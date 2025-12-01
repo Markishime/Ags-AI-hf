@@ -125,22 +125,19 @@ except Exception as e:
     traceback.print_exc()
     admin_panel_func = None
 
-# Page configuration (visual theme is forced to light via config.toml + CSS)
+# Page configuration
 st.set_page_config(
     page_title="AGS AI Assistant",
     page_icon="🌴",
     layout="wide",
-    initial_sidebar_state="expanded",
+    initial_sidebar_state="expanded"
 )
 
 # Hide Streamlit branding and user profile elements
 st.markdown(
             """
             <style>
-    /* Hide Streamlit UI elements */
-            #MainMenu {visibility: hidden;}
-            header {visibility: hidden;}
-            footer {visibility: hidden;}
+    /* Hide selected Streamlit branding elements, but keep header/menu visible */
 
     /* Hide Streamlit Cloud user avatar/profile button */
     button[title*="Manage app"] {display: none !important;}
@@ -196,15 +193,9 @@ st.markdown(
             unsafe_allow_html=True,
         )
 
-# Custom CSS for light theme & better styling
+# Custom CSS for better styling
 st.markdown("""
 <style>
-    /* Force light theme regardless of user/browser preference */
-    body, .stApp {
-        background-color: #ffffff;
-        color: #262730;
-    }
-
     .main-header {
         background: linear-gradient(90deg, #2E8B57 0%, #228B22 100%);
         padding: 1.5rem;
