@@ -1,0 +1,53 @@
+# Core Streamlit and UI
+streamlit==1.40.0
+streamlit-authenticator==0.3.3
+streamlit-lottie==0.0.5
+stqdm==0.0.5
+
+# Firebase Backend
+firebase-admin>=6.5.0
+pyrebase4==4.8.0
+
+# OCR and Image Processing
+google-cloud-documentai==2.30.0
+Pillow==10.4.0
+opencv-python-headless==4.10.0.84
+imageio==2.35.1
+spellchecker==0.4
+pytesseract==0.3.13
+
+# Data Processing
+pandas==2.2.3
+numpy==1.26.4
+openpyxl==3.1.5
+xlrd==2.0.1
+
+# AI and LLM
+langchain==0.2.16
+langchain-google-genai==1.0.10
+langchain-community==0.2.16
+google-generativeai==0.7.2
+
+# PDF Generation
+reportlab==4.2.5
+fpdf2==2.8.1
+PyMuPDF==1.24.10
+
+# DOCX Generation
+python-docx==1.1.2
+
+# Visualization
+matplotlib==3.9.2
+plotly==5.24.1
+seaborn==0.13.2
+
+# Environment and Configuration
+python-dotenv==1.0.1
+pyyaml==6.0.2
+
+# Utilities
+requests==2.32.3
+
+# Additional Dependencies
+streamlit-option-menu==0.4.0
+streamlit-extras==0.4.7
