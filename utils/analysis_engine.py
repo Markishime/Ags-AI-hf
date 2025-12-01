@@ -2482,21 +2482,28 @@ class PromptAnalyzer:
     def _initialize_llm(self):
         """Initialize the LLM with Google Gemini configuration"""
         try:
-            # Get Google API key from Streamlit secrets or environment
+            # Get Google API key from environment variables or Streamlit secrets
             google_api_key = None
             
-            # Try Streamlit secrets first
-            try:
-                import streamlit as st
-                if hasattr(st, 'secrets') and 'google_ai' in st.secrets:
-                    google_api_key = st.secrets.google_ai.get('api_key') or st.secrets.google_ai.get('google_api_key') or st.secrets.google_ai.get('gemini_api_key')
-                    self.logger.info("✅ Successfully retrieved Google AI API key from Streamlit secrets")
-            except Exception as e:
-                self.logger.warning(f"Failed to get API key from Streamlit secrets: {e}")
-                pass
+            # Try environment variable first (for Hugging Face Spaces deployment)
+            google_api_key = os.getenv("GOOGLE_AI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+            if google_api_key:
+                self.logger.info("✅ Successfully retrieved Google AI API key from environment variable")
+            
+            # Fallback to Streamlit secrets
+            if not google_api_key:
+                try:
+                    import streamlit as st
+                    if hasattr(st, 'secrets') and 'google_ai' in st.secrets:
+                        google_api_key = st.secrets.google_ai.get('api_key') or st.secrets.google_ai.get('google_api_key') or st.secrets.google_ai.get('gemini_api_key')
+                        if google_api_key:
+                            self.logger.info("✅ Successfully retrieved Google AI API key from Streamlit secrets")
+                except Exception as e:
+                    self.logger.warning(f"Failed to get API key from Streamlit secrets: {e}")
+                    pass
             
             if not google_api_key:
-                self.logger.error("Google API key not found. Please set GOOGLE_API_KEY or GEMINI_API_KEY in Streamlit secrets or environment variables")
+                self.logger.error("Google API key not found. Please set GOOGLE_AI_API_KEY environment variable or configure in Streamlit secrets")
                 self.llm = None
                 return
             
