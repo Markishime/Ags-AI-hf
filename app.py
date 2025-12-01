@@ -125,7 +125,7 @@ st.set_page_config(
 )
 
 # Hide Streamlit branding and user profile elements
-        st.markdown(
+st.markdown(
             """
             <style>
     /* Hide Streamlit UI elements */
@@ -303,7 +303,7 @@ def initialize_app():
 def show_header():
     """Display application header"""
     # Display main header container (deploy button is handled by Streamlit's built-in button)
-            st.markdown(f"""
+    st.markdown(f"""
             <div class="main-header">
                 <h1>🌴 {t('app_title')}</h1>
                 <p>{t('app_subtitle')}</p>
