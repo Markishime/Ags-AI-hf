@@ -146,8 +146,34 @@ st.markdown(
     /* Force light mode for the main content area */
     .block-container {background-color: #ffffff !important;}
 
-    /* Force light mode in the sidebar */
+    /* Force light mode in the sidebar - comprehensive selectors */
     section[data-testid="stSidebar"] {background-color: #f0f2f6 !important;}
+    section[data-testid="stSidebar"] > div {background-color: #f0f2f6 !important;}
+    section[data-testid="stSidebar"] > div:first-child {background-color: #f0f2f6 !important;}
+    section[data-testid="stSidebar"] [data-testid="stSidebarContent"] {background-color: #f0f2f6 !important;}
+    section[data-testid="stSidebar"] .stSidebar {background-color: #f0f2f6 !important;}
+    [data-testid="stSidebarNav"] {background-color: #f0f2f6 !important;}
+    [data-testid="stSidebarUserContent"] {background-color: #f0f2f6 !important;}
+    div[data-testid="stSidebarCollapsedControl"] {background-color: #f0f2f6 !important;}
+    
+    /* Sidebar text color for light background */
+    section[data-testid="stSidebar"] * {color: #262730 !important;}
+    section[data-testid="stSidebar"] h1, 
+    section[data-testid="stSidebar"] h2, 
+    section[data-testid="stSidebar"] h3, 
+    section[data-testid="stSidebar"] p,
+    section[data-testid="stSidebar"] span,
+    section[data-testid="stSidebar"] label {color: #262730 !important;}
+    
+    /* Sidebar buttons styling for light mode */
+    section[data-testid="stSidebar"] button {
+        background-color: #2E8B57 !important;
+        color: white !important;
+    }
+    section[data-testid="stSidebar"] button:hover {
+        background-color: #228B22 !important;
+    }
+    section[data-testid="stSidebar"] button span {color: white !important;}
 
     /* Disable any header buttons (theme/profile/etc.) */
     button[kind="header"] {display: none !important;}
