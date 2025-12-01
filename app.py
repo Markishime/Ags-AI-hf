@@ -125,12 +125,35 @@ except Exception as e:
     traceback.print_exc()
     admin_panel_func = None
 
-# Page configuration
+# Page configuration (force light layout early)
 st.set_page_config(
     page_title="AGS AI Assistant",
-    page_icon="🌴",
-    layout="wide",
-    initial_sidebar_state="expanded"
+    page_icon="🌴",  # keep existing palm icon; change if you prefer
+    layout="wide",  # or "centered" if you want a narrower layout
+    initial_sidebar_state="expanded",
+    menu_items=None,
+)
+
+# Force light mode regardless of user/system theme
+st.markdown(
+    """
+    <style>
+    /* Force light mode background */
+    section[data-testid="stDecoration"] {background-color: #ffffff !important;}
+    .stApp {background-color: #ffffff !important;}
+    [data-testid="stAppViewContainer"] {background-color: #ffffff !important;}
+
+    /* Force light mode for the main content area */
+    .block-container {background-color: #ffffff !important;}
+
+    /* Force light mode in the sidebar */
+    section[data-testid="stSidebar"] {background-color: #f0f2f6 !important;}
+
+    /* Disable any header buttons (theme/profile/etc.) */
+    button[kind="header"] {display: none !important;}
+    </style>
+    """,
+    unsafe_allow_html=True,
 )
 
 # Hide Streamlit branding and user profile elements
