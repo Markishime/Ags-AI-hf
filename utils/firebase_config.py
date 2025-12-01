@@ -138,7 +138,16 @@ def get_firebase_credentials() -> Optional[dict]:
         dict: Firebase service account credentials or None
     """
     try:
-        # Prefer Streamlit secrets exclusively in deployment
+        # 1) Prefer JSON from environment variable (e.g. on Hugging Face Spaces)
+        env_creds = os.getenv("FIREBASE_SERVICE_ACCOUNT_KEY")
+        if env_creds:
+            try:
+                print("Loading Firebase credentials from FIREBASE_SERVICE_ACCOUNT_KEY env var")
+                return json.loads(env_creds)
+            except Exception as e:
+                print(f"Error parsing FIREBASE_SERVICE_ACCOUNT_KEY: {e}")
+
+        # 2) Fallback to Streamlit secrets
         try:
             if hasattr(st, 'secrets') and 'firebase' in st.secrets:
                 print("Loading Firebase credentials from Streamlit secrets")
@@ -170,10 +179,12 @@ def get_firebase_credentials() -> Optional[dict]:
                     print(f"Missing required Firebase credentials in secrets: {missing_fields}")
                     
             elif hasattr(st, 'secrets') and 'FIREBASE_SERVICE_ACCOUNT_KEY' in st.secrets:
+                print("Loading Firebase credentials from st.secrets['FIREBASE_SERVICE_ACCOUNT_KEY']")
                 return dict(st.secrets['FIREBASE_SERVICE_ACCOUNT_KEY'])
         except Exception as e:
             print(f"Error loading Firebase credentials from Streamlit secrets: {e}")
-        # No environment fallback in deployment; return None to signal missing secrets
+
+        # If nothing found, return None to signal missing credentials
         return None
         
     except Exception as e:

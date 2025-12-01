@@ -82,10 +82,19 @@ from datetime import datetime
 
 # Ensure Gemini API key is available to LLM clients
 try:
-    if hasattr(st, 'secrets') and 'google_ai' in st.secrets:
-        api_key = st.secrets.google_ai.get('api_key') or st.secrets.google_ai.get('google_api_key') or st.secrets.google_ai.get('gemini_api_key')
-        if api_key and not os.getenv('GOOGLE_API_KEY'):
-            os.environ['GOOGLE_API_KEY'] = api_key
+    # Prefer environment variable (as on Hugging Face Spaces)
+    api_key = os.getenv("GOOGLE_AI_API_KEY")
+
+    # Fallback to Streamlit secrets if env var not set
+    if not api_key and hasattr(st, "secrets") and "google_ai" in st.secrets:
+        api_key = (
+            st.secrets.google_ai.get("api_key")
+            or st.secrets.google_ai.get("google_api_key")
+            or st.secrets.google_ai.get("gemini_api_key")
+        )
+
+    if api_key and not os.getenv("GOOGLE_API_KEY"):
+        os.environ["GOOGLE_API_KEY"] = api_key
 except Exception:
     pass
 

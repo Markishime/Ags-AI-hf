@@ -66,7 +66,22 @@ class DocumentAIProcessor:
     def _initialize_client(self):
         """Initialize Document AI client with credentials"""
         try:
-            # Try to get credentials from environment or secrets
+            # 1) Prefer JSON credentials + config from environment variables
+            env_creds = os.getenv("GOOGLE_DOCUMENTAI_SERVICE_ACCOUNT_KEY")
+            if env_creds:
+                try:
+                    creds_info = json.loads(env_creds)
+                    creds = service_account.Credentials.from_service_account_info(creds_info)
+                    self.client = documentai.DocumentProcessorServiceClient(credentials=creds)
+                    self.project_id = creds_info.get("project_id")
+                    self.processor_id = os.getenv("DOCUMENTAI_PROCESSOR_ID")
+                    self.location = os.getenv("DOCUMENTAI_LOCATION", "us")
+                    logger.info("Document AI initialized from GOOGLE_DOCUMENTAI_SERVICE_ACCOUNT_KEY env var")
+                    return
+                except Exception as e:
+                    logger.warning(f"Failed to initialize Document AI from GOOGLE_DOCUMENTAI_SERVICE_ACCOUNT_KEY: {e}")
+
+            # 2) Try to get credentials from GOOGLE_APPLICATION_CREDENTIALS or Streamlit secrets
             credentials_path = os.getenv('GOOGLE_APPLICATION_CREDENTIALS')
             if not credentials_path:
                 # Try to get from streamlit secrets
