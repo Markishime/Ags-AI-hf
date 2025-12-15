@@ -47,24 +47,47 @@ def show_admin_panel():
     if not st.session_state.get('admin_authenticated', False):
         st.warning(f"🔒 {t('admin_enter_code')}")
         
-        # Get admin codes from Streamlit secrets
+        # Get admin codes from Streamlit secrets (Hugging Face Spaces format)
         admin_codes = []
         try:
-            if hasattr(st, 'secrets') and 'admin' in st.secrets:
-                admin_codes = st.secrets.admin.get('admin_codes', [])
+            if hasattr(st, 'secrets'):
+                # Try flat format first: st.secrets['admin.admin_codes'] (Hugging Face Spaces)
+                if 'admin.admin_codes' in st.secrets:
+                    admin_codes = st.secrets['admin.admin_codes']
+                # Try nested format: st.secrets.admin.admin_codes
+                elif 'admin' in st.secrets and hasattr(st.secrets.admin, 'admin_codes'):
+                    admin_codes = st.secrets.admin.admin_codes
+                elif 'admin' in st.secrets:
+                    admin_codes = st.secrets.admin.get('admin_codes', [])
+                
+                # Handle string values (could be JSON string or single code)
                 if isinstance(admin_codes, str):
-                    # Handle case where it's a single string instead of list
-                    admin_codes = [admin_codes]
+                    # Try to parse as JSON array
+                    try:
+                        import json
+                        admin_codes = json.loads(admin_codes)
+                    except (json.JSONDecodeError, ValueError):
+                        # If not JSON, treat as single code
+                        admin_codes = [admin_codes]
+                
+                # Ensure it's a list
+                if not isinstance(admin_codes, list):
+                    admin_codes = [admin_codes] if admin_codes else []
         except Exception as e:
             st.error(t('admin_error_reading').format(str(e)))
             return
         
         if not admin_codes:
             st.error(f"⚠️ {t('admin_no_codes')}")
-            st.code("""
-[admin]
-admin_codes = ["YOUR_ADMIN_CODE_HERE"]
-            """, language="toml")
+            st.info("**How to configure in Hugging Face Spaces:**")
+            st.markdown("""
+1. Go to your Space settings
+2. Navigate to **Variables and secrets** tab
+3. Add a new secret with:
+   - **Key:** `admin.admin_codes`
+   - **Value:** `["YOUR_ADMIN_CODE_HERE"]` (JSON array format)
+4. Save and restart your Space
+            """)
             return
         
         # Show admin code input form

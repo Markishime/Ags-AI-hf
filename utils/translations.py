@@ -39,6 +39,7 @@ TRANSLATIONS = {
         'home_ready': 'Ready to get started?',
         'home_ready_desc': 'Upload your oil palm test reports and get helpful farming advice.',
         'home_start': 'Start Analysis',
+        'home_upload_files': 'Upload Your Files',
         
         # Dashboard
         'dashboard_title': 'Dashboard',
@@ -125,7 +126,7 @@ TRANSLATIONS = {
         'admin_title': 'Admin Panel',
         'admin_restricted': 'Admin access only',
         'admin_enter_code': 'Please enter the admin code to access the admin panel.',
-        'admin_no_codes': 'No admin codes configured. Please configure admin codes in `.streamlit/secrets.toml` under `[admin]` section.',
+        'admin_no_codes': 'No admin codes configured. Please configure admin codes in Hugging Face Spaces secrets. Go to Settings > Variables and secrets, and add a secret with key `admin.admin_codes` and value as a JSON array like `["YOUR_ADMIN_CODE_HERE"]`.',
         'admin_access': 'Admin Access',
         'admin_code_input': 'Enter Admin Code',
         'admin_code_help': 'Enter the admin code to access the admin panel',
@@ -203,6 +204,7 @@ TRANSLATIONS = {
         'home_ready': 'Bersedia untuk bermula?',
         'home_ready_desc': 'Muat naik laporan ujian kelapa sawit anda dan dapatkan nasihat pertanian yang berguna.',
         'home_start': 'Mula Analisis',
+        'home_upload_files': 'Muat Naik Fail Anda',
         
         # Dashboard
         'dashboard_title': 'Papan Pemuka',
@@ -289,7 +291,7 @@ TRANSLATIONS = {
         'admin_title': 'Panel Admin',
         'admin_restricted': 'Akses admin sahaja',
         'admin_enter_code': 'Sila masukkan kod admin untuk mengakses panel admin.',
-        'admin_no_codes': 'Tiada kod admin dikonfigurasi. Sila konfigurasi kod admin dalam `.streamlit/secrets.toml` di bawah bahagian `[admin]`.',
+        'admin_no_codes': 'Tiada kod admin dikonfigurasi. Sila konfigurasi kod admin dalam Hugging Face Spaces secrets. Pergi ke Settings > Variables and secrets, dan tambah secret dengan kunci `admin.admin_codes` dan nilai sebagai array JSON seperti `["YOUR_ADMIN_CODE_HERE"]`.',
         'admin_access': 'Akses Admin',
         'admin_code_input': 'Masukkan Kod Admin',
         'admin_code_help': 'Masukkan kod admin untuk mengakses panel admin',
