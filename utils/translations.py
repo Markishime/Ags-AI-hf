@@ -342,20 +342,39 @@ TRANSLATIONS = {
 
 def get_language() -> str:
     """Get current language from session state, default to 'en' (English)"""
+    # Always check URL params first (for dynamic updates)
+    try:
+        query_params = st.query_params
+        url_lang = query_params.get('lang', '')
+        if url_lang in ['en', 'ms']:
+            st.session_state.language = url_lang
+            return url_lang
+    except Exception:
+        pass
+    
+    # Fallback to session state
     if 'language' not in st.session_state:
         st.session_state.language = 'en'  # Default to English for clarity
     return st.session_state.language
 
 def set_language(lang: str):
-    """Set current language"""
+    """Set current language and notify parent window if embedded"""
     if lang in ['en', 'ms']:
         st.session_state.language = lang
+        # Try to notify parent window if CropDrive integration is available
+        try:
+            from utils.cropdrive_integration import send_language_change
+            send_language_change(lang)
+        except (ImportError, Exception):
+            # If integration not available, just update session state
+            pass
 
 def toggle_language():
     """Toggle between English and Malaysian"""
     current = get_language()
     new_lang = 'en' if current == 'ms' else 'ms'
     set_language(new_lang)
+    # Language change will be handled by set_language() which calls send_language_change()
     
     # If CropDrive integration is available, notify parent window
     try:

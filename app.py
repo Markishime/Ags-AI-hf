@@ -270,16 +270,18 @@ def initialize_app():
     if CROPDRIVE_INTEGRATION_AVAILABLE:
         try:
             current_lang, user_plan, features = initialize_integration()
-            # Language is set by integration, but ensure it's in session state
-            if 'language' not in st.session_state:
-                st.session_state.language = current_lang
-            else:
-                # Update language if changed via URL params
-                st.session_state.language = current_lang
+            # Language is already set by initialize_integration() from URL params
+            # It always updates st.session_state.language, so no need to check here
         except Exception as e:
             print(f"Warning: CropDrive integration failed: {e}")
-            # Fallback to default
-            if 'language' not in st.session_state:
+            # Fallback: Initialize language from URL params manually
+            try:
+                query_params = st.query_params
+                current_lang = query_params.get('lang', 'en')
+                if current_lang not in ['en', 'ms']:
+                    current_lang = 'en'
+                st.session_state.language = current_lang
+            except Exception:
                 st.session_state.language = 'en'
     else:
         # Fallback: Initialize language from URL params manually
@@ -288,11 +290,9 @@ def initialize_app():
             current_lang = query_params.get('lang', 'en')
             if current_lang not in ['en', 'ms']:
                 current_lang = 'en'
-            if 'language' not in st.session_state:
-                st.session_state.language = current_lang
+            st.session_state.language = current_lang
         except Exception:
-            if 'language' not in st.session_state:
-                st.session_state.language = 'en'
+            st.session_state.language = 'en'
     
     # Initialize Firebase
     if not initialize_firebase():

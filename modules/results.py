@@ -24,6 +24,19 @@ from modules.admin import get_active_prompt
 from utils.feedback_system import (
     display_feedback_section as display_feedback_section_util)
 
+# Import CropDrive integration for user ID
+try:
+    from utils.cropdrive_integration import get_user_id, get_user_email, get_user_name
+    CROPDRIVE_INTEGRATION_AVAILABLE = True
+except ImportError:
+    CROPDRIVE_INTEGRATION_AVAILABLE = False
+    def get_user_id():
+        return st.session_state.get('user_id', '')
+    def get_user_email():
+        return st.session_state.get('user_email', '')
+    def get_user_name():
+        return st.session_state.get('user_name', '')
+
 
 def normalize_markdown_block_for_step3(text):
     """Normalize inline dense markdown into readable headings and lists for Step 3.
@@ -868,26 +881,37 @@ def store_analysis_to_firestore(analysis_results, result_id):
         if not db:
             raise Exception("Firestore client not available")
         
-        user_email = st.session_state.get('user_email')
-        user_id = st.session_state.get('user_id')
+        # Get user info from CropDrive integration (if available) or session state
+        if CROPDRIVE_INTEGRATION_AVAILABLE:
+            user_id = get_user_id()
+            user_email = get_user_email()
+            user_name = get_user_name()
+        else:
+            # Fallback to session state
+            user_id = st.session_state.get('user_id', '')
+            user_email = st.session_state.get('user_email', '')
+            user_name = st.session_state.get('user_name', '')
         
         # Skip saving to Firestore if user is not authenticated (anonymous users)
-        if not user_email and not user_id:
-            logger.info("Skipping Firestore storage - user not authenticated (anonymous user)")
+        if not user_id:
+            logger.info("Skipping Firestore storage - user ID not found (anonymous user)")
             return False
         
         # Create the document data structure for Firestore
         current_time = datetime.now()
         firestore_data = {
             'id': result_id,
-            'user_email': user_email,
-            'user_id': user_id,
+            'user_id': user_id,  # Primary identifier from CropDrive
+            'user_email': user_email if user_email else None,
+            'user_name': user_name if user_name else None,
             'timestamp': current_time.isoformat(),  # Convert to ISO string
             'status': 'completed',
             'report_types': ['soil', 'leaf'],
             'created_at': current_time.isoformat(),  # Convert to ISO string
             'analysis_results': analysis_results
         }
+        
+        logger.info(f"💾 Storing analysis {result_id} for user_id: {user_id}, user_email: {user_email}")
         
         # Pre-process analysis_results to handle datetime objects and complex structures
         analysis_results = preprocess_analysis_results_for_firestore(analysis_results)
@@ -1609,12 +1633,23 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
             logger.error(f"❌ Failed to store analysis to Firestore: {e}")
             # Continue with session state storage as fallback
         
+        # Get user info for display data
+        if CROPDRIVE_INTEGRATION_AVAILABLE:
+            display_user_id = get_user_id()
+            display_user_email = get_user_email()
+            display_user_name = get_user_name()
+        else:
+            display_user_id = st.session_state.get('user_id', '')
+            display_user_email = st.session_state.get('user_email', '')
+            display_user_name = st.session_state.get('user_name', '')
+        
         # Return data structure with analysis results included
         display_data = {
             'success': True,
             'id': result_id,
-            'user_email': user_email or None,  # Optional for anonymous users
-            'user_id': user_id,
+            'user_id': display_user_id,
+            'user_email': display_user_email or None,  # Optional for anonymous users
+            'user_name': display_user_name or None,  # Optional
             'timestamp': datetime.now(),
             'status': 'completed',
             'report_types': ['soil', 'leaf'],

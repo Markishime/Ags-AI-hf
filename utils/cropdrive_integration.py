@@ -6,7 +6,6 @@ Handles communication with parent window when embedded in CropDrive website
 import streamlit as st
 from streamlit.components.v1 import html
 import json
-from datetime import datetime
 
 # ============================================================================
 # STEP 1: JavaScript for parent window communication
@@ -43,21 +42,38 @@ def inject_parent_communication():
                     language: data.language || 'en',
                     userId: data.userId,
                     plan: data.plan || 'none',
-                    userEmail: data.userEmail
+                    userEmail: data.userEmail || '',
+                    userName: data.userName || ''
                 };
                 currentLanguage = userConfig.language;
+                if (currentLanguage !== 'en' && currentLanguage !== 'ms') {
+                    currentLanguage = 'en';
+                }
                 
                 // Store in localStorage
                 localStorage.setItem('cropdrive_language', currentLanguage);
                 localStorage.setItem('cropdrive_userId', userConfig.userId || '');
+                localStorage.setItem('cropdrive_userEmail', userConfig.userEmail || '');
+                localStorage.setItem('cropdrive_userName', userConfig.userName || '');
                 localStorage.setItem('cropdrive_plan', userConfig.plan || 'none');
                 
                 // Update URL parameters
                 const url = new URL(window.location.href);
-                url.searchParams.set('lang', currentLanguage);
+                const currentLangParam = url.searchParams.get('lang');
+                if (currentLangParam !== currentLanguage) {
+                    url.searchParams.set('lang', currentLanguage);
+                }
                 url.searchParams.set('userId', userConfig.userId || '');
+                url.searchParams.set('userEmail', userConfig.userEmail || '');
+                url.searchParams.set('userName', userConfig.userName || '');
                 url.searchParams.set('plan', userConfig.plan || 'none');
                 window.history.replaceState({}, '', url);
+                
+                // Notify parent that language was set
+                window.parent.postMessage({
+                    type: 'STREAMLIT_LANGUAGE_UPDATE',
+                    language: currentLanguage
+                }, '*');
                 
                 // Reload to apply changes
                 window.location.reload();
@@ -65,13 +81,22 @@ def inject_parent_communication():
             
             // Handle language change
             if (data.type === 'LANGUAGE_CHANGE') {
-                currentLanguage = data.language;
+                currentLanguage = data.language || 'en';
+                if (currentLanguage !== 'en' && currentLanguage !== 'ms') {
+                    currentLanguage = 'en';
+                }
                 localStorage.setItem('cropdrive_language', currentLanguage);
                 
                 // Update URL
                 const url = new URL(window.location.href);
                 url.searchParams.set('lang', currentLanguage);
                 window.history.replaceState({}, '', url);
+                
+                // Notify parent that language was updated
+                window.parent.postMessage({
+                    type: 'STREAMLIT_LANGUAGE_UPDATE',
+                    language: currentLanguage
+                }, '*');
                 
                 // Reload to apply language change
                 window.location.reload();
@@ -85,6 +110,19 @@ def inject_parent_communication():
             if (langParam && (langParam === 'en' || langParam === 'ms')) {
                 currentLanguage = langParam;
                 localStorage.setItem('cropdrive_language', currentLanguage);
+            }
+            // Also check for user info in URL params
+            const userIdParam = urlParams.get('userId');
+            const userEmailParam = urlParams.get('userEmail');
+            const userNameParam = urlParams.get('userName');
+            if (userIdParam) {
+                localStorage.setItem('cropdrive_userId', userIdParam);
+            }
+            if (userEmailParam) {
+                localStorage.setItem('cropdrive_userEmail', userEmailParam);
+            }
+            if (userNameParam) {
+                localStorage.setItem('cropdrive_userName', userNameParam);
             }
         });
     })();
@@ -101,7 +139,7 @@ def initialize_integration():
     # Inject communication JavaScript
     inject_parent_communication()
     
-    # Get language from URL parameters
+    # Get language from URL parameters (always check on each run)
     query_params = st.query_params
     current_lang = query_params.get('lang', 'en')
     
@@ -109,22 +147,36 @@ def initialize_integration():
     if current_lang not in ['en', 'ms']:
         current_lang = 'en'
     
-    # Store in session state
-    if 'language' not in st.session_state:
-        st.session_state.language = current_lang
+    # Always update language from URL params (handles dynamic changes)
+    st.session_state.language = current_lang
     
     # Get user config from URL
     user_id = query_params.get('userId', '')
+    user_email = query_params.get('userEmail', '')
+    user_name = query_params.get('userName', '')
     user_plan = query_params.get('plan', 'none')
     features_str = query_params.get('features', '')
     features = features_str.split(',') if features_str else []
     
+    # Store user config in session state
     if 'user_config' not in st.session_state:
         st.session_state.user_config = {
             'userId': user_id,
             'plan': user_plan,
             'features': features
         }
+    
+    # Also store user info in session state for Firebase storage (for backward compatibility)
+    if user_id:
+        st.session_state.user_id = user_id
+    if user_email:
+        st.session_state.user_email = user_email
+    if user_name:
+        st.session_state.user_name = user_name
+    
+    # Update user_config with email and name
+    st.session_state.user_config['userEmail'] = user_email
+    st.session_state.user_config['userName'] = user_name
     
     return current_lang, user_plan, features
 
@@ -228,23 +280,69 @@ def get_user_plan():
 
 def get_user_id():
     """Get current user ID from session state"""
-    return st.session_state.get('user_config', {}).get('userId', '')
+    # Try multiple sources for user ID
+    user_id = st.session_state.get('user_id', '')
+    if not user_id:
+        user_id = st.session_state.get('user_config', {}).get('userId', '')
+    return user_id
+
+def get_user_email():
+    """Get current user email from session state"""
+    user_email = st.session_state.get('user_email', '')
+    if not user_email:
+        user_email = st.session_state.get('user_config', {}).get('userEmail', '')
+    return user_email
+
+def get_user_name():
+    """Get current user name from session state"""
+    user_name = st.session_state.get('user_name', '')
+    if not user_name:
+        user_name = st.session_state.get('user_config', {}).get('userName', '')
+    return user_name
 
 def send_language_change(new_language: str):
-    """Send language change notification to parent window"""
+    """Send language change notification to parent window when language changes within Streamlit"""
+    # Validate language
+    if new_language not in ['en', 'ms']:
+        new_language = 'en'
+    
+    # Update session state
+    st.session_state.language = new_language
+    
+    # Update URL parameter
+    query_params = st.query_params
+    query_params['lang'] = new_language
+    
+    # Send message to parent window
     message = {
-        'type': 'LANGUAGE_CHANGE',
+        'type': 'LANGUAGE_CHANGE_REQUEST',
         'language': new_language
     }
     
-    parent_origin = 'https://cropdrive-f5exleg55-mark-lloyd-cuizons-projects.vercel.app'
+    # Get allowed origins from the JavaScript (should match)
+    allowed_origins = [
+        'https://cropdrive.ai',
+        'https://cropdrive-f5exleg55-mark-lloyd-cuizons-projects.vercel.app',
+        'http://localhost:3000'
+    ]
     
     send_js = f"""
     <script>
-    window.parent.postMessage({json.dumps(message)}, '{parent_origin}');
-    console.log('📤 Sent language change message:', {json.dumps(message)});
+    const allowedOrigins = {json.dumps(allowed_origins)};
+    allowedOrigins.forEach(origin => {{
+        window.parent.postMessage({json.dumps(message)}, origin);
+    }});
+    console.log('📤 Sent language change request:', {json.dumps(message)});
+    
+    // Also update URL
+    const url = new URL(window.location.href);
+    url.searchParams.set('lang', '{new_language}');
+    window.history.replaceState({{}}, '', url);
     </script>
     """
     
     html(send_js, height=0)
+    
+    # Trigger rerun to apply language change
+    st.rerun()
 
