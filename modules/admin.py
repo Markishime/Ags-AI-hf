@@ -51,10 +51,10 @@ def show_admin_panel():
         admin_codes = []
         try:
             if hasattr(st, 'secrets'):
-                # Try flat format first: st.secrets['admin.admin_codes'] (Hugging Face Spaces)
-                if 'admin.admin_codes' in st.secrets:
-                    admin_codes = st.secrets['admin.admin_codes']
-                # Try nested format: st.secrets.admin.admin_codes
+                # Try simple key format: st.secrets['admin_codes'] (Hugging Face Spaces - no dots allowed)
+                if 'admin_codes' in st.secrets:
+                    admin_codes = st.secrets['admin_codes']
+                # Try nested format: st.secrets.admin.admin_codes (for local development)
                 elif 'admin' in st.secrets and hasattr(st.secrets.admin, 'admin_codes'):
                     admin_codes = st.secrets.admin.admin_codes
                 elif 'admin' in st.secrets:
@@ -84,7 +84,7 @@ def show_admin_panel():
 1. Go to your Space settings
 2. Navigate to **Variables and secrets** tab
 3. Add a new secret with:
-   - **Key:** `admin.admin_codes`
+   - **Key:** `admin_codes` (no dots allowed - must be alphanumeric only)
    - **Value:** `["YOUR_ADMIN_CODE_HERE"]` (JSON array format)
 4. Save and restart your Space
             """)
