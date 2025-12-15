@@ -389,16 +389,10 @@ def show_home_page():
         </div>
         """, unsafe_allow_html=True)
     
-    # Buttons to start - two buttons side by side
-    col1, col2 = st.columns(2)
-    with col1:
-        if st.button(t('home_start'), use_container_width=True, type="primary"):
-            st.session_state.current_page = 'upload'
-            st.rerun()
-    with col2:
-        if st.button(t('home_upload_files'), use_container_width=True, type="primary"):
-            st.session_state.current_page = 'upload'
-            st.rerun()
+    # Button to start - upload files
+    if st.button(t('home_upload_files'), use_container_width=True, type="primary"):
+        st.session_state.current_page = 'upload'
+        st.rerun()
     
 
 # Authentication pages removed - no longer needed
