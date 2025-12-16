@@ -43,6 +43,16 @@ class PDFReportGenerator:
         self.margin = 54
         self.content_width = (self.page_width - 
                               (2 * self.margin))
+        self.language = 'en'  # Default language
+    
+    def _t(self, key: str, default: str = None) -> str:
+        """Get translation for PDF text"""
+        try:
+            from utils.translations import TRANSLATIONS
+            translations = TRANSLATIONS.get(self.language, TRANSLATIONS['en'])
+            return translations.get(key, default or key)
+        except Exception:
+            return default or key
     
     def _create_table_with_proper_layout(self, table_data, col_widths=None, 
                                          font_size=9):
@@ -217,8 +227,19 @@ class PDFReportGenerator:
         return styles
     
     def generate_report(self, analysis_data: Dict[str, Any], metadata: Dict[str, Any], 
-                       options: Dict[str, Any]) -> bytes:
+                       options: Dict[str, Any], language: str = None) -> bytes:
         """Generate complete PDF report with comprehensive analysis support"""
+        # Get language if not provided
+        if language is None:
+            try:
+                import streamlit as st
+                language = st.session_state.get('language', 'en')
+            except Exception:
+                language = 'en'
+        
+        # Store language for use in PDF generation
+        self.language = language
+        
         buffer = io.BytesIO()
         doc = SimpleDocTemplate(
             buffer,
@@ -238,7 +259,8 @@ class PDFReportGenerator:
             story.append(PageBreak())
         except Exception as e:
             logger.error(f"Error creating title page: {str(e)}")
-            story.append(Paragraph("Agricultural Analysis Report", self.styles['CustomTitle']))
+            title_text = self._t('pdf_title', 'Agricultural Analysis Report')
+            story.append(Paragraph(title_text, self.styles['CustomTitle']))
             story.append(PageBreak())
         
         # Check if this is step-by-step analysis format
@@ -398,7 +420,8 @@ class PDFReportGenerator:
         story = []
         
         # Main title
-        story.append(Paragraph("Agricultural Analysis Report", self.styles['CustomTitle']))
+        title_text = self._t('pdf_title', 'Agricultural Analysis Report')
+        story.append(Paragraph(title_text, self.styles['CustomTitle']))
         story.append(Spacer(1, 30))
         
         # Report details - handle multiple analysis types
@@ -406,13 +429,16 @@ class PDFReportGenerator:
         if isinstance(report_types, list) and len(report_types) > 1:
             # Multiple analysis types
             types_str = ' & '.join([t.title() for t in report_types])
-            story.append(Paragraph(f"Report Type: {types_str} Analysis", self.styles['CustomHeading']))
+            report_type_text = self._t('pdf_report_type_multiple', f'Report Type: {types_str} Analysis')
+            story.append(Paragraph(report_type_text, self.styles['CustomHeading']))
         elif isinstance(report_types, list) and len(report_types) == 1:
             # Single analysis type
-            story.append(Paragraph(f"Report Type: {report_types[0].title()} Analysis", self.styles['CustomHeading']))
+            report_type_text = self._t('pdf_report_type_single', f'Report Type: {report_types[0].title()} Analysis')
+            story.append(Paragraph(report_type_text, self.styles['CustomHeading']))
         else:
             # Default to comprehensive analysis
-            story.append(Paragraph("Report Type: Comprehensive Agricultural Analysis", self.styles['CustomHeading']))
+            report_type_text = self._t('pdf_report_type_comprehensive', 'Report Type: Comprehensive Agricultural Analysis')
+            story.append(Paragraph(report_type_text, self.styles['CustomHeading']))
         
         story.append(Spacer(1, 20))
         
@@ -432,10 +458,10 @@ class PDFReportGenerator:
             timestamp = datetime.now()
         
         metadata_data = [
-            ['Lab Number:', 'SP LAB Analysis'],
-            ['Sample Date:', timestamp.strftime('%Y-%m-%d')],
-            ['Farm Name:', user_email.split('@')[0].title() if '@' in user_email else 'Oil Palm Plantation'],
-            ['Report Generated:', datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
+            [self._t('pdf_lab_number', 'Lab Number:'), 'SP LAB Analysis'],
+            [self._t('pdf_sample_date', 'Sample Date:'), timestamp.strftime('%Y-%m-%d')],
+            [self._t('pdf_farm_name', 'Farm Name:'), user_email.split('@')[0].title() if '@' in user_email else self._t('pdf_oil_palm_plantation', 'Oil Palm Plantation')],
+            [self._t('pdf_report_generated', 'Report Generated:'), datetime.now().strftime('%Y-%m-%d %H:%M:%S')]
         ]
         
         metadata_table = Table(metadata_data, colWidths=[self.content_width*0.35, self.content_width*0.65])
@@ -453,8 +479,8 @@ class PDFReportGenerator:
         story.append(Spacer(1, 50))
         
         # Company info
-        story.append(Paragraph("Generated by AGS AI Analysis System", self.styles['CustomBody']))
-        story.append(Paragraph("Advanced Agricultural Intelligence Platform", self.styles['CustomBody']))
+        story.append(Paragraph(self._t('pdf_generated_by', 'Generated by AGS AI Analysis System'), self.styles['CustomBody']))
+        story.append(Paragraph(self._t('pdf_platform_name', 'Advanced Agricultural Intelligence Platform'), self.styles['CustomBody']))
         
         return story
     
@@ -463,14 +489,13 @@ class PDFReportGenerator:
         story = []
         
         # Executive Summary header
-        story.append(Paragraph("Executive Summary", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_executive_summary', 'Executive Summary'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Simple executive summary
-        story.append(Paragraph(
-            "This comprehensive agronomic analysis evaluates key nutritional parameters from both soil and leaf tissue samples to assess the current fertility status and plant health of the oil palm plantation. The analysis is based on adherence to Malaysian Palm Oil Board (MPOB) standards for optimal oil palm cultivation.",
-            self.styles['CustomBody']
-        ))
+        summary_text = self._t('pdf_executive_summary_text', 
+            "This comprehensive agronomic analysis evaluates key nutritional parameters from both soil and leaf tissue samples to assess the current fertility status and plant health of the oil palm plantation. The analysis is based on adherence to Malaysian Palm Oil Board (MPOB) standards for optimal oil palm cultivation.")
+        story.append(Paragraph(summary_text, self.styles['CustomBody']))
         story.append(Spacer(1, 20))
         
         return story
@@ -480,14 +505,13 @@ class PDFReportGenerator:
         story = []
         
         # Parameters header
-        story.append(Paragraph("Parameters Analysis", self.styles['Heading2']))
+        story.append(Paragraph(self._t('pdf_parameters_analysis', 'Parameters Analysis'), self.styles['Heading2']))
         story.append(Spacer(1, 12))
         
         # Simple parameters summary
-        story.append(Paragraph(
-            "Parameter analysis includes soil and leaf nutrient assessment based on MPOB standards.",
-            self.styles['Normal']
-        ))
+        params_text = self._t('pdf_parameters_summary', 
+            "Parameter analysis includes soil and leaf nutrient assessment based on MPOB standards.")
+        story.append(Paragraph(params_text, self.styles['Normal']))
         story.append(Spacer(1, 12))
         
         return story

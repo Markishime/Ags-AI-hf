@@ -730,24 +730,55 @@ def show_results_page():
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("📥 Download PDF Report", type="primary", use_container_width=True):
-                try:
-                    # Generate PDF
-                    with st.spinner("🔄 Generating PDF report..."):
-                        pdf_bytes = generate_results_pdf(results_data)
+            # Get current language
+            from utils.translations import get_language
+            current_lang = get_language()
+            
+            # Create two buttons side by side for English and Malaysian PDFs
+            pdf_col1, pdf_col2 = st.columns(2)
+            with pdf_col1:
+                if st.button("📥 " + (t('download_pdf_en') if current_lang == 'ms' else "Download PDF Report (English)"), 
+                           type="primary", use_container_width=True, key="pdf_en"):
+                    try:
+                        # Generate PDF in English
+                        with st.spinner("🔄 Generating PDF report..."):
+                            pdf_bytes = generate_results_pdf(results_data, language='en')
+                            
+                        # Download the PDF
+                        st.download_button(
+                            label="💾 Download PDF (English)",
+                            data=pdf_bytes,
+                            file_name=f"agricultural_analysis_report_en.pdf",
+                            mime="application/pdf",
+                            type="primary",
+                            key="dl_pdf_en"
+                        )
                         
-                    # Download the PDF
-                    st.download_button(
-                        label="💾 Download PDF",
-                        data=pdf_bytes,
-                        file_name=f"agricultural_analysis_report.pdf",
-                        mime="application/pdf",
-                        type="primary"
-                    )
-                    
-                except Exception as e:
-                    st.error(f"❌ Failed to generate PDF: {str(e)}")
-                    st.info("Please try again or contact support if the issue persists.")
+                    except Exception as e:
+                        st.error(f"❌ Failed to generate PDF: {str(e)}")
+                        st.info("Please try again or contact support if the issue persists.")
+            
+            with pdf_col2:
+                if st.button("📥 " + (t('download_pdf_ms') if current_lang == 'en' else "Muat Turun Laporan PDF (Bahasa Malaysia)"), 
+                           type="primary", use_container_width=True, key="pdf_ms"):
+                    try:
+                        # Generate PDF in Malaysian
+                        with st.spinner("🔄 Menjana laporan PDF..."):
+                            pdf_bytes = generate_results_pdf(results_data, language='ms')
+                            
+                        # Download the PDF
+                        st.download_button(
+                            label="💾 Muat Turun PDF (Bahasa Malaysia)",
+                            data=pdf_bytes,
+                            file_name=f"laporan_analisis_pertanian_ms.pdf",
+                            mime="application/pdf",
+                            type="primary",
+                            key="dl_pdf_ms"
+                        )
+                        
+                    except Exception as e:
+                        st.error(f"❌ Gagal menjana PDF: {str(e)}")
+                        st.info("Sila cuba lagi atau hubungi sokongan jika masalah berterusan.")
         
         st.markdown('</div>', unsafe_allow_html=True)
         
@@ -8034,25 +8065,57 @@ def display_references_section(results_data):
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("📥 Download PDF Report", type="primary", use_container_width=True):
-            try:
-                # Generate PDF
-                with st.spinner("🔄 Generating PDF report..."):
-                    pdf_bytes = generate_results_pdf(results_data)
+        # Get current language
+        from utils.translations import get_language
+        current_lang = get_language()
+        
+        # Create two buttons side by side for English and Malaysian PDFs
+        pdf_col1, pdf_col2 = st.columns(2)
+        with pdf_col1:
+            if st.button("📥 " + (t('download_pdf_en') if current_lang == 'ms' else "Download PDF Report (English)"), 
+                       type="primary", use_container_width=True, key="pdf_en_ref"):
+                try:
+                    # Generate PDF in English
+                    with st.spinner("🔄 Generating PDF report..."):
+                        pdf_bytes = generate_results_pdf(results_data, language='en')
+                        
+                    # Download the PDF
+                    st.download_button(
+                        label="💾 Download PDF (English)",
+                        data=pdf_bytes,
+                        file_name=f"agricultural_analysis_report_en_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
+                        type="primary",
+                        key="dl_pdf_en_ref"
+                    )
+                    st.success("✅ PDF report generated successfully!")
                     
-                # Download the PDF
-                st.download_button(
-                    label="💾 Download PDF",
-                    data=pdf_bytes,
-                    file_name=f"agricultural_analysis_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
-                    mime="application/pdf",
-                    type="primary"
-                )
-                st.success("✅ PDF report generated successfully!")
-                
-            except Exception as e:
-                st.error(f"❌ Failed to generate PDF: {str(e)}")
-                st.info("Please try again or contact support if the issue persists.")
+                except Exception as e:
+                    st.error(f"❌ Failed to generate PDF: {str(e)}")
+                    st.info("Please try again or contact support if the issue persists.")
+        
+        with pdf_col2:
+            if st.button("📥 " + (t('download_pdf_ms') if current_lang == 'en' else "Muat Turun Laporan PDF (Bahasa Malaysia)"), 
+                       type="primary", use_container_width=True, key="pdf_ms_ref"):
+                try:
+                    # Generate PDF in Malaysian
+                    with st.spinner("🔄 Menjana laporan PDF..."):
+                        pdf_bytes = generate_results_pdf(results_data, language='ms')
+                        
+                    # Download the PDF
+                    st.download_button(
+                        label="💾 Muat Turun PDF (Bahasa Malaysia)",
+                        data=pdf_bytes,
+                        file_name=f"laporan_analisis_pertanian_ms_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                        mime="application/pdf",
+                        type="primary",
+                        key="dl_pdf_ms_ref"
+                    )
+                    st.success("✅ Laporan PDF berjaya dijana!")
+                    
+                except Exception as e:
+                    st.error(f"❌ Gagal menjana PDF: {str(e)}")
+                    st.info("Sila cuba lagi atau hubungi sokongan jika masalah berterusan.")
 
 
 def display_analysis_components(analysis_results):
@@ -16773,10 +16836,20 @@ def _removed_generate_results_pdf(results_data, include_raw_data=True, include_s
 def generate_results_pdf(results_data, include_raw_data=True, include_summary=True, 
                         include_key_findings=True, include_step_analysis=True, 
                         include_references=False, include_charts=True, 
-                        pdf_title="Agricultural Analysis Report", include_timestamp=True):
+                        pdf_title="Agricultural Analysis Report", include_timestamp=True,
+                        language=None):
     """Generate comprehensive PDF from results page content - includes ALL details"""
     try:
         from utils.pdf_utils import PDFReportGenerator
+        from utils.translations import get_language
+        
+        # Get language if not provided
+        if language is None:
+            language = get_language()
+        
+        # Temporarily set language in session state for PDF generation
+        original_lang = st.session_state.get('language', 'en')
+        st.session_state.language = language
         
         # Prepare analysis data for PDF generation (same as existing download functionality)
         analysis_data = results_data.get('analysis_results', {})
@@ -16838,7 +16911,10 @@ def generate_results_pdf(results_data, include_raw_data=True, include_summary=Tr
         
         # Generate comprehensive PDF using existing PDF utils
         generator = PDFReportGenerator()
-        pdf_bytes = generator.generate_report(analysis_data, metadata, options)
+        pdf_bytes = generator.generate_report(analysis_data, metadata, options, language=language)
+        
+        # Restore original language
+        st.session_state.language = original_lang
         
         return pdf_bytes
         
@@ -16846,6 +16922,9 @@ def generate_results_pdf(results_data, include_raw_data=True, include_summary=Tr
         logger.error(f"Error generating comprehensive results PDF: {e}")
         import traceback
         logger.error(f"Full traceback: {traceback.format_exc()}")
+        # Restore original language even on error
+        if 'original_lang' in locals():
+            st.session_state.language = original_lang
         return None
 
 
