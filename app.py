@@ -290,9 +290,9 @@ def initialize_app():
             current_lang = query_params.get('lang', 'en')
             if current_lang not in ['en', 'ms']:
                 current_lang = 'en'
-            st.session_state.language = current_lang
+                st.session_state.language = current_lang
         except Exception:
-            st.session_state.language = 'en'
+                st.session_state.language = 'en'
     
     # Initialize Firebase
     if not initialize_firebase():
