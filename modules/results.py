@@ -2212,6 +2212,47 @@ def process_html_tables(text):
                         row = [td.get_text(strip=True) for td in tr.find_all(['td', 'th'])]
                         if row:  # Only add non-empty rows
                             rows.append(row)
+                
+                # Create a styled HTML table if we have headers and rows
+                if headers and rows:
+                    table_html = f"""
+                    <div style="margin: 20px 0; overflow-x: auto;">
+                        <h4 style="color: #2c3e50; margin-bottom: 15px; font-weight: 600;">📊 {title}</h4>
+                        <table style="width: 100%; border-collapse: collapse; background: white; border-radius: 8px; overflow: hidden; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">
+                            <thead>
+                                <tr style="background: linear-gradient(135deg, #43e97b, #38f9d7); color: white;">
+                    """
+                    
+                    # Add headers
+                    for header in headers:
+                        table_html += f'<th style="padding: 12px 15px; text-align: left; font-weight: 600; border-right: 1px solid rgba(255,255,255,0.2);">{header}</th>'
+                    
+                    table_html += """
+                                </tr>
+                            </thead>
+                            <tbody>
+                    """
+                    
+                    # Add rows
+                    for i, row in enumerate(rows):
+                        row_style = "background: #f8f9fa;" if i % 2 == 0 else "background: white;"
+                        table_html += f'<tr style="{row_style}">'
+                        for cell in row:
+                            table_html += f'<td style="padding: 10px 15px; border-right: 1px solid #e9ecef; border-bottom: 1px solid #e9ecef; vertical-align: top;">{cell}</td>'
+                        table_html += '</tr>'
+                    
+                    table_html += """
+                            </tbody>
+                        </table>
+                    </div>
+                    """
+                    
+                    # Replace the original table block with the styled HTML
+                    if table_block_tuple[0]:  # <tables> format
+                        original_block = f'<tables>{table_block}</tables>'
+                    else:  # <TABLE> format
+                        original_block = f'<TABLE>{table_block}</TABLE>'
+                    processed_text = processed_text.replace(original_block, table_html)
             else:
                 # Handle custom TABLE format with <TITLE>, <HEADERS>, <ROWS>
                 title_match = re.search(r'<TITLE>(.*?)</TITLE>', table_block, re.DOTALL)
@@ -14871,16 +14912,39 @@ def display_regenerative_agriculture_content(analysis_data):
 
         detailed_text = sanitize_persona_and_enforce_article(detailed_text)
 
+        # Process HTML/XML tables in the content first
+        processed_text = process_html_tables(detailed_text)
+        
         # Use markdown normalization for better formatting
-        normalized_content = normalize_markdown_block_for_step3(detailed_text)
+        normalized_content = normalize_markdown_block_for_step3(processed_text)
 
         st.markdown("#### 📋 Detailed Analysis")
-        st.markdown(
-            f'<div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #ffffff, #f8f9fa); border: 1px solid #e9ecef; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">'
-            f'<div style="color: #2c3e50; line-height: 1.7;">{normalized_content}</div>'
-            f'</div>',
-            unsafe_allow_html=True
-        )
+        
+        # Check if content contains processed HTML tables
+        if '<table' in normalized_content and '</table>' in normalized_content:
+            # Split content by tables and render appropriately
+            parts = re.split(r'(<div style="margin: 20px 0.*?</div>\s*</div>)', normalized_content, flags=re.DOTALL)
+            for part in parts:
+                if part.strip():
+                    if '<table' in part:
+                        # This is a processed table, render directly
+                        st.markdown(part, unsafe_allow_html=True)
+                    else:
+                        # Regular text content
+                        st.markdown(
+                            f'<div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #ffffff, #f8f9fa); border: 1px solid #e9ecef; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">'
+                            f'<div style="color: #2c3e50; line-height: 1.7;">{part}</div>'
+                            f'</div>',
+                            unsafe_allow_html=True
+                        )
+        else:
+            # No tables, render as regular text
+            st.markdown(
+                f'<div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #ffffff, #f8f9fa); border: 1px solid #e9ecef; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">'
+                f'<div style="color: #2c3e50; line-height: 1.7;">{normalized_content}</div>'
+                f'</div>',
+                unsafe_allow_html=True
+            )
     except Exception:
         pass
 
