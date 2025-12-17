@@ -23,6 +23,7 @@ from utils.ocr_utils import extract_data_from_image
 from modules.admin import get_active_prompt
 from utils.feedback_system import (
     display_feedback_section as display_feedback_section_util)
+from utils.translations import t, get_language
 
 # Import CropDrive integration for user ID
 try:
@@ -730,23 +731,27 @@ def show_results_page():
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
-            if st.button("📥 Download PDF Report", type="primary", use_container_width=True):
+            if st.button(f"📥 {t('pdf_download_report', 'Download PDF Report')}", type="primary", use_container_width=True):
                 try:
                     # Generate PDF
-                    with st.spinner("🔄 Generating PDF report..."):
+                    with st.spinner(f"🔄 {t('pdf_generating', 'Generating PDF report...')}"):
                         pdf_bytes = generate_results_pdf(results_data)
                         
+                    # Get language-specific filename
+                    current_lang = get_language()
+                    filename = "laporan_analisis_pertanian.pdf" if current_lang == 'ms' else "agricultural_analysis_report.pdf"
+                    
                     # Download the PDF
                     st.download_button(
-                        label="💾 Download PDF",
+                        label=f"💾 {t('pdf_download_report', 'Download PDF')}",
                         data=pdf_bytes,
-                        file_name=f"agricultural_analysis_report.pdf",
+                        file_name=filename,
                         mime="application/pdf",
                         type="primary"
                     )
                     
                 except Exception as e:
-                    st.error(f"❌ Failed to generate PDF: {str(e)}")
+                    st.error(f"❌ {t('pdf_generated_error', 'Failed to generate PDF')}: {str(e)}")
                     st.info("Please try again or contact support if the issue persists.")
         
         st.markdown('</div>', unsafe_allow_html=True)
@@ -8030,28 +8035,33 @@ def display_references_section(results_data):
     
     # Download PDF button after references
     st.markdown("---")
-    st.markdown("## 📄 Download Report")
+    st.markdown(f"## 📄 {t('pdf_download_report', 'Download Report')}")
     
     col1, col2, col3 = st.columns([1, 2, 1])
     with col2:
-        if st.button("📥 Download PDF Report", type="primary", use_container_width=True):
+        if st.button(f"📥 {t('pdf_download_report', 'Download PDF Report')}", type="primary", use_container_width=True, key="download_pdf_btn_2"):
             try:
                 # Generate PDF
-                with st.spinner("🔄 Generating PDF report..."):
+                with st.spinner(f"🔄 {t('pdf_generating', 'Generating PDF report...')}"):
                     pdf_bytes = generate_results_pdf(results_data)
                     
+                # Get language-specific filename
+                current_lang = get_language()
+                timestamp_str = datetime.now().strftime('%Y%m%d_%H%M%S')
+                filename = f"laporan_analisis_pertanian_{timestamp_str}.pdf" if current_lang == 'ms' else f"agricultural_analysis_report_{timestamp_str}.pdf"
+                
                 # Download the PDF
                 st.download_button(
-                    label="💾 Download PDF",
+                    label=f"💾 {t('pdf_download_report', 'Download PDF')}",
                     data=pdf_bytes,
-                    file_name=f"agricultural_analysis_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf",
+                    file_name=filename,
                     mime="application/pdf",
                     type="primary"
                 )
-                st.success("✅ PDF report generated successfully!")
+                st.success(f"✅ {t('pdf_generated_success', 'PDF report generated successfully!')}")
                 
             except Exception as e:
-                st.error(f"❌ Failed to generate PDF: {str(e)}")
+                st.error(f"❌ {t('pdf_generated_error', 'Failed to generate PDF')}: {str(e)}")
                 st.info("Please try again or contact support if the issue persists.")
 
 
@@ -16773,10 +16783,17 @@ def _removed_generate_results_pdf(results_data, include_raw_data=True, include_s
 def generate_results_pdf(results_data, include_raw_data=True, include_summary=True, 
                         include_key_findings=True, include_step_analysis=True, 
                         include_references=False, include_charts=True, 
-                        pdf_title="Agricultural Analysis Report", include_timestamp=True):
+                        pdf_title=None, include_timestamp=True):
     """Generate comprehensive PDF from results page content - includes ALL details"""
     try:
         from utils.pdf_utils import PDFReportGenerator
+        
+        # Get current language from session state
+        current_language = st.session_state.get('language', 'en')
+        
+        # Set PDF title based on language if not provided
+        if pdf_title is None:
+            pdf_title = t('pdf_title', 'Agricultural Analysis Report')
         
         # Prepare analysis data for PDF generation (same as existing download functionality)
         analysis_data = results_data.get('analysis_results', {})
@@ -16836,9 +16853,9 @@ def generate_results_pdf(results_data, include_raw_data=True, include_summary=Tr
             'include_all_details': True  # Ensure all details are included
         }
         
-        # Generate comprehensive PDF using existing PDF utils
+        # Generate comprehensive PDF using existing PDF utils with language support
         generator = PDFReportGenerator()
-        pdf_bytes = generator.generate_report(analysis_data, metadata, options)
+        pdf_bytes = generator.generate_report(analysis_data, metadata, options, language=current_language)
         
         return pdf_bytes
         

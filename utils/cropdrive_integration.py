@@ -203,6 +203,10 @@ def send_analysis_complete(
         file_url: URL to analysis file/image (optional)
         analysis_data: Additional analysis data dict (optional)
     """
+    # Include user ID in the analysis complete message
+    user_id = get_user_id()
+    user_email = get_user_email()
+    
     message = {
         'type': 'ANALYSIS_COMPLETE',
         'title': title,
@@ -210,15 +214,24 @@ def send_analysis_complete(
         'summary': summary or '',
         'recommendationsCount': recommendations_count,
         'fileUrl': file_url,
-        'analysisData': analysis_data or {}
+        'analysisData': analysis_data or {},
+        'userId': user_id,
+        'userEmail': user_email
     }
     
-    # IMPORTANT: Update this with your actual website domain
-    parent_origin = 'https://cropdrive-f5exleg55-mark-lloyd-cuizons-projects.vercel.app'
+    # Send to all allowed origins
+    allowed_origins = [
+        'https://cropdrive.ai',
+        'https://cropdrive-f5exleg55-mark-lloyd-cuizons-projects.vercel.app',
+        'http://localhost:3000'
+    ]
     
     send_js = f"""
     <script>
-    window.parent.postMessage({json.dumps(message)}, '{parent_origin}');
+    const allowedOrigins = {json.dumps(allowed_origins)};
+    allowedOrigins.forEach(origin => {{
+        window.parent.postMessage({json.dumps(message)}, origin);
+    }});
     console.log('📤 Sent analysis complete message:', {json.dumps(message)});
     </script>
     """
@@ -264,11 +277,18 @@ def send_feature_restricted(required_plan: str, feature_name: str):
         'featureName': feature_name
     }
     
-    parent_origin = 'https://cropdrive-f5exleg55-mark-lloyd-cuizons-projects.vercel.app'
+    allowed_origins = [
+        'https://cropdrive.ai',
+        'https://cropdrive-f5exleg55-mark-lloyd-cuizons-projects.vercel.app',
+        'http://localhost:3000'
+    ]
     
     send_js = f"""
     <script>
-    window.parent.postMessage({json.dumps(message)}, '{parent_origin}');
+    const allowedOrigins = {json.dumps(allowed_origins)};
+    allowedOrigins.forEach(origin => {{
+        window.parent.postMessage({json.dumps(message)}, origin);
+    }});
     </script>
     """
     
