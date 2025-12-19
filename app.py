@@ -127,7 +127,7 @@ except Exception as e:
 
 # Page configuration
 st.set_page_config(
-    page_title="CropDriveTM Assistant",
+    page_title="CropDrive™ AI Assistant",
     page_icon="🌴",
     layout="wide",
     initial_sidebar_state="expanded"
@@ -322,7 +322,7 @@ def show_sidebar():
         # Logo and title
         st.markdown(f"""
         <div class="sidebar-logo">
-            <h2>🌴 CropDriveTM</h2>
+            <h2>🌴 CropDrive™ AI</h2>
             <p>{t('app_subtitle')}</p>
         </div>
         """, unsafe_allow_html=True)
