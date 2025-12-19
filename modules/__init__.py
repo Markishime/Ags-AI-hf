@@ -1,1 +1,1 @@
-# Modules package for AGS AI Assistant
+# Modules package for CropDriveTM Assistant

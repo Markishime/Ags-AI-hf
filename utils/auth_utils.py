@@ -531,9 +531,9 @@ class AuthManager:
             import streamlit as st
             # Prepare shared content
             try:
-                app_name = st.secrets.get('app', {}).get('name', 'AGS AI Assistant') if hasattr(st, 'secrets') else 'AGS AI Assistant'
+                app_name = st.secrets.get('app', {}).get('name', 'CropDriveTM Assistant') if hasattr(st, 'secrets') else 'CropDriveTM Assistant'
             except Exception:
-                app_name = 'AGS AI Assistant'
+                app_name = 'CropDriveTM Assistant'
             subject = f"Reset your password for {app_name}"
             text_body = f"""
 Hello,\n\nFollow this link to reset your {app_name} password for your {to_email} account.\n\n{reset_link}\n\nIf you didn’t ask to reset your password, you can ignore this email.\n\nThanks,\n\nYour {app_name} team\n"""
@@ -713,16 +713,16 @@ Hello,\n\nFollow this link to reset your {app_name} password for your {to_email}
             users_ref = db.collection(COLLECTIONS['users'])
             
             # Check if default admin exists
-            admin_query = users_ref.where(filter=FieldFilter('email', '==', 'agsadmin@ags.ai')).limit(1)
+            admin_query = users_ref.where(filter=FieldFilter('email', '==', 'admin@cropdrive.ai')).limit(1)
             existing_admin = admin_query.get()
             
             if not existing_admin:
                 # Create default admin user
                 admin_data = {
-                    'email': 'agsadmin@ags.ai',
-                    'name': 'AGS Admin',
-                    'company': 'AGS AI',
-                    'password_hash': self._hash_password('agsai123'),
+                    'email': 'admin@cropdrive.ai',
+                    'name': 'CropDriveTM Admin',
+                    'company': 'CropDriveTM',
+                    'password_hash': self._hash_password('cropdrive123'),
                     'role': 'admin',
                     'is_active': True,
                     'created_at': datetime.now(),

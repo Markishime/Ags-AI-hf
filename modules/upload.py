@@ -53,7 +53,7 @@ except ImportError:
 def get_machine_id():
     """Generate a persistent machine identifier that persists across sessions"""
     if 'machine_id' not in st.session_state:
-        machine_id_file = os.path.join(os.path.expanduser('~'), '.ags_ai_machine_id')
+        machine_id_file = os.path.join(os.path.expanduser('~'), '.cropdrive_machine_id')
         machine_id = None
         
         # Try to read existing machine ID from file
