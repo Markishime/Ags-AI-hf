@@ -1,7 +1,7 @@
 """
 Parameter Standardization Utility
 Handles consistent naming and mapping of soil and leaf analysis parameters
-across all modules in the CropDriveTM system.
+across all modules in the CropDrive™ AI Assistant system.
 """
 
 import re

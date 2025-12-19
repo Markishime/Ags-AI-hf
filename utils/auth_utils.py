@@ -531,9 +531,9 @@ class AuthManager:
             import streamlit as st
             # Prepare shared content
             try:
-                app_name = st.secrets.get('app', {}).get('name', 'CropDriveTM Assistant') if hasattr(st, 'secrets') else 'CropDriveTM Assistant'
+                app_name = st.secrets.get('app', {}).get('name', 'CropDrive™ AI Assistant') if hasattr(st, 'secrets') else 'CropDrive™ AI Assistant'
             except Exception:
-                app_name = 'CropDriveTM Assistant'
+                app_name = 'CropDrive™ AI Assistant'
             subject = f"Reset your password for {app_name}"
             text_body = f"""
 Hello,\n\nFollow this link to reset your {app_name} password for your {to_email} account.\n\n{reset_link}\n\nIf you didn’t ask to reset your password, you can ignore this email.\n\nThanks,\n\nYour {app_name} team\n"""
@@ -720,9 +720,9 @@ Hello,\n\nFollow this link to reset your {app_name} password for your {to_email}
                 # Create default admin user
                 admin_data = {
                     'email': 'admin@cropdrive.ai',
-                    'name': 'CropDriveTM Admin',
-                    'company': 'CropDriveTM',
-                    'password_hash': self._hash_password('cropdrive123'),
+                    'name': 'CropDrive Admin',
+                    'company': 'CropDrive™ AI',
+                    'password_hash': self._hash_password('agsai123'),
                     'role': 'admin',
                     'is_active': True,
                     'created_at': datetime.now(),

@@ -1,1 +1,1 @@
-# Modules package for CropDriveTM Assistant
+# Modules package for CropDrive™ AI Assistant
