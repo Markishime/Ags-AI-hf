@@ -1737,7 +1737,7 @@ class PDFReportGenerator:
             }
             
             # Always show Soil Nutrient Status section header
-            story.append(Paragraph("🌱 Soil Nutrient Status", self.styles['Heading4']))
+            story.append(Paragraph(f"🌱 {self._t('soil_nutrient_status_title', 'Soil Nutrient Status')}", self.styles['Heading4']))
             story.append(Spacer(1, 4))
             
             # Create Soil Nutrient Status table
@@ -1756,13 +1756,13 @@ class PDFReportGenerator:
                             
                         min_val, max_val = soil_mpob_standards.get(param_name, (0, 0))
                         
-                        # Determine status
+                        # Determine status with translation
                         if avg_value < min_val:
-                            status = "Deficient"
+                            status = self._t('status_deficient', 'Deficient')
                         elif avg_value > max_val:
-                            status = "Excessive"
+                            status = self._t('status_excess', 'Excessive')
                         else:
-                            status = "Optimal"
+                            status = self._t('status_optimal', 'Optimal')
                         
                         soil_data.append([
                             param_name,
@@ -1772,20 +1772,22 @@ class PDFReportGenerator:
                         ])
                 
                 if soil_data:
-                    headers = ["Parameter", "Current Value", "MPOB Range", "Status"]
+                    headers = [self._t('table_parameter', 'Parameter'), self._t('table_value', 'Current Value'), self._t('table_mpob_standard', 'MPOB Range'), self._t('table_status', 'Status')]
                     table_data = [headers] + soil_data
                     pdf_table = self._create_table_with_proper_layout(table_data)
                     story.append(pdf_table)
                     story.append(Spacer(1, 8))
                 else:
-                    story.append(Paragraph("No soil nutrient data available (all values are 0)", self.styles['CustomBody']))
+                    no_data_text = self._t('pdf_no_soil_data', 'No soil nutrient data available (all values are 0)')
+                    story.append(Paragraph(no_data_text, self.styles['CustomBody']))
                     story.append(Spacer(1, 8))
             else:
-                story.append(Paragraph("No soil nutrient data available (all values are 0)", self.styles['CustomBody']))
+                no_data_text = self._t('pdf_no_soil_data', 'No soil nutrient data available (all values are 0)')
+                story.append(Paragraph(no_data_text, self.styles['CustomBody']))
                 story.append(Spacer(1, 8))
             
             # Always show Leaf Nutrient Status section header
-            story.append(Paragraph("🍃 Leaf Nutrient Status", self.styles['Heading4']))
+            story.append(Paragraph(f"🍃 {self._t('leaf_nutrient_status_title', 'Leaf Nutrient Status')}", self.styles['Heading4']))
             story.append(Spacer(1, 4))
             
             # Create Leaf Nutrient Status table
@@ -1804,13 +1806,13 @@ class PDFReportGenerator:
                             
                         min_val, max_val = leaf_mpob_standards.get(param_name, (0, 0))
                         
-                        # Determine status
+                        # Determine status with translation
                         if avg_value < min_val:
-                            status = "Deficient"
+                            status = self._t('status_deficient', 'Deficient')
                         elif avg_value > max_val:
-                            status = "Excessive"
+                            status = self._t('status_excess', 'Excessive')
                         else:
-                            status = "Optimal"
+                            status = self._t('status_optimal', 'Optimal')
                         
                         leaf_data.append([
                             param_name,
@@ -1820,16 +1822,18 @@ class PDFReportGenerator:
                         ])
                 
                 if leaf_data:
-                    headers = ["Parameter", "Current Value", "MPOB Range", "Status"]
+                    headers = [self._t('table_parameter', 'Parameter'), self._t('table_value', 'Current Value'), self._t('table_mpob_standard', 'MPOB Range'), self._t('table_status', 'Status')]
                     table_data = [headers] + leaf_data
                     pdf_table = self._create_table_with_proper_layout(table_data)
                     story.append(pdf_table)
                     story.append(Spacer(1, 8))
                 else:
-                    story.append(Paragraph("No leaf nutrient data available (all values are 0)", self.styles['CustomBody']))
+                    no_data_text = self._t('pdf_no_leaf_data', 'No leaf nutrient data available (all values are 0)')
+                    story.append(Paragraph(no_data_text, self.styles['CustomBody']))
                     story.append(Spacer(1, 8))
             else:
-                story.append(Paragraph("No leaf nutrient data available (all values are 0)", self.styles['CustomBody']))
+                no_data_text = self._t('pdf_no_leaf_data', 'No leaf nutrient data available (all values are 0)')
+                story.append(Paragraph(no_data_text, self.styles['CustomBody']))
                 story.append(Spacer(1, 8))
                     
         except Exception as e:
@@ -1894,7 +1898,8 @@ class PDFReportGenerator:
                 return
             
             # Always show Raw Soil Sample Data section header
-            story.append(Paragraph("🌱 Raw Soil Sample Data", self.styles['Heading4']))
+            raw_soil_title = self._t('pdf_raw_soil_data', 'Raw Soil Sample Data') if self.language == 'ms' else 'Raw Soil Sample Data'
+            story.append(Paragraph(f"🌱 {raw_soil_title}", self.styles['Heading4']))
             story.append(Spacer(1, 4))
             
             # Create Soil Sample Data table
@@ -1925,7 +1930,8 @@ class PDFReportGenerator:
                 story.append(Spacer(1, 8))
             
             # Always show Raw Leaf Sample Data section header
-            story.append(Paragraph("🍃 Raw Leaf Sample Data", self.styles['Heading4']))
+            raw_leaf_title = self._t('pdf_raw_leaf_data', 'Raw Leaf Sample Data') if self.language == 'ms' else 'Raw Leaf Sample Data'
+            story.append(Paragraph(f"🍃 {raw_leaf_title}", self.styles['Heading4']))
             story.append(Spacer(1, 4))
             
             # Create Leaf Sample Data table
@@ -2041,7 +2047,7 @@ class PDFReportGenerator:
             
             # Display Soil Nutrient Status table
             if soil_params and 'parameter_statistics' in soil_params:
-                story.append(Paragraph("🌱 Soil Nutrient Status (Average vs. MPOB Standard)", self.styles['Heading4']))
+                story.append(Paragraph(f"🌱 {self._t('soil_nutrient_status_title', 'Soil Nutrient Status (Average vs. MPOB Standard)')}", self.styles['Heading4']))
                 
                 # Create soil data list
                 soil_data = []
@@ -2111,7 +2117,7 @@ class PDFReportGenerator:
             
             # Display Leaf Nutrient Status table
             if leaf_params and 'parameter_statistics' in leaf_params:
-                story.append(Paragraph("🍃 Leaf Nutrient Status (Average vs. MPOB Standard)", self.styles['Heading4']))
+                story.append(Paragraph(f"🍃 {self._t('leaf_nutrient_status_title', 'Leaf Nutrient Status (Average vs. MPOB Standard)')}", self.styles['Heading4']))
                 
                 # Create leaf data list
                 leaf_data = []

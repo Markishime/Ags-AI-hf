@@ -3116,19 +3116,28 @@ def display_leaf_data_table(leaf_data):
 def display_summary_section(results_data):
     """Display a comprehensive Executive Summary with farmer-friendly explanations"""
     st.markdown("---")
-    st.markdown("## 📝 **Executive Summary**")
-    st.markdown("*Key insights from your soil and leaf analysis in simple terms*")
+    st.markdown(f"## 📝 **{t('executive_summary', 'Executive Summary')}**")
+    st.markdown(f"*{t('executive_summary_desc', 'Key insights from your soil and leaf analysis in simple terms')}*")
 
     # Add farmer-friendly introduction
-    st.markdown("""
-    **🌱 Your Oil Palm Health Report**
+    current_lang = get_language()
+    if current_lang == 'ms':
+        st.markdown("""
+        **🌱 Laporan Kesihatan Kelapa Sawit Anda**
 
-    This summary gives you the **big picture** of what's happening with your soil and palm trees.
-    We've analyzed your lab results and created this easy-to-understand overview.
-    """)
+        Ringkasan ini memberikan anda **gambaran besar** tentang apa yang berlaku dengan tanah dan pokok sawit anda.
+        Kami telah menganalisis keputusan makmal anda dan mencipta gambaran keseluruhan yang mudah difahami ini.
+        """)
+    else:
+        st.markdown("""
+        **🌱 Your Oil Palm Health Report**
+
+        This summary gives you the **big picture** of what's happening with your soil and palm trees.
+        We've analyzed your lab results and created this easy-to-understand overview.
+        """)
 
     st.markdown("---")
-    st.markdown("### 📊 **Executive Summary**")
+    st.markdown(f"### 📊 **{t('executive_summary', 'Executive Summary')}**")
     
     # Get analysis data with type checking
     analysis_results = get_analysis_results_from_data(results_data)
@@ -5690,23 +5699,34 @@ def display_analysis_components(analysis_results):
     # Check for economic forecast data
     economic_forecast = analysis_results.get('economic_forecast')
     if economic_forecast:
-        st.markdown("## 📈 Economic Forecast")
+        st.markdown(f"## 📈 {t('economic_forecast', 'Economic Forecast')}")
         display_economic_forecast(economic_forecast)
 
 def display_step_block(step_result, step_number, step_title):
     """Display step results in a professional block format with clear visual hierarchy"""
     
-    # Define step-specific colors and icons
-    step_configs = {
-        1: {"color": "#667eea", "icon": "📊", "description": "Data Analysis & Interpretation"},
-        2: {"color": "#f093fb", "icon": "🔍", "description": "Issue Diagnosis & Problem Identification"},
-        3: {"color": "#4facfe", "icon": "💡", "description": "Solution Recommendations & Strategies"},
-        4: {"color": "#43e97b", "icon": "🌱", "description": "Regenerative Agriculture Integration"},
-        5: {"color": "#fa709a", "icon": "💰", "description": "Economic Impact & ROI Analysis"},
-        6: {"color": "#000000", "icon": "📈", "description": "Yield Forecast & Projections"}
-    }
+    # Define step-specific colors and icons with translations
+    current_lang = get_language()
+    if current_lang == 'ms':
+        step_configs = {
+            1: {"color": "#667eea", "icon": "📊", "description": "Analisis Data & Interpretasi"},
+            2: {"color": "#f093fb", "icon": "🔍", "description": "Diagnosis Isu & Pengenalan Masalah"},
+            3: {"color": "#4facfe", "icon": "💡", "description": "Cadangan Penyelesaian & Strategi"},
+            4: {"color": "#43e97b", "icon": "🌱", "description": "Integrasi Pertanian Regeneratif"},
+            5: {"color": "#fa709a", "icon": "💰", "description": "Kesan Ekonomi & Analisis ROI"},
+            6: {"color": "#000000", "icon": "📈", "description": "Ramalan & Unjuran Hasil"}
+        }
+    else:
+        step_configs = {
+            1: {"color": "#667eea", "icon": "📊", "description": "Data Analysis & Interpretation"},
+            2: {"color": "#f093fb", "icon": "🔍", "description": "Issue Diagnosis & Problem Identification"},
+            3: {"color": "#4facfe", "icon": "💡", "description": "Solution Recommendations & Strategies"},
+            4: {"color": "#43e97b", "icon": "🌱", "description": "Regenerative Agriculture Integration"},
+            5: {"color": "#fa709a", "icon": "💰", "description": "Economic Impact & ROI Analysis"},
+            6: {"color": "#000000", "icon": "📈", "description": "Yield Forecast & Projections"}
+        }
     
-    config = step_configs.get(step_number, {"color": "#667eea", "icon": "📋", "description": "Analysis Step"})
+    config = step_configs.get(step_number, {"color": "#667eea", "icon": "📋", "description": t('results_step_analysis', 'Analysis Step')})
     
     # Create a prominent step header with step-specific styling
     st.markdown(f"""
@@ -6367,7 +6387,7 @@ def display_table(table_data, title):
 
 def display_step1_data_analysis(analysis_data):
     """Display Step 1: Data Analysis content"""
-    st.markdown("### 📊 Data Analysis Results")
+    st.markdown(f"### 📊 {t('results_data_analysis', 'Data Analysis Results')}")
     
     # Display nutrient comparisons
     if 'nutrient_comparisons' in analysis_data:
@@ -6407,7 +6427,7 @@ def display_step1_data_analysis(analysis_data):
 
 def display_step3_solution_recommendations(analysis_data):
     """Display Step 3: Solution Recommendations content"""
-    st.markdown("### 💡 Solution Recommendations")
+    st.markdown(f"### 💡 {t('results_solution_recommendations', 'Solution Recommendations')}")
 
     # Display solutions
     if 'solutions' in analysis_data and analysis_data['solutions']:
@@ -6477,7 +6497,7 @@ def display_step3_solution_recommendations(analysis_data):
 
 def display_step2_issue_diagnosis(analysis_data):
     """Display Step 2: Issue Diagnosis content with consistent formatting"""
-    st.markdown("### 🔍 Issue Diagnosis")
+    st.markdown(f"### 🔍 {t('results_issue_diagnosis', 'Issue Diagnosis')}")
 
     # Display summary if available
     if 'summary' in analysis_data and analysis_data['summary']:
@@ -6567,7 +6587,7 @@ def display_step2_issue_diagnosis(analysis_data):
 def display_step5_economic_forecast(analysis_data):
     """Display Step 5: Economic Impact Forecast content with consistent formatting"""
     try:
-        st.markdown("### 💰 Economic Impact Forecast")
+        st.markdown(f"### 💰 {t('results_economic_impact', 'Economic Impact Forecast')}")
 
         # Display accurate tables directly from backend data if available
         # Try multiple locations for economic_forecast data
@@ -8113,21 +8133,32 @@ def display_analysis_components(analysis_results):
     economic_forecast = analysis_results.get('economic_forecast', {})
     if economic_forecast:
         st.markdown("---")
-        st.markdown("## 📈 Economic Forecast")
+        st.markdown(f"## 📈 {t('economic_forecast', 'Economic Forecast')}")
         display_economic_forecast(economic_forecast)
 
 def display_step_block(step_result, step_number, step_title):
     """Display step results in a professional block format with clear visual hierarchy"""
     
-    # Define step-specific colors and icons
-    step_configs = {
-        1: {"color": "#667eea", "icon": "📊", "description": "Data Analysis & Interpretation"},
-        2: {"color": "#f093fb", "icon": "🔍", "description": "Issue Diagnosis & Problem Identification"},
-        3: {"color": "#4facfe", "icon": "💡", "description": "Solution Recommendations & Strategies"},
-        4: {"color": "#43e97b", "icon": "🌱", "description": "Regenerative Agriculture Integration"},
-        5: {"color": "#fa709a", "icon": "💰", "description": "Economic Impact & ROI Analysis"},
-        6: {"color": "#000000", "icon": "📈", "description": "Yield Forecast & Projections"}
-    }
+    # Define step-specific colors and icons with translations
+    current_lang = get_language()
+    if current_lang == 'ms':
+        step_configs = {
+            1: {"color": "#667eea", "icon": "📊", "description": "Analisis Data & Interpretasi"},
+            2: {"color": "#f093fb", "icon": "🔍", "description": "Diagnosis Isu & Pengenalan Masalah"},
+            3: {"color": "#4facfe", "icon": "💡", "description": "Cadangan Penyelesaian & Strategi"},
+            4: {"color": "#43e97b", "icon": "🌱", "description": "Integrasi Pertanian Regeneratif"},
+            5: {"color": "#fa709a", "icon": "💰", "description": "Kesan Ekonomi & Analisis ROI"},
+            6: {"color": "#000000", "icon": "📈", "description": "Ramalan & Unjuran Hasil"}
+        }
+    else:
+        step_configs = {
+            1: {"color": "#667eea", "icon": "📊", "description": "Data Analysis & Interpretation"},
+            2: {"color": "#f093fb", "icon": "🔍", "description": "Issue Diagnosis & Problem Identification"},
+            3: {"color": "#4facfe", "icon": "💡", "description": "Solution Recommendations & Strategies"},
+            4: {"color": "#43e97b", "icon": "🌱", "description": "Regenerative Agriculture Integration"},
+            5: {"color": "#fa709a", "icon": "💰", "description": "Economic Impact & ROI Analysis"},
+            6: {"color": "#000000", "icon": "📈", "description": "Yield Forecast & Projections"}
+        }
     
     config = step_configs.get(step_number, {"color": "#667eea", "icon": "📋", "description": "Analysis Step"})
     
@@ -11528,7 +11559,7 @@ def create_soil_vs_mpob_visualization_with_robust_mapping(analysis_data):
         
         return {
             'type': 'actual_vs_optimal_bar',
-            'title': '🌱 Soil Nutrient Status (Average vs. MPOB Standard)',
+            'title': f"🌱 {t('soil_nutrient_status_title', 'Soil Nutrient Status (Average vs. MPOB Standard)')}",
             'subtitle': 'REAL values from your current data - Observed (Average) vs Recommended (MPOB)',
             'data': {
                 'categories': categories,
@@ -11661,7 +11692,7 @@ def create_leaf_vs_mpob_visualization_with_robust_mapping(analysis_data):
         
         return {
             'type': 'actual_vs_optimal_bar',
-            'title': '🍃 Leaf Nutrient Status (Average vs. MPOB Standard)',
+            'title': f"🍃 {t('leaf_nutrient_status_title', 'Leaf Nutrient Status (Average vs. MPOB Standard)')}",
             'subtitle': 'REAL values from your current data - Observed (Average) vs Recommended (MPOB)',
             'data': {
                 'categories': categories,
@@ -11843,7 +11874,7 @@ def create_sample_step1_visualizations():
         # Create sample soil vs MPOB visualization with exact values from image tables
         sample_soil_viz = {
             'type': 'actual_vs_optimal_bar',
-            'title': '🌱 Soil Nutrient Status (Average vs. MPOB Standard)',
+            'title': f"🌱 {t('soil_nutrient_status_title', 'Soil Nutrient Status (Average vs. MPOB Standard)')}",
             'subtitle': 'Demonstration of soil nutrient analysis visualization',
             'data': {
                 'categories': ['pH', 'N (%)', 'Org. C (%)', 'Total P (mg/kg)', 'Avail P (mg/kg)', 'Exch. K (meq/100 g)', 'Exch. Ca (meq/100 g)', 'Exch. Mg (meq/100 g)', 'CEC (meq/100 g)'],
@@ -11863,7 +11894,7 @@ def create_sample_step1_visualizations():
         # Create sample leaf vs MPOB visualization with exact values from image tables
         sample_leaf_viz = {
             'type': 'actual_vs_optimal_bar',
-            'title': '🍃 Leaf Nutrient Status (Average vs. MPOB Standard)',
+            'title': f"🍃 {t('leaf_nutrient_status_title', 'Leaf Nutrient Status (Average vs. MPOB Standard)')}",
             'subtitle': 'Demonstration of leaf nutrient analysis visualization',
             'data': {
                 'categories': ['N (%)', 'P (%)', 'K (%)', 'Mg (%)', 'Ca (%)', 'B (mg/kg)', 'Cu (mg/kg)', 'Zn (mg/kg)'],
@@ -11980,7 +12011,7 @@ def create_soil_vs_mpob_visualization(soil_params):
 
         return {
             'type': 'actual_vs_optimal_bar',
-            'title': '🌱 Soil Nutrient Status (Average vs. MPOB Standard)',
+            'title': f"🌱 {t('soil_nutrient_status_title', 'Soil Nutrient Status (Average vs. MPOB Standard)')}",
             'subtitle': 'EXACT values copied from Soil Nutrient Status table',
             'data': {
                 'categories': categories,
@@ -12089,7 +12120,7 @@ def create_leaf_vs_mpob_visualization(leaf_params):
 
         return {
             'type': 'actual_vs_optimal_bar',
-            'title': '🍃 Leaf Nutrient Status (Average vs. MPOB Standard)',
+            'title': f"🍃 {t('leaf_nutrient_status_title', 'Leaf Nutrient Status (Average vs. MPOB Standard)')}",
             'subtitle': 'EXACT values copied from Leaf Nutrient Status table',
             'data': {
                 'categories': categories,
@@ -12945,7 +12976,7 @@ def display_nutrient_status_tables(analysis_data):
         
         # Display Soil Nutrient Status table - BULLETPROOF VERSION
         if soil_params and 'parameter_statistics' in soil_params:
-            st.markdown("### 🌱 Soil Nutrient Status (Average vs. MPOB Standard)")
+            st.markdown(f"### 🌱 {t('soil_nutrient_status_title', 'Soil Nutrient Status (Average vs. MPOB Standard)')}")
             
             # Create soil data list with BULLETPROOF validation
             soil_data = []
@@ -13051,7 +13082,7 @@ def display_nutrient_status_tables(analysis_data):
         
         # Display Leaf Nutrient Status table - BULLETPROOF VERSION
         if leaf_params and 'parameter_statistics' in leaf_params:
-            st.markdown("### 🍃 Leaf Nutrient Status (Average vs. MPOB Standard)")
+            st.markdown(f"### 🍃 {t('leaf_nutrient_status_title', 'Leaf Nutrient Status (Average vs. MPOB Standard)')}")
             
             # Create leaf data list with BULLETPROOF validation
             leaf_data = []
@@ -15073,12 +15104,12 @@ def display_economic_impact_content(analysis_data):
         # Display key metrics
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("🌾 Current Yield", f"{current_yield:.1f} tonnes/ha")
+            st.metric(f"🌾 {t('current_yield_tonnes_ha', 'Current Yield')}", f"{current_yield:.1f} {t('tonnes_per_hectare', 'tonnes/ha')}")
         with col2:
-            st.metric("🏞️ Land Size", f"{land_size:.1f} hectares")
+            st.metric(f"🏞️ {t('land_size_hectares', 'Land Size')}", f"{land_size:.1f} {t('hectares', 'hectares')}")
         with col3:
             # Do not derive ROI from scenarios; show placeholder or omit
-            st.metric("💰 Estimated ROI", "N/A")
+            st.metric(f"💰 {t('results_roi', 'Estimated ROI')}", "N/A")
 
         # Display any additional tables from analysis data
         display_analysis_tables(analysis_data.get('tables'), "Economic Analysis Data Tables")
@@ -15110,19 +15141,28 @@ def display_economic_impact_content(analysis_data):
         # Fallback to LLM-generated economic analysis
         col1, col2, col3 = st.columns(3)
         with col1:
-            st.metric("Current Yield", f"{econ_data.get('current_yield', 0):.1f} tons/ha")
+            st.metric(t('current_yield_tonnes_ha', 'Current Yield'), f"{econ_data.get('current_yield', 0):.1f} {t('tonnes_per_hectare', 'tons/ha')}")
         with col2:
-            st.metric("Projected Improvement", f"{econ_data.get('yield_improvement', 0):.1f}%")
+            st.metric(t('results_yield_improvement', 'Projected Improvement'), f"{econ_data.get('yield_improvement', 0):.1f}%")
         with col3:
-            st.metric("ROI Estimate", f"{econ_data.get('roi', 0):.1f}%")
+            st.metric(t('results_roi', 'ROI Estimate'), f"{econ_data.get('roi', 0):.1f}%")
         
         if 'cost_benefit' in econ_data:
-            st.markdown("#### Cost-Benefit Analysis")
-            for scenario in econ_data['cost_benefit']:
-                st.markdown(f"**{scenario.get('scenario', 'Unknown')}:**")
-                st.markdown(f"- Investment: RM {scenario.get('investment', 0):,.0f}")
-                st.markdown(f"- Return: RM {scenario.get('return', 0):,.0f}")
-                st.markdown(f"- ROI: {scenario.get('roi', 0):.1f}%")
+            current_lang = get_language()
+            if current_lang == 'ms':
+                st.markdown("#### Analisis Kos-Faedah")
+                for scenario in econ_data['cost_benefit']:
+                    st.markdown(f"**{scenario.get('scenario', 'Unknown')}:**")
+                    st.markdown(f"- Pelaburan: RM {scenario.get('investment', 0):,.0f}")
+                    st.markdown(f"- Pulangan: RM {scenario.get('return', 0):,.0f}")
+                    st.markdown(f"- ROI: {scenario.get('roi', 0):.1f}%")
+            else:
+                st.markdown("#### Cost-Benefit Analysis")
+                for scenario in econ_data['cost_benefit']:
+                    st.markdown(f"**{scenario.get('scenario', 'Unknown')}:**")
+                    st.markdown(f"- Investment: RM {scenario.get('investment', 0):,.0f}")
+                    st.markdown(f"- Return: RM {scenario.get('return', 0):,.0f}")
+                    st.markdown(f"- ROI: {scenario.get('roi', 0):.1f}%")
 
         # Display any additional tables from analysis data
         display_analysis_tables(analysis_data.get('tables'), "Economic Analysis Data Tables")
@@ -15147,17 +15187,31 @@ def display_economic_impact_content(analysis_data):
         with col3:
             st.metric("⏱️ Payback Period", "24-36 months")
         
-        st.markdown("#### Investment Scenarios")
-        investment_data = [
-            ["Low Investment", "RM 2,000 - 3,000", "RM 8,000 - 12,000", "250-300%", "24-36 months"],
-            ["Medium Investment", "RM 4,000 - 6,000", "RM 15,000 - 20,000", "275-350%", "24-36 months"],
-            ["High Investment", "RM 8,000 - 12,000", "RM 25,000 - 35,000", "200-300%", "36-48 months"]
-        ]
-        
-        import pandas as pd
-        df = pd.DataFrame(investment_data, columns=[
-            "Investment Level", "Total Investment (RM)", "Expected Return (RM)", "ROI (%)", "Payback Period"
-        ])
+        current_lang = get_language()
+        if current_lang == 'ms':
+            st.markdown("#### Senario Pelaburan")
+            investment_data = [
+                ["Pelaburan Rendah", "RM 2,000 - 3,000", "RM 8,000 - 12,000", "250-300%", "24-36 bulan"],
+                ["Pelaburan Sederhana", "RM 4,000 - 6,000", "RM 15,000 - 20,000", "275-350%", "24-36 bulan"],
+                ["Pelaburan Tinggi", "RM 8,000 - 12,000", "RM 25,000 - 35,000", "200-300%", "36-48 bulan"]
+            ]
+            
+            import pandas as pd
+            df = pd.DataFrame(investment_data, columns=[
+                "Tahap Pelaburan", "Jumlah Pelaburan (RM)", "Pulangan Dijangka (RM)", "ROI (%)", "Tempoh Pulangan Modal"
+            ])
+        else:
+            st.markdown("#### Investment Scenarios")
+            investment_data = [
+                ["Low Investment", "RM 2,000 - 3,000", "RM 8,000 - 12,000", "250-300%", "24-36 months"],
+                ["Medium Investment", "RM 4,000 - 6,000", "RM 15,000 - 20,000", "275-350%", "24-36 months"],
+                ["High Investment", "RM 8,000 - 12,000", "RM 25,000 - 35,000", "200-300%", "36-48 months"]
+            ]
+            
+            import pandas as pd
+            df = pd.DataFrame(investment_data, columns=[
+                "Investment Level", "Total Investment (RM)", "Expected Return (RM)", "ROI (%)", "Payback Period"
+            ])
         apply_table_styling()
         st.dataframe(df, use_container_width=True)
 
@@ -15269,7 +15323,7 @@ def display_forecast_graph_content(analysis_data, step_number=None, step_title=N
                         break
             
         if baseline_yield > 0:
-            st.markdown(f"**Current Yield Baseline:** {baseline_yield:.1f} tonnes/hectare")
+            st.markdown(f"**{t('baseline_yield', 'Current Yield Baseline')}:** {baseline_yield:.1f} {t('tonnes_per_hectare', 'tonnes/hectare')}")
             st.markdown("")
         
         try:

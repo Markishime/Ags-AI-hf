@@ -170,6 +170,83 @@ TRANSLATIONS = {
         'results_baseline_yield': 'Baseline Yield',
         'results_projected_yield': 'Projected Yield',
         
+        # Executive Summary
+        'executive_summary': 'Executive Summary',
+        'executive_summary_desc': 'Key insights from your soil and leaf analysis in simple terms',
+        'executive_summary_intro': 'This comprehensive agronomic analysis evaluates key nutritional parameters from both soil and leaf tissue samples to assess the current fertility status and plant health of the oil palm plantation.',
+        
+        # Nutrient Status Tables
+        'soil_nutrient_status_title': 'Soil Nutrient Status (Average vs. MPOB Standard)',
+        'leaf_nutrient_status_title': 'Leaf Nutrient Status (Average vs. MPOB Standard)',
+        'nutrient_gap_analysis_title': 'Nutrient Gap Analysis',
+        'parameter_analysis_matrix': 'Parameter Analysis Matrix',
+        'data_quality_assessment': 'Data Quality Assessment',
+        
+        # Table Column Headers
+        'table_parameter': 'Parameter',
+        'table_average': 'Average',
+        'table_mpob_standard': 'MPOB Standard',
+        'table_status': 'Status',
+        'table_gap': 'Gap',
+        'table_severity': 'Severity',
+        'table_source': 'Source',
+        'table_min': 'Min',
+        'table_max': 'Max',
+        'table_std_dev': 'Std Dev',
+        'table_optimal_range': 'Optimal Range',
+        'table_unit': 'Unit',
+        'table_value': 'Value',
+        
+        # Economic Forecast Labels
+        'economic_forecast': 'Economic Forecast',
+        'economic_forecast_source': 'Economic Forecast Source',
+        'land_size_hectares': 'Land Size (Hectares)',
+        'current_yield_tonnes_ha': 'Current Yield (Tonnes/Ha)',
+        'palm_density_per_hectare': 'Palm Density Per Hectare',
+        'total_palms': 'Total Palms',
+        'oil_palm_price_range': 'Oil Palm Price Range (RM/Tonne)',
+        'investment_scenario': 'Investment Scenario',
+        'yield_improvement_tha': 'Yield Improvement (t/ha)',
+        'revenue_rm_ha': 'Revenue (RM/ha)',
+        'input_cost_rm_ha': 'Input Cost (RM/ha)',
+        'net_profit_rm_ha': 'Net Profit (RM/ha)',
+        'cumulative_net_profit': 'Cumulative Net Profit (RM/ha)',
+        'roi_percent': 'ROI (%)',
+        'payback_period': 'Payback Period',
+        'months': 'months',
+        
+        # Step Titles
+        'step_1_title': 'Step 1: Data Analysis',
+        'step_2_title': 'Step 2: Issue Diagnosis',
+        'step_3_title': 'Step 3: Solution Recommendations',
+        'step_4_title': 'Step 4: Regenerative Agriculture',
+        'step_5_title': 'Step 5: Economic Impact Forecast',
+        'step_6_title': 'Step 6: Yield Forecast & Projections',
+        
+        # Yield Forecast
+        'yield_forecast_title': 'Yield Forecast & Projections',
+        'baseline_yield': 'Baseline Yield',
+        'projected_yield': 'Projected Yield',
+        'year_1': 'Year 1',
+        'year_2': 'Year 2',
+        'year_3': 'Year 3',
+        'year_4': 'Year 4',
+        'year_5': 'Year 5',
+        'high_investment': 'High Investment',
+        'medium_investment': 'Medium Investment',
+        'low_investment': 'Low Investment',
+        'tonnes_per_hectare': 'tonnes/hectare',
+        'hectares': 'hectares',
+        
+        # Status Labels
+        'status_optimal': 'Optimal',
+        'status_deficient': 'Deficient',
+        'status_excess': 'Excess',
+        'status_critical': 'Critical',
+        'status_low': 'Low',
+        'status_balanced': 'Balanced',
+        'status_adequate': 'Adequate',
+        
         # Admin
         'admin_title': 'Admin Panel',
         'admin_restricted': 'Admin access only',
@@ -259,6 +336,10 @@ TRANSLATIONS = {
         'pdf_generating': 'Generating PDF report...',
         'pdf_generated_success': 'PDF report generated successfully!',
         'pdf_generated_error': 'Failed to generate PDF report',
+        'pdf_no_soil_data': 'No soil nutrient data available',
+        'pdf_no_leaf_data': 'No leaf nutrient data available',
+        'pdf_raw_soil_data': 'Raw Soil Sample Data',
+        'pdf_raw_leaf_data': 'Raw Leaf Sample Data',
     },
     'ms': {
         # Common
@@ -422,6 +503,83 @@ TRANSLATIONS = {
         'results_baseline_yield': 'Hasil Asas',
         'results_projected_yield': 'Hasil Unjuran',
         
+        # Executive Summary (Malaysian)
+        'executive_summary': 'Ringkasan Eksekutif',
+        'executive_summary_desc': 'Pandangan utama daripada analisis tanah dan daun anda dalam istilah mudah',
+        'executive_summary_intro': 'Analisis agronomi komprehensif ini menilai parameter pemakanan utama daripada sampel tisu tanah dan daun untuk menilai status kesuburan semasa dan kesihatan tumbuhan ladang kelapa sawit.',
+        
+        # Nutrient Status Tables (Malaysian)
+        'soil_nutrient_status_title': 'Status Nutrien Tanah (Purata vs. Standard MPOB)',
+        'leaf_nutrient_status_title': 'Status Nutrien Daun (Purata vs. Standard MPOB)',
+        'nutrient_gap_analysis_title': 'Analisis Jurang Nutrien',
+        'parameter_analysis_matrix': 'Matriks Analisis Parameter',
+        'data_quality_assessment': 'Penilaian Kualiti Data',
+        
+        # Table Column Headers (Malaysian)
+        'table_parameter': 'Parameter',
+        'table_average': 'Purata',
+        'table_mpob_standard': 'Standard MPOB',
+        'table_status': 'Status',
+        'table_gap': 'Jurang',
+        'table_severity': 'Keterukan',
+        'table_source': 'Sumber',
+        'table_min': 'Min',
+        'table_max': 'Maks',
+        'table_std_dev': 'Sisihan Piawai',
+        'table_optimal_range': 'Julat Optimum',
+        'table_unit': 'Unit',
+        'table_value': 'Nilai',
+        
+        # Economic Forecast Labels (Malaysian)
+        'economic_forecast': 'Ramalan Ekonomi',
+        'economic_forecast_source': 'Sumber Ramalan Ekonomi',
+        'land_size_hectares': 'Saiz Tanah (Hektar)',
+        'current_yield_tonnes_ha': 'Hasil Semasa (Tan/Ha)',
+        'palm_density_per_hectare': 'Kepadatan Sawit Per Hektar',
+        'total_palms': 'Jumlah Pokok Sawit',
+        'oil_palm_price_range': 'Julat Harga Kelapa Sawit (RM/Tan)',
+        'investment_scenario': 'Senario Pelaburan',
+        'yield_improvement_tha': 'Peningkatan Hasil (t/ha)',
+        'revenue_rm_ha': 'Pendapatan (RM/ha)',
+        'input_cost_rm_ha': 'Kos Input (RM/ha)',
+        'net_profit_rm_ha': 'Untung Bersih (RM/ha)',
+        'cumulative_net_profit': 'Untung Bersih Kumulatif (RM/ha)',
+        'roi_percent': 'ROI (%)',
+        'payback_period': 'Tempoh Pulangan Modal',
+        'months': 'bulan',
+        
+        # Step Titles (Malaysian)
+        'step_1_title': 'Langkah 1: Analisis Data',
+        'step_2_title': 'Langkah 2: Diagnosis Isu',
+        'step_3_title': 'Langkah 3: Cadangan Penyelesaian',
+        'step_4_title': 'Langkah 4: Pertanian Regeneratif',
+        'step_5_title': 'Langkah 5: Ramalan Kesan Ekonomi',
+        'step_6_title': 'Langkah 6: Ramalan & Unjuran Hasil',
+        
+        # Yield Forecast (Malaysian)
+        'yield_forecast_title': 'Ramalan & Unjuran Hasil',
+        'baseline_yield': 'Hasil Asas',
+        'projected_yield': 'Hasil Unjuran',
+        'year_1': 'Tahun 1',
+        'year_2': 'Tahun 2',
+        'year_3': 'Tahun 3',
+        'year_4': 'Tahun 4',
+        'year_5': 'Tahun 5',
+        'high_investment': 'Pelaburan Tinggi',
+        'medium_investment': 'Pelaburan Sederhana',
+        'low_investment': 'Pelaburan Rendah',
+        'tonnes_per_hectare': 'tan/hektar',
+        'hectares': 'hektar',
+        
+        # Status Labels (Malaysian)
+        'status_optimal': 'Optimum',
+        'status_deficient': 'Kekurangan',
+        'status_excess': 'Berlebihan',
+        'status_critical': 'Kritikal',
+        'status_low': 'Rendah',
+        'status_balanced': 'Seimbang',
+        'status_adequate': 'Mencukupi',
+        
         # Admin
         'admin_title': 'Panel Admin',
         'admin_restricted': 'Akses admin sahaja',
@@ -511,6 +669,10 @@ TRANSLATIONS = {
         'pdf_generating': 'Menjana laporan PDF...',
         'pdf_generated_success': 'Laporan PDF berjaya dijana!',
         'pdf_generated_error': 'Gagal menjana laporan PDF',
+        'pdf_no_soil_data': 'Tiada data nutrien tanah tersedia',
+        'pdf_no_leaf_data': 'Tiada data nutrien daun tersedia',
+        'pdf_raw_soil_data': 'Data Sampel Tanah Mentah',
+        'pdf_raw_leaf_data': 'Data Sampel Daun Mentah',
     }
 }
 
