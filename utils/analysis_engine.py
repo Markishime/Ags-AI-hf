@@ -2479,6 +2479,51 @@ class PromptAnalyzer:
         self.ai_config = get_ai_config()
         self._initialize_llm()
     
+    def _get_current_language(self) -> str:
+        """Get current language from session state for multilingual analysis"""
+        try:
+            import streamlit as st
+            # Check URL params first
+            query_params = st.query_params
+            url_lang = query_params.get('lang', '')
+            if url_lang in ['en', 'ms']:
+                return url_lang
+            # Fall back to session state
+            return st.session_state.get('language', 'en')
+        except Exception:
+            return 'en'
+    
+    def _get_language_instruction(self, language: str) -> str:
+        """Get language instruction for LLM prompts"""
+        if language == 'ms':
+            return """
+            LANGUAGE REQUIREMENT - CRITICAL:
+            You MUST generate ALL analysis content, text, findings, recommendations, 
+            and descriptions in Bahasa Malaysia (Malaysian language). This includes:
+            - Summary text
+            - Detailed analysis
+            - Key findings
+            - Recommendations
+            - Table headers and descriptions
+            - All explanatory text
+            
+            Technical terms and parameter names (like pH, N, P, K, CEC, etc.) can remain 
+            in their standard scientific format, but all explanatory text must be in 
+            Bahasa Malaysia.
+            
+            Example phrases:
+            - "Hasil analisis" instead of "Analysis results"
+            - "Cadangan" instead of "Recommendations"  
+            - "Penemuan utama" instead of "Key findings"
+            - "Kekurangan nutrien" instead of "Nutrient deficiency"
+            - "Tahap optimum" instead of "Optimal level"
+            """
+        else:
+            return """
+            LANGUAGE REQUIREMENT:
+            Generate all analysis content in English.
+            """
+    
     def _initialize_llm(self):
         """Initialize the LLM with Google Gemini configuration"""
         try:
@@ -2672,9 +2717,15 @@ class PromptAnalyzer:
             total_step_count = total_steps if total_steps else (len(previous_results) + 1 if previous_results else 1)
             
 
+            # Get current language for multilingual support
+            current_language = self._get_current_language()
+            language_instruction = self._get_language_instruction(current_language)
+            
             # This ensures the LLM follows the exact steps configured by the user
             system_prompt = f"""This is an expert agronomic analysis system for oil palm cultivation in Malaysia.
             The analysis must be conducted according to the SPECIFIC step instructions from the active prompt configuration and provide detailed, accurate results using neutral, third-person language only.
+
+            {language_instruction}
 
             ANALYSIS CONTEXT:
             - This is Step {step['number']} of a {total_step_count} step analysis process
