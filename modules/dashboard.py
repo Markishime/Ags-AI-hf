@@ -1763,7 +1763,7 @@ def get_real_time_notifications(user_id: str) -> List[Dict[str, Any]]:
         notifications = [
         {
                 'id': '1',
-            'title': 'Welcome to AGS AI Assistant!',
+            'title': 'Welcome to CropDriveTM Assistant!',
             'message': 'Start by uploading your first SP LAB report for analysis.',
                 'date': datetime.now().strftime('%Y-%m-%d %H:%M'),
                 'priority': 'high',

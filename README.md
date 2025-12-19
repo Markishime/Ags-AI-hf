@@ -1,5 +1,5 @@
 ---
-title: "AGS AI Assistant"
+title: "CropDriveTM Assistant"
 emoji: "🌴"
 colorFrom: "green"
 colorTo: "blue"
@@ -9,6 +9,6 @@ python_version: "3.10"
 pinned: false
 ---
 
-# AGS AI Assistant
+# CropDriveTM Assistant
 
 AI-powered assistant for analyzing agricultural documents and data using Streamlit on Hugging Face Spaces.
