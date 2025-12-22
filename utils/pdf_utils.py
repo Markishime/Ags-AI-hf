@@ -278,7 +278,7 @@ class PDFReportGenerator:
                 story.extend(self._create_results_header_section(analysis_data, metadata))
             except Exception as e:
                 logger.error(f"Error creating results header: {str(e)}")
-                story.append(Paragraph("Analysis Results", self.styles['Heading1']))
+                story.append(Paragraph(self._t('pdf_analysis_results', 'Analysis Results'), self.styles['Heading1']))
             
             try:
                 # 2. Executive Summary (if enabled) - COPY EXACTLY FROM RESULTS PAGE
@@ -286,8 +286,8 @@ class PDFReportGenerator:
                     story.extend(self._create_enhanced_executive_summary(analysis_data))
             except Exception as e:
                 logger.error(f"Error creating executive summary: {str(e)}")
-                story.append(Paragraph("Executive Summary", self.styles['Heading2']))
-                story.append(Paragraph("Summary could not be generated due to technical issues.", self.styles['Normal']))
+                story.append(Paragraph(self._t('pdf_executive_summary', 'Executive Summary'), self.styles['Heading2']))
+                story.append(Paragraph(self._t('pdf_summary_error', 'Summary could not be generated due to technical issues.'), self.styles['Normal']))
             
             
             try:
@@ -580,7 +580,7 @@ class PDFReportGenerator:
         story = []
         
         # Executive Summary header
-        story.append(Paragraph("Executive Summary", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_executive_summary', 'Executive Summary'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Handle data structure - analysis_data might be the analysis_results content directly
@@ -609,7 +609,8 @@ class PDFReportGenerator:
             return story
 
         # Fallback if generation fails
-        story.append(Paragraph("Executive summary could not be generated from the analysis data.", self.styles['CustomBody']))
+        fallback_text = self._t('pdf_executive_summary_fallback', 'Executive summary could not be generated from the analysis data.')
+        story.append(Paragraph(fallback_text, self.styles['CustomBody']))
         story.append(Spacer(1, 12))
         return story
 
@@ -1382,7 +1383,7 @@ class PDFReportGenerator:
 
     def _create_step1_pdf_content(self, story, analysis_data, main_analysis_results=None):
         """Create Step 1 PDF content matching results page format"""
-        story.append(Paragraph("📊 Data Analysis Results", self.styles['Heading2']))
+        story.append(Paragraph(f"📊 {self._t('pdf_data_analysis_results', 'Data Analysis Results')}", self.styles['Heading2']))
         story.append(Spacer(1, 8))
         
         # Debug: Log what data is available
@@ -1401,7 +1402,7 @@ class PDFReportGenerator:
         
         # Summary section
         if 'summary' in analysis_data and analysis_data['summary']:
-            story.append(Paragraph("📋 Summary", self.styles['Heading3']))
+            story.append(Paragraph(f"📋 {self._t('pdf_summary', 'Summary')}", self.styles['Heading3']))
             summary_text = analysis_data['summary']
             if isinstance(summary_text, str) and summary_text.strip():
                 story.append(Paragraph(self._sanitize_text_persona(summary_text.strip()), self.styles['CustomBody']))
@@ -1409,7 +1410,7 @@ class PDFReportGenerator:
         
         # Detailed Analysis section
         if 'detailed_analysis' in analysis_data and analysis_data['detailed_analysis']:
-            story.append(Paragraph("📋 Detailed Analysis", self.styles['Heading3']))
+            story.append(Paragraph(f"📋 {self._t('pdf_detailed_analysis', 'Detailed Analysis')}", self.styles['Heading3']))
             detailed_text = analysis_data['detailed_analysis']
             
             if isinstance(detailed_text, dict):
@@ -1431,7 +1432,7 @@ class PDFReportGenerator:
             story.append(Spacer(1, 8))
         
         # Data Tables section
-        story.append(Paragraph("📊 Data Tables", self.styles['Heading3']))
+        story.append(Paragraph(f"📊 {self._t('pdf_data_tables', 'Data Tables')}", self.styles['Heading3']))
         story.append(Spacer(1, 6))
         
         # Your Soil and Leaf Test Results table
@@ -1520,7 +1521,7 @@ class PDFReportGenerator:
         
         # Summary section
         if 'summary' in analysis_data and analysis_data['summary']:
-            story.append(Paragraph("📋 Summary", self.styles['Heading3']))
+            story.append(Paragraph(f"📋 {self._t('pdf_summary', 'Summary')}", self.styles['Heading3']))
             summary_text = analysis_data['summary']
             if isinstance(summary_text, str) and summary_text.strip():
                 story.append(Paragraph(self._sanitize_text_persona(summary_text.strip()), self.styles['CustomBody']))
@@ -1528,7 +1529,7 @@ class PDFReportGenerator:
         
         # Detailed Analysis section
         if 'detailed_analysis' in analysis_data and analysis_data['detailed_analysis']:
-            story.append(Paragraph("📋 Detailed Analysis", self.styles['Heading3']))
+            story.append(Paragraph(f"📋 {self._t('pdf_detailed_analysis', 'Detailed Analysis')}", self.styles['Heading3']))
             detailed_text = analysis_data['detailed_analysis']
             
             if isinstance(detailed_text, dict):
@@ -1551,7 +1552,7 @@ class PDFReportGenerator:
         
         # Tables section (consistent with Step 2)
         if 'tables' in analysis_data and analysis_data['tables']:
-            story.append(Paragraph("📊 Data Tables", self.styles['Heading3']))
+            story.append(Paragraph(f"📊 {self._t('pdf_data_tables', 'Data Tables')}", self.styles['Heading3']))
             tables = analysis_data['tables']
             if isinstance(tables, list):
                 for table in tables:
@@ -1588,7 +1589,7 @@ class PDFReportGenerator:
         """Create standard step PDF content for steps 2, 4, 5, 6"""
         # Summary section
         if 'summary' in analysis_data and analysis_data['summary']:
-            story.append(Paragraph("📋 Summary", self.styles['Heading3']))
+            story.append(Paragraph(f"📋 {self._t('pdf_summary', 'Summary')}", self.styles['Heading3']))
             summary_text = analysis_data['summary']
             if isinstance(summary_text, str) and summary_text.strip():
                 # Apply comprehensive cleaning (same as analysis engine)
@@ -1600,7 +1601,7 @@ class PDFReportGenerator:
         
         # Detailed Analysis section
         if 'detailed_analysis' in analysis_data and analysis_data['detailed_analysis']:
-            story.append(Paragraph("📋 Detailed Analysis", self.styles['Heading3']))
+            story.append(Paragraph(f"📋 {self._t('pdf_detailed_analysis', 'Detailed Analysis')}", self.styles['Heading3']))
             detailed_text = analysis_data['detailed_analysis']
             
             if isinstance(detailed_text, dict):
@@ -1623,7 +1624,7 @@ class PDFReportGenerator:
         
         # Tables section
         if 'tables' in analysis_data and analysis_data['tables']:
-            story.append(Paragraph("📊 Data Tables", self.styles['Heading3']))
+            story.append(Paragraph(f"📊 {self._t('pdf_data_tables', 'Data Tables')}", self.styles['Heading3']))
             tables = analysis_data['tables']
             if isinstance(tables, list):
                 for table in tables:
@@ -3740,12 +3741,12 @@ class PDFReportGenerator:
         # If still no steps, create a comprehensive fallback message
         if not step_results:
             logger.warning("🔍 DEBUG - No step data found anywhere, creating comprehensive fallback content")
-            story.append(Paragraph("Comprehensive Analysis Results:", self.styles['Heading2']))
-            story.append(Paragraph("The analysis has been completed successfully. Below are the key findings and recommendations:", self.styles['Normal']))
+            story.append(Paragraph(self._t('pdf_comprehensive_analysis_results', 'Comprehensive Analysis Results:'), self.styles['Heading2']))
+            story.append(Paragraph(self._t('pdf_analysis_completed', 'The analysis has been completed successfully. Below are the key findings and recommendations:'), self.styles['Normal']))
             
             # Add key findings if available
             if 'key_findings' in analysis_results:
-                story.append(Paragraph("Key Findings:", self.styles['Heading3']))
+                story.append(Paragraph(self._t('pdf_key_findings', 'Key Findings:'), self.styles['Heading3']))
                 key_findings = analysis_results['key_findings']
                 normalized_kf = []
 
@@ -3775,13 +3776,13 @@ class PDFReportGenerator:
             
             # Add summary if available
             if 'summary' in analysis_results:
-                story.append(Paragraph("Summary:", self.styles['Heading3']))
+                story.append(Paragraph(self._t('pdf_summary', 'Summary:'), self.styles['Heading3']))
                 story.append(Paragraph(str(analysis_results['summary']), self.styles['CustomBody']))
                 story.append(Spacer(1, 8))
             
             # Add detailed analysis if available
             if 'detailed_analysis' in analysis_results:
-                story.append(Paragraph("Detailed Analysis:", self.styles['Heading3']))
+                story.append(Paragraph(self._t('pdf_detailed_analysis', 'Detailed Analysis:'), self.styles['Heading3']))
                 story.append(Paragraph(str(analysis_results['detailed_analysis']), self.styles['CustomBody']))
                 story.append(Spacer(1, 8))
             
@@ -3843,7 +3844,7 @@ class PDFReportGenerator:
             
             # Statistical Analysis (from enhanced LLM output)
             if 'statistical_analysis' in step and step['statistical_analysis']:
-                story.append(Paragraph("Statistical Analysis:", self.styles['Heading3']))
+                story.append(Paragraph(self._t('pdf_statistical_analysis', 'Statistical Analysis:'), self.styles['Heading3']))
                 if isinstance(step['statistical_analysis'], dict):
                     for key, value in step['statistical_analysis'].items():
                         story.append(Paragraph(f"<b>{key.replace('_', ' ').title()}:</b> {value}", self.styles['CustomBody']))
@@ -3853,7 +3854,7 @@ class PDFReportGenerator:
             
             # Issues Identified (crucial for farmers)
             if 'issues_identified' in step and step['issues_identified']:
-                story.append(Paragraph("Issues Identified:", self.styles['Heading3']))
+                story.append(Paragraph(self._t('pdf_issues_identified', 'Issues Identified:'), self.styles['Heading3']))
                 for i, issue in enumerate(step['issues_identified'], 1):
                     issue_text = f"<b>{i}.</b> {issue}"
                     story.append(Paragraph(issue_text, self.styles['CustomBody']))
@@ -3861,7 +3862,7 @@ class PDFReportGenerator:
             
             # Key Findings (from enhanced LLM output)
             if 'key_findings' in step and step['key_findings']:
-                story.append(Paragraph("Key Findings:", self.styles['Heading3']))
+                story.append(Paragraph(self._t('pdf_key_findings', 'Key Findings:'), self.styles['Heading3']))
                 key_findings = step['key_findings']
                 normalized_kf = []
 
@@ -3894,7 +3895,7 @@ class PDFReportGenerator:
             
             # Legacy recommendations (for backward compatibility)
             if 'recommendations' in step and step['recommendations']:
-                story.append(Paragraph("Additional Recommendations:", self.styles['Heading3']))
+                story.append(Paragraph(self._t('pdf_additional_recommendations', 'Additional Recommendations:'), self.styles['Heading3']))
                 for i, rec in enumerate(step['recommendations'], 1):
                     rec_text = f"<b>{i}.</b> {rec}"
                     story.append(Paragraph(rec_text, self.styles['CustomBody']))
@@ -3911,7 +3912,7 @@ class PDFReportGenerator:
                 # Explicitly list specific recommendations if provided
                 specific_recs = step.get('specific_recommendations', [])
                 if isinstance(specific_recs, list) and specific_recs:
-                    story.append(Paragraph("Specific Recommendations (Rates):", self.styles['Heading3']))
+                    story.append(Paragraph(self._t('pdf_specific_recommendations', 'Specific Recommendations (Rates):'), self.styles['Heading3']))
                     for i, rec in enumerate(specific_recs, 1):
                         story.append(Paragraph(f"{i}. {rec}", self.styles['CustomBody']))
                     story.append(Spacer(1, 8))
@@ -3947,7 +3948,7 @@ class PDFReportGenerator:
 
                     if yield_chart is not None:
                         logger.info("🔍 DEBUG Step 6 - Adding chart to story")
-                        story.append(Paragraph("📈 STEP 6 — Forecast Graph: 5-Year Yield Forecast & Projections", self.styles['Heading3']))
+                        story.append(Paragraph(f"📈 STEP 6 — {self._t('pdf_forecast_graph', 'Forecast Graph')}: {self._t('pdf_5_year_yield_forecast_projections', '5-Year Yield Forecast & Projections')}", self.styles['Heading3']))
                         story.append(Spacer(1, 8))
                         story.append(yield_chart)
                         story.append(Spacer(1, 12))
@@ -3955,17 +3956,17 @@ class PDFReportGenerator:
                     else:
                         logger.warning("❌ Step 6: Yield forecast chart is None")
                         logger.info("🔍 DEBUG Step 6 - Chart is None, adding failure message")
-                        story.append(Paragraph("📈 STEP 6 — Forecast Graph: 5-Year Yield Forecast & Projections", self.styles['Heading3']))
+                        story.append(Paragraph(f"📈 STEP 6 — {self._t('pdf_forecast_graph', 'Forecast Graph')}: {self._t('pdf_5_year_yield_forecast_projections', '5-Year Yield Forecast & Projections')}", self.styles['Heading3']))
                         story.append(Spacer(1, 8))
-                        story.append(Paragraph("5-Year Yield Forecast (t/ha) - Chart generation failed", self.styles['Normal']))
+                        story.append(Paragraph(f"{self._t('pdf_5_year_yield_forecast', '5-Year Yield Forecast')} (t/ha) - {self._t('pdf_chart_generation_failed', 'Chart generation failed')}", self.styles['Normal']))
 
                 except Exception as e:
                     logger.error(f"❌ Step 6: Error adding yield forecast chart: {str(e)}")
                     import traceback
                     logger.error(f"Step 6 Full traceback: {traceback.format_exc()}")
-                    story.append(Paragraph("📈 STEP 6 — Forecast Graph: 5-Year Yield Forecast & Projections", self.styles['Heading3']))
+                    story.append(Paragraph(f"📈 STEP 6 — {self._t('pdf_forecast_graph', 'Forecast Graph')}: {self._t('pdf_5_year_yield_forecast_projections', '5-Year Yield Forecast & Projections')}", self.styles['Heading3']))
                     story.append(Spacer(1, 8))
-                    story.append(Paragraph("5-Year Yield Forecast (t/ha) - Chart generation error", self.styles['Normal']))
+                    story.append(Paragraph(f"{self._t('pdf_5_year_yield_forecast', '5-Year Yield Forecast')} (t/ha) - {self._t('pdf_chart_generation_error', 'Chart generation error')}", self.styles['Normal']))
             
             # Visualizations and Charts - ONLY Step 1 bar graphs; remove charts for Steps 2-6
             try:
@@ -6747,7 +6748,7 @@ class PDFReportGenerator:
             return story
 
         # Economic Impact Forecast header
-        story.append(Paragraph("Economic Impact Forecast", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_economic_impact_forecast', 'Economic Impact Forecast'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Find economic forecast data from multiple possible locations
@@ -6801,24 +6802,24 @@ class PDFReportGenerator:
             
             # Display basic information
             if current_yield > 0:
-                story.append(Paragraph(f"<b>Current Yield:</b> {current_yield:.1f} tons/ha", self.styles['CustomBody']))
+                story.append(Paragraph(f"<b>{self._t('pdf_current_yield', 'Current Yield')}:</b> {current_yield:.1f} tons/ha", self.styles['CustomBody']))
             else:
-                story.append(Paragraph(f"<b>Current Yield:</b> Based on analysis results", self.styles['CustomBody']))
+                story.append(Paragraph(f"<b>{self._t('pdf_current_yield', 'Current Yield')}:</b> {self._t('pdf_based_on_analysis', 'Based on analysis results')}", self.styles['CustomBody']))
             
             if land_size > 0:
-                story.append(Paragraph(f"<b>Land Size:</b> {land_size:.1f} hectares", self.styles['CustomBody']))
+                story.append(Paragraph(f"<b>{self._t('pdf_land_size', 'Land Size')}:</b> {land_size:.1f} hectares", self.styles['CustomBody']))
             
             # Add palm density information if available
             palm_density = econ.get('palm_density_per_hectare', 0)
             total_palms = econ.get('total_palms', 0)
             if palm_density > 0:
-                story.append(Paragraph(f"<b>Palm Density:</b> {palm_density} palms/hectare", self.styles['CustomBody']))
+                story.append(Paragraph(f"<b>{self._t('pdf_palm_density', 'Palm Density')}:</b> {palm_density} palms/hectare", self.styles['CustomBody']))
             if total_palms > 0:
-                story.append(Paragraph(f"<b>Total Palms:</b> {total_palms:,} palms", self.styles['CustomBody']))
+                story.append(Paragraph(f"<b>{self._t('pdf_total_palms', 'Total Palms')}:</b> {total_palms:,} palms", self.styles['CustomBody']))
             
             # Use FFB price range for consistency
             ffb_price_range = econ.get('oil_palm_price_range_rm_per_tonne', 'RM 650-750')
-            story.append(Paragraph(f"<b>FFB Price Range:</b> {ffb_price_range}/tonne", self.styles['CustomBody']))
+            story.append(Paragraph(f"<b>{self._t('pdf_ffb_price_range', 'FFB Price Range')}:</b> {ffb_price_range}/tonne", self.styles['CustomBody']))
             story.append(Spacer(1, 12))
             
             # Remove Economic Forecast Assumptions section as requested
@@ -6831,17 +6832,17 @@ class PDFReportGenerator:
                 # Fallback to Year-1 only display if no scenario data available
                 year1 = econ.get('year_1', {}) if isinstance(econ, dict) else {}
                 if year1:
-                    story.append(Paragraph("💹 Year-1 Economic Impact Forecast per Hectare", self.styles['Heading2']))
+                    story.append(Paragraph(f"💹 {self._t('pdf_year_1_economic_impact', 'Year-1 Economic Impact Forecast per Hectare')}", self.styles['Heading2']))
                     story.append(Spacer(1, 6))
                     # Build a simple key/value table from known fields, falling back gracefully
                     keys = [
-                        ('new_yield_tpha', 'New Yield (t/ha)'),
-                        ('additional_yield_tpha', 'Additional Yield (t/ha)'),
-                        ('additional_revenue_rm', 'Additional Revenue (RM)'),
-                        ('cost_per_hectare_rm', 'Cost per Hectare (RM)'),
+                        ('new_yield_tpha', self._t('pdf_new_yield', 'New Yield (t/ha)')),
+                        ('additional_yield_tpha', self._t('pdf_additional_yield', 'Additional Yield (t/ha)')),
+                        ('additional_revenue_rm', self._t('pdf_additional_revenue', 'Additional Revenue (RM)')),
+                        ('cost_per_hectare_rm', self._t('pdf_cost_per_hectare', 'Cost per Hectare (RM)')),
                         # Prefer range if available; fall back to roi_percentage with cap note
-                        ('roi_percentage_range', 'ROI (%)'),
-                        ('payback_months', 'Payback (months)')
+                        ('roi_percentage_range', self._t('pdf_roi_percent', 'ROI (%)')),
+                        ('payback_months', self._t('pdf_payback_months', 'Payback (months)'))
                     ]
                     rows = []
                     for k, label in keys:
@@ -6851,12 +6852,12 @@ class PDFReportGenerator:
                             if k == 'roi_percentage_range' and isinstance(v, str):
                                 display_value = v
                             elif 'roi_percentage' in k and isinstance(v, (int, float)):
-                                display_value = f"{60}% (Capped for realism - maximum sustainable ROI)" if v > 60 else f"{v:.1f}%"
+                                display_value = f"{60}% ({self._t('pdf_roi_capped', 'Capped for realism - maximum sustainable ROI')})" if v > 60 else f"{v:.1f}%"
                             else:
                                 display_value = str(v)
                             rows.append([label, display_value])
                     if rows:
-                        table = self._create_table_with_proper_layout([["Metric", "Value"]] + rows, [self.content_width*0.5, self.content_width*0.5], font_size=9)
+                        table = self._create_table_with_proper_layout([[self._t('pdf_metric', 'Metric'), self._t('pdf_value_label', 'Value')]] + rows, [self.content_width*0.5, self.content_width*0.5], font_size=9)
                     if table:
                         story.append(table)
                     story.append(Spacer(1, 12))
@@ -6867,24 +6868,24 @@ class PDFReportGenerator:
                     story.append(Paragraph("<i>Note: RM values are based on current market rates and typical plantation economics.</i>", self.styles['CustomBody']))
         else:
             # Create a basic economic forecast when data is not available
-            story.append(Paragraph("Economic Impact Assessment", self.styles['Heading2']))
+            story.append(Paragraph(self._t('pdf_economic_impact_assessment', 'Economic Impact Assessment'), self.styles['Heading2']))
             story.append(Spacer(1, 8))
             
             # Basic economic information
-            story.append(Paragraph("<b>Current Yield:</b> Based on analysis results", self.styles['CustomBody']))
-            story.append(Paragraph("<b>Projected Yield Improvement:</b> 15-25% with proper management", self.styles['CustomBody']))
-            story.append(Paragraph("<b>Estimated ROI:</b> 200-300% over 3-5 years", self.styles['CustomBody']))
+            story.append(Paragraph(f"<b>{self._t('pdf_current_yield', 'Current Yield')}:</b> {self._t('pdf_based_on_analysis', 'Based on analysis results')}", self.styles['CustomBody']))
+            story.append(Paragraph(f"<b>{self._t('pdf_projected_yield_improvement', 'Projected Yield Improvement')}:</b> 15-25% {self._t('pdf_with_proper_management', 'with proper management')}", self.styles['CustomBody']))
+            story.append(Paragraph(f"<b>{self._t('pdf_estimated_roi', 'Estimated ROI')}:</b> 200-300% {self._t('pdf_over_years', 'over 3-5 years')}", self.styles['CustomBody']))
             story.append(Spacer(1, 12))
             
             # Basic cost-benefit table
-            story.append(Paragraph("Estimated Cost-Benefit Analysis", self.styles['Heading3']))
+            story.append(Paragraph(self._t('pdf_estimated_cost_benefit', 'Estimated Cost-Benefit Analysis'), self.styles['Heading3']))
             story.append(Spacer(1, 8))
             
             table_data = [
-                ['Investment Level', 'Total Investment (RM)', 'Expected Return (RM)', 'ROI (%)', 'Payback Period (Months)'],
-                ['Low Investment', '2,000 - 3,000', '8,000 - 12,000', '250-300', '24-36'],
-                ['Medium Investment', '4,000 - 6,000', '15,000 - 20,000', '275-350', '24-36'],
-                ['High Investment', '8,000 - 12,000', '25,000 - 35,000', '200-300', '36-48']
+                [self._t('pdf_investment_level', 'Investment Level'), self._t('pdf_total_investment', 'Total Investment (RM)'), self._t('pdf_expected_return', 'Expected Return (RM)'), self._t('pdf_roi_percent', 'ROI (%)'), self._t('pdf_payback_period', 'Payback Period (Months)')],
+                [self._t('low_investment', 'Low Investment'), '2,000 - 3,000', '8,000 - 12,000', '250-300', '24-36'],
+                [self._t('medium_investment', 'Medium Investment'), '4,000 - 6,000', '15,000 - 20,000', '275-350', '24-36'],
+                [self._t('high_investment', 'High Investment'), '8,000 - 12,000', '25,000 - 35,000', '200-300', '36-48']
             ]
             
             col_widths = [
@@ -6910,7 +6911,7 @@ class PDFReportGenerator:
         story = []
         
         # 5-Year Yield Forecast header
-        story.append(Paragraph("5-Year Yield Forecast", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_5_year_yield_forecast', '5-Year Yield Forecast'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Find yield forecast data from multiple possible locations
@@ -7123,7 +7124,7 @@ class PDFReportGenerator:
         story = []
         
         # Conclusion header
-        story.append(Paragraph("Detailed Conclusion", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_detailed_conclusion', 'Detailed Conclusion'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Extract key data for personalized conclusion
@@ -7135,42 +7136,42 @@ class PDFReportGenerator:
         conclusion_parts = []
         
         # Analysis overview
-        conclusion_parts.append("""
-        <b>Analysis Overview:</b><br/>
-        This comprehensive agricultural analysis has systematically evaluated your oil palm plantation's current nutritional status and identified critical areas for improvement. The step-by-step analysis reveals specific challenges and opportunities that directly impact your plantation's productivity and profitability.
+        conclusion_parts.append(f"""
+        <b>{self._t('pdf_analysis_overview', 'Analysis Overview')}:</b><br/>
+        {self._t('pdf_conclusion_overview_text', 'This comprehensive agricultural analysis has systematically evaluated your oil palm plantation\'s current nutritional status and identified critical areas for improvement. The step-by-step analysis reveals specific challenges and opportunities that directly impact your plantation\'s productivity and profitability.')}
         """)
         
         # Key findings summary
         if step_analysis:
-            conclusion_parts.append("""
-        <b>Key Findings Summary:</b><br/>
-        The analysis has identified several critical factors affecting your plantation's performance. These findings provide a clear roadmap for targeted interventions that will maximize your return on investment while ensuring sustainable agricultural practices.
+            conclusion_parts.append(f"""
+        <b>{self._t('pdf_key_findings_summary', 'Key Findings Summary')}:</b><br/>
+        {self._t('pdf_conclusion_findings_text', 'The analysis has identified several critical factors affecting your plantation\'s performance. These findings provide a clear roadmap for targeted interventions that will maximize your return on investment while ensuring sustainable agricultural practices.')}
         """)
         
         # Economic impact
         if economic_forecast:
-            conclusion_parts.append("""
-        <b>Economic Impact Assessment:</b><br/>
-        The economic analysis demonstrates significant potential for improved profitability through strategic interventions. The investment scenarios presented show clear pathways to enhanced yields and increased revenue, with medium investment approaches typically offering the optimal balance between cost-effectiveness and yield improvement.
+            conclusion_parts.append(f"""
+        <b>{self._t('pdf_economic_impact_assessment', 'Economic Impact Assessment')}:</b><br/>
+        {self._t('pdf_conclusion_economic_text', 'The economic analysis demonstrates significant potential for improved profitability through strategic interventions. The investment scenarios presented show clear pathways to enhanced yields and increased revenue, with medium investment approaches typically offering the optimal balance between cost-effectiveness and yield improvement.')}
         """)
         
         # Yield projections
         if yield_forecast:
-            conclusion_parts.append("""
-        <b>5-Year Yield Projections:</b><br/>
-        The yield forecast analysis provides a detailed roadmap for sustainable growth over the next five years. These projections are based on realistic investment scenarios and account for seasonal variations, market conditions, and implementation timelines. The forecast demonstrates the potential for substantial yield improvements with proper management and targeted interventions.
+            conclusion_parts.append(f"""
+        <b>{self._t('pdf_5_year_yield_projections', '5-Year Yield Projections')}:</b><br/>
+        {self._t('pdf_conclusion_yield_text', 'The yield forecast analysis provides a detailed roadmap for sustainable growth over the next five years. These projections are based on realistic investment scenarios and account for seasonal variations, market conditions, and implementation timelines. The forecast demonstrates the potential for substantial yield improvements with proper management and targeted interventions.')}
         """)
         
         # Implementation recommendations
-        conclusion_parts.append("""
-        <b>Implementation Strategy:</b><br/>
-        Successful implementation of these recommendations requires a phased approach, beginning with high-priority interventions and gradually expanding to comprehensive management practices. Regular monitoring and adaptive management will be essential to achieving the projected outcomes and ensuring long-term sustainability.
+        conclusion_parts.append(f"""
+        <b>{self._t('pdf_implementation_strategy', 'Implementation Strategy')}:</b><br/>
+        {self._t('pdf_conclusion_implementation_text', 'Successful implementation of these recommendations requires a phased approach, beginning with high-priority interventions and gradually expanding to comprehensive management practices. Regular monitoring and adaptive management will be essential to achieving the projected outcomes and ensuring long-term sustainability.')}
         """)
         
         # Long-term outlook
-        conclusion_parts.append("""
-        <b>Long-term Outlook:</b><br/>
-        The analysis indicates strong potential for sustained productivity improvements and enhanced profitability. By following the recommended strategies and maintaining consistent monitoring practices, your plantation can achieve significant yield increases while contributing to sustainable agricultural intensification goals. The 5-year projections provide a clear vision for long-term success and continued growth.
+        conclusion_parts.append(f"""
+        <b>{self._t('pdf_long_term_outlook', 'Long-term Outlook')}:</b><br/>
+        {self._t('pdf_conclusion_longterm_text', 'The analysis indicates strong potential for sustained productivity improvements and enhanced profitability. By following the recommended strategies and maintaining consistent monitoring practices, your plantation can achieve significant yield increases while contributing to sustainable agricultural intensification goals. The 5-year projections provide a clear vision for long-term success and continued growth.')}
         """)
         
         # Combine all conclusion parts
@@ -7180,9 +7181,9 @@ class PDFReportGenerator:
         story.append(Spacer(1, 20))
         
         # Add final summary paragraph
-        final_summary = """
-        <b>Final Summary:</b><br/>
-        This analysis provides a comprehensive foundation for optimizing your oil palm plantation's performance. The combination of detailed nutritional assessment, economic analysis, and yield projections offers a clear path forward for achieving improved productivity and profitability. Implementation of the recommended strategies will position your plantation for sustainable success and long-term growth.
+        final_summary = f"""
+        <b>{self._t('pdf_final_summary', 'Final Summary')}:</b><br/>
+        {self._t('pdf_conclusion_final_text', 'This analysis provides a comprehensive foundation for optimizing your oil palm plantation\'s performance. The combination of detailed nutritional assessment, economic analysis, and yield projections offers a clear path forward for achieving improved productivity and profitability. Implementation of the recommended strategies will position your plantation for sustainable success and long-term growth.')}
         """
         
         story.append(Paragraph(final_summary, self.styles['CustomBody']))
@@ -7195,7 +7196,7 @@ class PDFReportGenerator:
         story = []
         
         # Results header
-        story.append(Paragraph("Analysis Results", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_analysis_results', 'Analysis Results'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Create simplified metadata table without debug information
@@ -7208,12 +7209,12 @@ class PDFReportGenerator:
                 formatted_time = timestamp.strftime("%Y-%m-%d")
             else:
                 formatted_time = str(timestamp)[:10]  # Just the date part
-            metadata_data.append(['Analysis Date', formatted_time])
+            metadata_data.append([self._t('pdf_analysis_date', 'Analysis Date'), formatted_time])
         
         # Report Types only
         report_types = analysis_data.get('report_types', ['soil', 'leaf'])
         if report_types:
-            metadata_data.append(['Report Types', ', '.join(report_types)])
+            metadata_data.append([self._t('pdf_report_types', 'Report Types'), ', '.join(report_types)])
         
         if metadata_data:
             metadata_table = self._create_table_with_proper_layout(metadata_data)
@@ -7237,7 +7238,7 @@ class PDFReportGenerator:
         story = []
         
         # Raw Data header
-        story.append(Paragraph("Raw Analysis Data", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_raw_analysis_data', 'Raw Analysis Data'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Get raw data from analysis
@@ -7247,11 +7248,11 @@ class PDFReportGenerator:
         
         # Soil parameters table
         if soil_params:
-            story.append(Paragraph("Soil Analysis Parameters", self.styles['Heading2']))
+            story.append(Paragraph(self._t('pdf_soil_analysis_parameters', 'Soil Analysis Parameters'), self.styles['Heading2']))
             story.append(Spacer(1, 8))
             
             # Create soil parameters table
-            soil_data = [['Parameter', 'Average', 'Min', 'Max', 'Unit']]
+            soil_data = [[self._t('table_parameter', 'Parameter'), self._t('table_average', 'Average'), self._t('table_min', 'Min'), self._t('table_max', 'Max'), self._t('table_unit', 'Unit')]]
             for param, data in soil_params.items():
                 if isinstance(data, dict) and 'average' in data:
                     unit = data.get('unit', '')
@@ -7280,11 +7281,11 @@ class PDFReportGenerator:
         
         # Leaf parameters table
         if leaf_params:
-            story.append(Paragraph("Leaf Analysis Parameters", self.styles['Heading2']))
+            story.append(Paragraph(self._t('pdf_leaf_analysis_parameters', 'Leaf Analysis Parameters'), self.styles['Heading2']))
             story.append(Spacer(1, 8))
             
             # Create leaf parameters table
-            leaf_data = [['Parameter', 'Average', 'Min', 'Max', 'Unit']]
+            leaf_data = [[self._t('table_parameter', 'Parameter'), self._t('table_average', 'Average'), self._t('table_min', 'Min'), self._t('table_max', 'Max'), self._t('table_unit', 'Unit')]]
             for param, data in leaf_params.items():
                 if isinstance(data, dict) and 'average' in data:
                     unit = data.get('unit', '')
@@ -7313,7 +7314,7 @@ class PDFReportGenerator:
                 story.append(Spacer(1, 12))
         
         if not soil_params and not leaf_params:
-            story.append(Paragraph("No raw data available for this analysis.", self.styles['CustomBody']))
+            story.append(Paragraph(self._t('pdf_no_raw_data', 'No raw data available for this analysis.'), self.styles['CustomBody']))
         
         story.append(Spacer(1, 20))
         return story
@@ -7323,7 +7324,7 @@ class PDFReportGenerator:
         story = []
         
         # References header
-        story.append(Paragraph("References", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_references', 'References'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Get references from analysis data
@@ -7333,12 +7334,12 @@ class PDFReportGenerator:
             total_refs = len(all_references.get('database_references', []))
             
             if total_refs > 0:
-                story.append(Paragraph(f"<b>Total References Found:</b> {total_refs}", self.styles['CustomBody']))
+                story.append(Paragraph(f"<b>{self._t('pdf_total_references_found', 'Total References Found')}:</b> {total_refs}", self.styles['CustomBody']))
                 story.append(Spacer(1, 12))
                 
                 # Database references only
                 if all_references['database_references']:
-                    story.append(Paragraph("Database References", self.styles['Heading2']))
+                    story.append(Paragraph(self._t('pdf_database_references', 'Database References'), self.styles['Heading2']))
                     story.append(Spacer(1, 8))
                     
                     for i, ref in enumerate(all_references['database_references'], 1):
@@ -9513,7 +9514,7 @@ class PDFReportGenerator:
             if 'tables' in data and data['tables']:
                 tables = data['tables']
                 if isinstance(tables, list):
-                    story.append(Paragraph("📊 Data Tables", self.styles['Heading2']))
+                    story.append(Paragraph(f"📊 {self._t('pdf_data_tables', 'Data Tables')}", self.styles['Heading2']))
                     story.append(Spacer(1, 8))
                     for i, table_data in enumerate(tables, 1):
                         if not isinstance(table_data, dict):
