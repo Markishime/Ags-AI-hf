@@ -1578,15 +1578,15 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         
         
         # Saving results (optimized - no delays)
-        status_text.text("💾 **Step 8/8:** Saving analysis results to database... 🔄")
-        time_estimate.text("⏱️ Finalizing analysis...")
-        step_indicator.text(f"📋 Step {current_step} of {total_steps} - Saving")
+        status_text.text(f"💾 **{t('analysis_step', 'Step')} 8/8:** {t('analysis_saving_results', 'Saving analysis results to database...')} 🔄")
+        time_estimate.text(f"⏱️ {t('analysis_finalizing', 'Finalizing analysis...')}")
+        step_indicator.text(f"📋 {t('analysis_step', 'Step')} {current_step} {t('analysis_of', 'of')} {total_steps} - {t('analysis_saving', 'Saving')}")
         
-        status_text.text("💾 **Step 8/8:** Saving analysis results to database... ✅")
+        status_text.text(f"💾 **{t('analysis_step', 'Step')} 8/8:** {t('analysis_saving_results', 'Saving analysis results to database...')} ✅")
         if time_estimate:
-            time_estimate.text("⏱️ Estimated time remaining: ~10 seconds")
+            time_estimate.text(f"⏱️ {t('analysis_time_remaining', 'Estimated time remaining')}: ~10 {t('analysis_seconds', 'seconds')}")
         if step_indicator:
-            step_indicator.text(f"📋 Step {current_step} of {total_steps}")
+            step_indicator.text(f"📋 {t('analysis_step', 'Step')} {current_step} {t('analysis_of', 'of')} {total_steps}")
         
         user_email = st.session_state.get('user_email')
         user_id = st.session_state.get('user_id', 'anonymous')

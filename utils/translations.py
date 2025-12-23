@@ -681,6 +681,8 @@ TRANSLATIONS = {
         'analysis_almost_done': 'Hampir siap...',
         'analysis_preparing_results': 'Menyediakan hasil...',
         'analysis_saving': 'Menyimpan',
+        'analysis_saving_results': 'Menyimpan hasil analisis ke pangkalan data...',
+        'analysis_finalizing': 'Menyelesaikan analisis...',
         
         # Status Labels (Malaysian)
         'status_optimal': 'Optimum',
