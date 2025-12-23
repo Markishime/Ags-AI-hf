@@ -54,6 +54,60 @@ class PDFReportGenerator:
         except Exception:
             return default or key
     
+    def _translate_table_header(self, header: str) -> str:
+        """Translate common table header names"""
+        if not header or not isinstance(header, str):
+            return header
+        
+        # Common table header translations
+        header_translations = {
+            'en': {
+                'Parameter': 'Parameter',
+                'Average': 'Average',
+                'MPOB Standard': 'MPOB Standard',
+                'Status': 'Status',
+                'Gap': 'Gap',
+                '% Gap': '% Gap',
+                'Severity': 'Severity',
+                'Current Value': 'Current Value',
+                'Optimal Level': 'Optimal Level',
+                'Sample': 'Sample',
+                'Sample No.': 'Sample No.',
+                'Lab No.': 'Lab No.',
+                'Minimum': 'Minimum',
+                'Maximum': 'Maximum',
+                'Standard Deviation': 'Standard Deviation',
+                'Sample Count': 'Sample Count',
+            },
+            'ms': {
+                'Parameter': 'Parameter',
+                'Average': 'Purata',
+                'MPOB Standard': 'Standard MPOB',
+                'Status': 'Status',
+                'Gap': 'Jurang',
+                '% Gap': '% Jurang',
+                'Severity': 'Keterukan',
+                'Current Value': 'Nilai Semasa',
+                'Optimal Level': 'Tahap Optimum',
+                'Sample': 'Sampel',
+                'Sample No.': 'No. Sampel',
+                'Lab No.': 'No. Makmal',
+                'Minimum': 'Minimum',
+                'Maximum': 'Maksimum',
+                'Standard Deviation': 'Sisihan Piawai',
+                'Sample Count': 'Bilangan Sampel',
+            }
+        }
+        
+        translations = header_translations.get(self.language, header_translations['en'])
+        return translations.get(header, header)
+    
+    def _translate_table_headers(self, headers: list) -> list:
+        """Translate a list of table headers"""
+        if not headers or not isinstance(headers, list):
+            return headers
+        return [self._translate_table_header(h) for h in headers]
+    
     def _create_table_with_proper_layout(self, table_data, col_widths=None, 
                                          font_size=9):
         """Create a table that fits page width and wraps long text to prevent 
@@ -310,7 +364,7 @@ class PDFReportGenerator:
                 import traceback
                 logger.error(f"Full traceback: {traceback.format_exc()}")
                 # Instead of showing error message, try to create basic analysis content
-                story.append(Paragraph("Step-by-Step Analysis", self.styles['Heading2']))
+                story.append(Paragraph(self._t('pdf_step_by_step_analysis', 'Step-by-Step Analysis'), self.styles['Heading2']))
                 story.append(Paragraph("Analysis completed successfully. Please refer to the detailed results above for comprehensive information.", self.styles['Normal']))
             
             try:
@@ -580,7 +634,7 @@ class PDFReportGenerator:
         story = []
         
         # Executive Summary header
-        story.append(Paragraph("Executive Summary", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_executive_summary', 'Executive Summary'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Handle data structure - analysis_data might be the analysis_results content directly
@@ -609,7 +663,7 @@ class PDFReportGenerator:
             return story
 
         # Fallback if generation fails
-        story.append(Paragraph("Executive summary could not be generated from the analysis data.", self.styles['CustomBody']))
+        story.append(Paragraph(self._t('pdf_executive_summary_error', 'Executive summary could not be generated from the analysis data.'), self.styles['CustomBody']))
         story.append(Spacer(1, 12))
         return story
 
@@ -655,7 +709,7 @@ class PDFReportGenerator:
 
             # 4-7: Detailed issue identification and impacts - pH issues (only if we have soil data)
             if has_soil_data:
-                executive_sections.append("CRITICAL SOIL pH ANALYSIS")
+                executive_sections.append(self._t('pdf_exec_critical_soil_ph', 'CRITICAL SOIL pH ANALYSIS'))
                 ph_messages_added = False
                 soil_stats = soil_params['parameter_statistics']
                 ph_data = soil_stats.get('pH', {})
@@ -677,7 +731,7 @@ class PDFReportGenerator:
 
             # 8-11: Key soil nutrient status (only if we have soil data)
             if has_soil_data:
-                executive_sections.append("SOIL NUTRIENT STATUS ASSESSMENT")
+                executive_sections.append(self._t('pdf_exec_soil_nutrient_status', 'SOIL NUTRIENT STATUS ASSESSMENT'))
                 nutrient_sentences_added = 0
 
                 soil_stats = soil_params['parameter_statistics']
@@ -716,7 +770,7 @@ class PDFReportGenerator:
 
             # 12-15: Leaf tissue nutrient status (only if we have leaf data)
             if has_leaf_data:
-                executive_sections.append("LEAF TISSUE NUTRIENT ANALYSIS")
+                executive_sections.append(self._t('pdf_exec_leaf_tissue_analysis', 'LEAF TISSUE NUTRIENT ANALYSIS'))
                 leaf_sentences_added = 0
 
                 leaf_stats = leaf_params['parameter_statistics']
@@ -747,7 +801,7 @@ class PDFReportGenerator:
 
             # 16-18: Yield and economic implications (only if we have yield data)
             if land_yield_data:
-                executive_sections.append("YIELD & ECONOMIC IMPACT ANALYSIS")
+                executive_sections.append(self._t('pdf_exec_yield_economic', 'YIELD & ECONOMIC IMPACT ANALYSIS'))
                 # Use same data extraction logic as dynamic summary
                 current_yield = land_yield_data.get('current_yield')
                 if current_yield is None:
@@ -797,12 +851,12 @@ class PDFReportGenerator:
                 executive_sections.append("")
             else:
                 # Add a general economic note if no specific yield data
-                executive_sections.append("YIELD & ECONOMIC IMPACT ANALYSIS")
+                executive_sections.append(self._t('pdf_exec_yield_economic', 'YIELD & ECONOMIC IMPACT ANALYSIS'))
                 executive_sections.append("Nutritional management programs typically provide excellent returns on investment through improved yields and palm health, with payback periods of 12-18 months for corrective fertilization.")
                 executive_sections.append("")
 
             # 19-20: Recommendations and monitoring
-            executive_sections.append("RECOMMENDATIONS & MONITORING")
+            executive_sections.append(self._t('pdf_exec_recommendations_monitoring', 'RECOMMENDATIONS & MONITORING'))
             executive_sections.append("Adopt site-specific nutrient management to align input rates with soil supply and crop demand, while prioritizing balanced N-P-K programs complemented by targeted secondary and micronutrient support for optimal oil palm nutrition.")
             executive_sections.append("Incorporate organic matter through empty fruit bunches, compost, or cover crops to build soil health, and monitor pH and CEC trends annually to safeguard nutrient availability and retention capacity.")
             executive_sections.append("Continued monitoring and adaptive management strategies will be essential for maintaining optimal nutritional status and maximizing the economic potential of this oil palm operation.")
@@ -869,7 +923,7 @@ class PDFReportGenerator:
             executive_sections.append("")
 
             # TOP 3 LIMITING FACTORS - Restate critical nutrients from gap tables
-            executive_sections.append("TOP 3 LIMITING FACTORS")
+            executive_sections.append(self._t('pdf_exec_top_limiting_factors', 'TOP 3 LIMITING FACTORS'))
             top_limiting = []
 
             # Collect critical nutrients from all gap tables
@@ -912,7 +966,7 @@ class PDFReportGenerator:
             executive_sections.append("")
 
             # 4. RECOMMENDED SOLUTIONS - Pull from Step 3
-            executive_sections.append("RECOMMENDED SOLUTIONS & INTERVENTIONS")
+            executive_sections.append(self._t('pdf_exec_recommended_solutions', 'RECOMMENDED SOLUTIONS & INTERVENTIONS'))
             step3 = next((s for s in step_results if s.get('step_number') == 3), {})
 
             # Get specific recommendations from Step 3
@@ -941,7 +995,7 @@ class PDFReportGenerator:
             executive_sections.append("")
 
             # 5. ECONOMIC ANALYSIS - Pull from Step 5
-            executive_sections.append("ECONOMIC IMPACT & ROI ANALYSIS")
+            executive_sections.append(self._t('pdf_exec_economic_roi', 'ECONOMIC IMPACT & ROI ANALYSIS'))
             step5 = next((s for s in step_results if s.get('step_number') == 5), {})
 
             # Extract economic forecast data
@@ -973,7 +1027,7 @@ class PDFReportGenerator:
             executive_sections.append("")
 
             # 6. 5-YEAR PROJECTIONS - Pull from Step 6
-            executive_sections.append("5-YEAR YIELD PROJECTIONS")
+            executive_sections.append(self._t('pdf_exec_5_year_yield', '5-YEAR YIELD PROJECTIONS'))
             step6 = next((s for s in step_results if s.get('step_number') == 6), {})
 
             # Extract yield forecast data
@@ -1013,7 +1067,7 @@ class PDFReportGenerator:
             executive_sections.append("")
 
             # 7. REGENERATIVE AGRICULTURE - Pull from Step 4
-            executive_sections.append("REGENERATIVE AGRICULTURE & SUSTAINABILITY")
+            executive_sections.append(self._t('pdf_exec_regenerative', 'REGENERATIVE AGRICULTURE & SUSTAINABILITY'))
             step4 = next((s for s in step_results if s.get('step_number') == 4), {})
 
             # Extract regenerative practices
@@ -1038,7 +1092,7 @@ class PDFReportGenerator:
             executive_sections.append("")
 
             # 8. CONCLUSION & NEXT STEPS
-            executive_sections.append("CONCLUSION & IMPLEMENTATION ROADMAP")
+            executive_sections.append(self._t('pdf_exec_conclusion', 'CONCLUSION & IMPLEMENTATION ROADMAP'))
 
             # Get implementation guidance from any step
             for step in step_results:
@@ -1382,7 +1436,7 @@ class PDFReportGenerator:
 
     def _create_step1_pdf_content(self, story, analysis_data, main_analysis_results=None):
         """Create Step 1 PDF content matching results page format"""
-        story.append(Paragraph("📊 Data Analysis Results", self.styles['Heading2']))
+        story.append(Paragraph(f"📊 {self._t('pdf_data_analysis_results', 'Data Analysis Results')}", self.styles['Heading2']))
         story.append(Spacer(1, 8))
         
         # Debug: Log what data is available
@@ -1401,7 +1455,7 @@ class PDFReportGenerator:
         
         # Summary section
         if 'summary' in analysis_data and analysis_data['summary']:
-            story.append(Paragraph("📋 Summary", self.styles['Heading3']))
+            story.append(Paragraph(f"📋 {self._t('pdf_summary', 'Summary')}", self.styles['Heading3']))
             summary_text = analysis_data['summary']
             if isinstance(summary_text, str) and summary_text.strip():
                 story.append(Paragraph(self._sanitize_text_persona(summary_text.strip()), self.styles['CustomBody']))
@@ -1409,7 +1463,7 @@ class PDFReportGenerator:
         
         # Detailed Analysis section
         if 'detailed_analysis' in analysis_data and analysis_data['detailed_analysis']:
-            story.append(Paragraph("📋 Detailed Analysis", self.styles['Heading3']))
+            story.append(Paragraph(f"📋 {self._t('pdf_detailed_analysis', 'Detailed Analysis')}", self.styles['Heading3']))
             detailed_text = analysis_data['detailed_analysis']
             
             if isinstance(detailed_text, dict):
@@ -1431,35 +1485,35 @@ class PDFReportGenerator:
             story.append(Spacer(1, 8))
         
         # Data Tables section
-        story.append(Paragraph("📊 Data Tables", self.styles['Heading3']))
+        story.append(Paragraph(f"📊 {self._t('pdf_data_tables', 'Data Tables')}", self.styles['Heading3']))
         story.append(Spacer(1, 6))
         
         # Your Soil and Leaf Test Results table
-        story.append(Paragraph("📋 Your Soil and Leaf Test Results", self.styles['Heading4']))
-        story.append(Paragraph("This table summarizes the average values from all samples collected.", self.styles['CustomBody']))
+        story.append(Paragraph(f"📋 {self._t('pdf_soil_leaf_test_results', 'Your Soil and Leaf Test Results')}", self.styles['Heading4']))
+        story.append(Paragraph(self._t('pdf_table_summary_desc', 'This table summarizes the average values from all samples collected.'), self.styles['CustomBody']))
         story.append(Spacer(1, 4))
         
         # Create comprehensive soil and leaf test results table
         self._create_comprehensive_test_results_table_pdf(story, analysis_data, main_analysis_results)
         
         # Nutrient Gap Analysis table
-        story.append(Paragraph("⚠️ Nutrient Gap Analysis: Observed vs. Malaysian Minimum Thresholds", self.styles['Heading4']))
-        story.append(Paragraph("This table prioritizes nutrient deficiencies by the magnitude of their gap relative to MPOB standards, highlighting the most critical areas for intervention.", self.styles['CustomBody']))
+        story.append(Paragraph(f"⚠️ {self._t('pdf_nutrient_gap_analysis_title', 'Nutrient Gap Analysis: Observed vs. Malaysian Minimum Thresholds')}", self.styles['Heading4']))
+        story.append(Paragraph(self._t('pdf_nutrient_gap_desc', 'This table prioritizes nutrient deficiencies by the magnitude of their gap relative to MPOB standards, highlighting the most critical areas for intervention.'), self.styles['CustomBody']))
         story.append(Spacer(1, 4))
         
         # Create nutrient gap analysis table
         self._create_nutrient_gap_analysis_table_pdf(story, analysis_data, main_analysis_results)
         
         # Nutrient Ratio Analysis table
-        story.append(Paragraph("⚖️ Nutrient Ratio Analysis", self.styles['Heading4']))
-        story.append(Paragraph("Nutrient ratios are crucial as they indicate balance and potential competition between nutrients for uptake by the palm.", self.styles['CustomBody']))
+        story.append(Paragraph(f"⚖️ {self._t('pdf_nutrient_ratio_analysis', 'Nutrient Ratio Analysis')}", self.styles['Heading4']))
+        story.append(Paragraph(self._t('pdf_nutrient_ratio_desc', 'Nutrient ratios are crucial as they indicate balance and potential competition between nutrients for uptake by the palm.'), self.styles['CustomBody']))
         story.append(Spacer(1, 4))
         
         # Create nutrient ratio analysis table
         self._create_nutrient_ratio_analysis_table_pdf(story, analysis_data, main_analysis_results)
         
         # Parameter Quick Guide table
-        story.append(Paragraph("📖 Parameter Quick Guide for Deficient Nutrients", self.styles['Heading4']))
+        story.append(Paragraph(f"📖 {self._t('pdf_parameter_quick_guide', 'Parameter Quick Guide for Deficient Nutrients')}", self.styles['Heading4']))
         story.append(Spacer(1, 4))
         
         # Create parameter quick guide table
@@ -1469,11 +1523,11 @@ class PDFReportGenerator:
         
         # Interpretations section (consistent with Step 2)
         if 'interpretations' in analysis_data and analysis_data['interpretations']:
-            story.append(Paragraph("📝 Interpretations", self.styles['Heading3']))
+            story.append(Paragraph(f"📝 {self._t('pdf_interpretations', 'Interpretations')}", self.styles['Heading3']))
             interpretations = analysis_data['interpretations']
             if isinstance(interpretations, list):
                 for i, interpretation in enumerate(interpretations, 1):
-                    story.append(Paragraph(f"Interpretation {i}:", self.styles['Heading4']))
+                    story.append(Paragraph(f"{self._t('pdf_interpretation', 'Interpretation')} {i}:", self.styles['Heading4']))
                     story.append(Paragraph(self._sanitize_text_persona(str(interpretation)), self.styles['CustomBody']))
                     story.append(Spacer(1, 6))
             story.append(Spacer(1, 8))
@@ -1482,7 +1536,7 @@ class PDFReportGenerator:
         """Create Step 3 PDF content matching results page format"""
         # Key Findings section (at the end, consistent with Step 2)
         if 'key_findings' in analysis_data and analysis_data['key_findings']:
-            story.append(Paragraph("🔍 Key Findings", self.styles['Heading3']))
+            story.append(Paragraph(f"🔍 {self._t('pdf_key_findings', 'Key Findings')}", self.styles['Heading3']))
             key_findings = analysis_data['key_findings']
             normalized_kf = []
 
@@ -1520,7 +1574,7 @@ class PDFReportGenerator:
         
         # Summary section
         if 'summary' in analysis_data and analysis_data['summary']:
-            story.append(Paragraph("📋 Summary", self.styles['Heading3']))
+            story.append(Paragraph(f"📋 {self._t('pdf_summary', 'Summary')}", self.styles['Heading3']))
             summary_text = analysis_data['summary']
             if isinstance(summary_text, str) and summary_text.strip():
                 story.append(Paragraph(self._sanitize_text_persona(summary_text.strip()), self.styles['CustomBody']))
@@ -1528,7 +1582,7 @@ class PDFReportGenerator:
         
         # Detailed Analysis section
         if 'detailed_analysis' in analysis_data and analysis_data['detailed_analysis']:
-            story.append(Paragraph("📋 Detailed Analysis", self.styles['Heading3']))
+            story.append(Paragraph(f"📋 {self._t('pdf_detailed_analysis', 'Detailed Analysis')}", self.styles['Heading3']))
             detailed_text = analysis_data['detailed_analysis']
             
             if isinstance(detailed_text, dict):
@@ -1551,7 +1605,7 @@ class PDFReportGenerator:
         
         # Tables section (consistent with Step 2)
         if 'tables' in analysis_data and analysis_data['tables']:
-            story.append(Paragraph("📊 Data Tables", self.styles['Heading3']))
+            story.append(Paragraph(f"📊 {self._t('pdf_data_tables', 'Data Tables')}", self.styles['Heading3']))
             tables = analysis_data['tables']
             if isinstance(tables, list):
                 for table in tables:
@@ -1566,18 +1620,18 @@ class PDFReportGenerator:
         
         # Interpretations section (consistent with Step 2)
         if 'interpretations' in analysis_data and analysis_data['interpretations']:
-            story.append(Paragraph("📝 Interpretations", self.styles['Heading3']))
+            story.append(Paragraph(f"📝 {self._t('pdf_interpretations', 'Interpretations')}", self.styles['Heading3']))
             interpretations = analysis_data['interpretations']
             if isinstance(interpretations, list):
                 for i, interpretation in enumerate(interpretations, 1):
-                    story.append(Paragraph(f"Interpretation {i}:", self.styles['Heading4']))
+                    story.append(Paragraph(f"{self._t('pdf_interpretation', 'Interpretation')} {i}:", self.styles['Heading4']))
                     story.append(Paragraph(self._sanitize_text_persona(str(interpretation)), self.styles['CustomBody']))
                     story.append(Spacer(1, 6))
             story.append(Spacer(1, 8))
         
         # Key Findings section (at the end, consistent with Step 2)
         if 'key_findings' in analysis_data and analysis_data['key_findings']:
-            story.append(Paragraph("🔍 Key Findings", self.styles['Heading3']))
+            story.append(Paragraph(f"🔍 {self._t('pdf_key_findings', 'Key Findings')}", self.styles['Heading3']))
             key_findings = analysis_data['key_findings']
             if isinstance(key_findings, list):
                 for i, finding in enumerate(key_findings, 1):
@@ -1588,7 +1642,7 @@ class PDFReportGenerator:
         """Create standard step PDF content for steps 2, 4, 5, 6"""
         # Summary section
         if 'summary' in analysis_data and analysis_data['summary']:
-            story.append(Paragraph("📋 Summary", self.styles['Heading3']))
+            story.append(Paragraph(f"📋 {self._t('pdf_summary', 'Summary')}", self.styles['Heading3']))
             summary_text = analysis_data['summary']
             if isinstance(summary_text, str) and summary_text.strip():
                 # Apply comprehensive cleaning (same as analysis engine)
@@ -1600,7 +1654,7 @@ class PDFReportGenerator:
         
         # Detailed Analysis section
         if 'detailed_analysis' in analysis_data and analysis_data['detailed_analysis']:
-            story.append(Paragraph("📋 Detailed Analysis", self.styles['Heading3']))
+            story.append(Paragraph(f"📋 {self._t('pdf_detailed_analysis', 'Detailed Analysis')}", self.styles['Heading3']))
             detailed_text = analysis_data['detailed_analysis']
             
             if isinstance(detailed_text, dict):
@@ -1623,7 +1677,7 @@ class PDFReportGenerator:
         
         # Tables section
         if 'tables' in analysis_data and analysis_data['tables']:
-            story.append(Paragraph("📊 Data Tables", self.styles['Heading3']))
+            story.append(Paragraph(f"📊 {self._t('pdf_data_tables', 'Data Tables')}", self.styles['Heading3']))
             tables = analysis_data['tables']
             if isinstance(tables, list):
                 for table in tables:
@@ -1642,11 +1696,11 @@ class PDFReportGenerator:
         
         # Interpretations section
         if 'interpretations' in analysis_data and analysis_data['interpretations']:
-            story.append(Paragraph("📝 Interpretations", self.styles['Heading3']))
+            story.append(Paragraph(f"📝 {self._t('pdf_interpretations', 'Interpretations')}", self.styles['Heading3']))
             interpretations = analysis_data['interpretations']
             if isinstance(interpretations, list):
                 for i, interpretation in enumerate(interpretations, 1):
-                    story.append(Paragraph(f"Interpretation {i}:", self.styles['Heading4']))
+                    story.append(Paragraph(f"{self._t('pdf_interpretation', 'Interpretation')} {i}:", self.styles['Heading4']))
                     story.append(Paragraph(self._sanitize_text_persona(str(interpretation)), self.styles['CustomBody']))
                     story.append(Spacer(1, 6))
             story.append(Spacer(1, 8))
@@ -2106,7 +2160,13 @@ class PDFReportGenerator:
                     ])
                 
                 if soil_data:
-                    headers = ["Parameter", "Average", "MPOB Optimal", "Status", "Unit"]
+                    headers = [
+                        self._t('table_parameter', 'Parameter'),
+                        self._t('table_average', 'Average'),
+                        self._t('table_mpob_optimal', 'MPOB Optimal'),
+                        self._t('table_status', 'Status'),
+                        self._t('table_unit', 'Unit')
+                    ]
                     table_data = [headers] + soil_data
                     pdf_table = self._create_table_with_proper_layout(table_data)
                     story.append(pdf_table)
@@ -2176,7 +2236,13 @@ class PDFReportGenerator:
                     ])
                 
                 if leaf_data:
-                    headers = ["Parameter", "Average", "MPOB Optimal", "Status", "Unit"]
+                    headers = [
+                        self._t('table_parameter', 'Parameter'),
+                        self._t('table_average', 'Average'),
+                        self._t('table_mpob_optimal', 'MPOB Optimal'),
+                        self._t('table_status', 'Status'),
+                        self._t('table_unit', 'Unit')
+                    ]
                     table_data = [headers] + leaf_data
                     pdf_table = self._create_table_with_proper_layout(table_data)
                     story.append(pdf_table)
@@ -2322,7 +2388,12 @@ class PDFReportGenerator:
                             ])
             
             if table_data:
-                headers = ["Parameter", "Average Value", "Unit", "Type"]
+                headers = [
+                    self._t('table_parameter', 'Parameter'),
+                    self._t('table_average_value', 'Average Value'),
+                    self._t('table_unit', 'Unit'),
+                    self._t('table_type', 'Type')
+                ]
                 table_data = [headers] + table_data
                 pdf_table = self._create_table_with_proper_layout(table_data)
                 story.append(pdf_table)
@@ -2662,7 +2733,15 @@ class PDFReportGenerator:
             gap_data = critical_data + low_data + balanced_data + unknown_data
 
             if gap_data:
-                headers = ["Nutrient", "Source", "Average Value", "MPOB Standard (Min)", "Absolute Gap", "Percent Gap", "Severity"]
+                headers = [
+                    self._t('table_nutrient', 'Nutrient'),
+                    self._t('table_source', 'Source'),
+                    self._t('table_average_value', 'Average Value'),
+                    self._t('table_mpob_standard_min', 'MPOB Standard (Min)'),
+                    self._t('table_absolute_gap', 'Absolute Gap'),
+                    self._t('table_percent_gap', 'Percent Gap'),
+                    self._t('table_severity', 'Severity')
+                ]
                 table_data = [headers] + gap_data
                 pdf_table = self._create_table_with_proper_layout(table_data)
                 story.append(pdf_table)
@@ -2798,7 +2877,12 @@ class PDFReportGenerator:
                         ])
             
             if ratio_data:
-                headers = ["Ratio", "Current Value", "Optimal Range", "Status"]
+                headers = [
+                    self._t('table_ratio', 'Ratio'),
+                    self._t('table_current_value', 'Current Value'),
+                    self._t('table_optimal_range', 'Optimal Range'),
+                    self._t('table_status', 'Status')
+                ]
                 table_data = [headers] + ratio_data
                 pdf_table = self._create_table_with_proper_layout(table_data)
                 story.append(pdf_table)
@@ -2828,7 +2912,12 @@ class PDFReportGenerator:
                 ["🍃 Zn (mg/kg)", "15-25", "Enzyme function", "Apply zinc sulfate"]
             ]
             
-            headers = ["Parameter", "Optimal Range", "Function", "Correction Action"]
+            headers = [
+                self._t('table_parameter', 'Parameter'),
+                self._t('table_optimal_range', 'Optimal Range'),
+                self._t('table_function', 'Function'),
+                self._t('table_correction_action', 'Correction Action')
+            ]
             table_data = [headers] + guide_data
             pdf_table = self._create_table_with_proper_layout(table_data)
             story.append(pdf_table)
@@ -9513,16 +9602,20 @@ class PDFReportGenerator:
             if 'tables' in data and data['tables']:
                 tables = data['tables']
                 if isinstance(tables, list):
-                    story.append(Paragraph("📊 Data Tables", self.styles['Heading2']))
+                    story.append(Paragraph(f"📊 {self._t('pdf_data_tables', 'Data Tables')}", self.styles['Heading2']))
                     story.append(Spacer(1, 8))
                     for i, table_data in enumerate(tables, 1):
                         if not isinstance(table_data, dict):
                             continue
-                        title = table_data.get('title') or f"Table {i}"
+                        title = table_data.get('title') or self._t('pdf_table', 'Table') + f" {i}"
                         headers = table_data.get('headers') or []
                         rows = table_data.get('rows') or []
                         if not headers or not rows:
                             continue
+
+                        # Translate table title and headers
+                        title = self._t(f'pdf_table_title_{title.lower().replace(" ", "_")}', title) if title else self._t('pdf_table', 'Table') + f" {i}"
+                        headers = self._translate_table_headers(headers)
 
                         story.append(Paragraph(f"<b>{title}</b>", self.styles['CustomBody']))
 
