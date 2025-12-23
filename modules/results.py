@@ -625,12 +625,26 @@ def show_results_page():
             
             # Process the new analysis with enhanced progress tracking
             try:
+                # Add a note about keeping the page open
+                st.info("⏳ **Important:** Please keep this page open during analysis. The process may take 2-5 minutes.")
+                
                 results_data = process_new_analysis(st.session_state.analysis_data, progress_bar, status_text, time_estimate, step_indicator, working_indicator)
+            except KeyboardInterrupt:
+                logger.warning("Analysis interrupted by user")
+                results_data = {'success': False, 'message': 'Analysis was interrupted. Please try again.'}
             except Exception as e:
+                error_msg = str(e).lower()
                 logger.error(f"❌ Error during analysis processing: {str(e)}")
                 import traceback
                 logger.error(f"Traceback: {traceback.format_exc()}")
-                results_data = {'success': False, 'message': f'Processing error: {str(e)}'}
+                
+                # Handle specific error types
+                if "bodystreambuffer" in error_msg or "aborted" in error_msg:
+                    results_data = {'success': False, 'message': 'Connection was interrupted during analysis. Please refresh the page and try again.'}
+                elif "timeout" in error_msg:
+                    results_data = {'success': False, 'message': 'Analysis timed out. Please try again with smaller files or check your connection.'}
+                else:
+                    results_data = {'success': False, 'message': f'Processing error: {str(e)}'}
             finally:
                 # Clear the analysis_data from session state after processing (success or failure)
                 if 'analysis_data' in st.session_state:
@@ -1598,19 +1612,46 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
             return
 
         try:
-            analysis_results = analysis_engine.generate_comprehensive_analysis(
-                soil_data=transformed_soil_data,
-                leaf_data=transformed_leaf_data,
-                land_yield_data=land_yield_data,
-                prompt_text=active_prompt.get('prompt_text', '')
-            )
-            logger.info(f"✅ Analysis completed successfully")
-            logger.info(f"🔍 Analysis results keys: {list(analysis_results.keys()) if isinstance(analysis_results, dict) else 'None'}")
+            # Update status before starting long-running analysis
+            status_text.text("🔬 **Step 4/5:** Starting comprehensive AI analysis... 🔄")
+            progress_bar.progress(70)
+            time_estimate.text("⏱️ This may take 2-5 minutes. Please keep this page open...")
+            
+            # Run analysis with better error handling
+            try:
+                analysis_results = analysis_engine.generate_comprehensive_analysis(
+                    soil_data=transformed_soil_data,
+                    leaf_data=transformed_leaf_data,
+                    land_yield_data=land_yield_data,
+                    prompt_text=active_prompt.get('prompt_text', '')
+                )
+                logger.info(f"✅ Analysis completed successfully")
+                logger.info(f"🔍 Analysis results keys: {list(analysis_results.keys()) if isinstance(analysis_results, dict) else 'None'}")
+            except KeyboardInterrupt:
+                # Handle user interruption
+                logger.warning("Analysis interrupted by user")
+                raise Exception("Analysis was interrupted. Please try again.")
+            except Exception as analysis_error:
+                # Re-raise to be caught by outer handler
+                raise analysis_error
+                
         except Exception as e:
             logger.error(f"❌ Analysis failed: {str(e)}")
             import traceback
             logger.error(f"❌ Analysis traceback: {traceback.format_exc()}")
-            st.error(f"❌ **Analysis Failed**: {str(e)}")
+            
+            # Check if it's a timeout/connection error
+            error_msg = str(e).lower()
+            if "timeout" in error_msg or "aborted" in error_msg or "bodystreambuffer" in error_msg or "connection" in error_msg:
+                st.error("❌ **Analysis Timeout**: The analysis took too long or the connection was interrupted.")
+                st.info("💡 **Tip:** Large files may take longer to process. Please ensure you have a stable internet connection and try again.")
+                st.info("💡 **Alternative:** Try refreshing the page and starting the analysis again.")
+            elif "quota" in error_msg or "429" in error_msg:
+                st.error("❌ **API Quota Exceeded**: The analysis service is temporarily unavailable due to high demand.")
+                st.info("💡 **Tip:** Please try again in a few minutes.")
+            else:
+                st.error(f"❌ **Analysis Failed**: {str(e)}")
+                st.info("💡 **Tip:** Please check your uploaded files and try again. If the problem persists, contact support.")
             return
         
         # Step 7: Generating Insights with animation
