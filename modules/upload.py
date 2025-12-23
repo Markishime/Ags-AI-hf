@@ -1075,56 +1075,56 @@ def upload_section():
         pass
     
     if soil_uploaded and leaf_uploaded and land_yield_provided:
-    # Show upload limit info if available
-    # CRITICAL: Always refresh from URL params to get latest count (parent may have updated it)
-    try:
-        query_params = st.query_params
-        url_uploads_used = query_params.get('uploadsUsed', '')
-        url_uploads_limit = query_params.get('uploadsLimit', '')
-        url_uploads_remaining = query_params.get('uploadsRemaining', '')
-        
-        # Use URL params if available (most up-to-date), otherwise use limit_info
-        if url_uploads_used and url_uploads_limit:
-            try:
-                uploads_used = int(url_uploads_used)
-                uploads_limit = int(url_uploads_limit)
-                if url_uploads_remaining:
-                    try:
-                        uploads_remaining = int(url_uploads_remaining) if url_uploads_remaining != 'infinity' and url_uploads_remaining != '-1' else float('inf')
-                    except (ValueError, TypeError):
+        # Show upload limit info if available
+        # CRITICAL: Always refresh from URL params to get latest count (parent may have updated it)
+        try:
+            query_params = st.query_params
+            url_uploads_used = query_params.get('uploadsUsed', '')
+            url_uploads_limit = query_params.get('uploadsLimit', '')
+            url_uploads_remaining = query_params.get('uploadsRemaining', '')
+            
+            # Use URL params if available (most up-to-date), otherwise use limit_info
+            if url_uploads_used and url_uploads_limit:
+                try:
+                    uploads_used = int(url_uploads_used)
+                    uploads_limit = int(url_uploads_limit)
+                    if url_uploads_remaining:
+                        try:
+                            uploads_remaining = int(url_uploads_remaining) if url_uploads_remaining != 'infinity' and url_uploads_remaining != '-1' else float('inf')
+                        except (ValueError, TypeError):
+                            uploads_remaining = max(0, uploads_limit - uploads_used)
+                    else:
                         uploads_remaining = max(0, uploads_limit - uploads_used)
-                else:
-                    uploads_remaining = max(0, uploads_limit - uploads_used)
-                
-                # Update session state with latest values
-                st.session_state.uploads_used = uploads_used
-                st.session_state.uploads_limit = uploads_limit
-                st.session_state.uploads_remaining = uploads_remaining
-            except (ValueError, TypeError):
-                # Fallback to limit_info if URL params invalid
+                    
+                    # Update session state with latest values
+                    st.session_state.uploads_used = uploads_used
+                    st.session_state.uploads_limit = uploads_limit
+                    st.session_state.uploads_remaining = uploads_remaining
+                except (ValueError, TypeError):
+                    # Fallback to limit_info if URL params invalid
+                    uploads_used = limit_info.get('uploads_used', 0) if limit_info else 0
+                    uploads_limit = limit_info.get('uploads_limit', 0) if limit_info else 0
+                    uploads_remaining = limit_info.get('uploads_remaining', 0) if limit_info else 0
+            else:
+                # Use limit_info if URL params not available
                 uploads_used = limit_info.get('uploads_used', 0) if limit_info else 0
                 uploads_limit = limit_info.get('uploads_limit', 0) if limit_info else 0
                 uploads_remaining = limit_info.get('uploads_remaining', 0) if limit_info else 0
-        else:
-            # Use limit_info if URL params not available
+        except Exception as e:
+            # Fallback to limit_info on error
             uploads_used = limit_info.get('uploads_used', 0) if limit_info else 0
             uploads_limit = limit_info.get('uploads_limit', 0) if limit_info else 0
             uploads_remaining = limit_info.get('uploads_remaining', 0) if limit_info else 0
-    except Exception as e:
-        # Fallback to limit_info on error
-        uploads_used = limit_info.get('uploads_used', 0) if limit_info else 0
-        uploads_limit = limit_info.get('uploads_limit', 0) if limit_info else 0
-        uploads_remaining = limit_info.get('uploads_remaining', 0) if limit_info else 0
-    
-    if limit_info or (uploads_limit > 0):
-        # Only show limit info if limit is set (greater than 0)
-        if uploads_limit > 0:
-            if uploads_remaining == float('inf') or uploads_remaining == -1:
-                st.info(f"📊 **Analyses:** Unlimited")
-            else:
-                # Display: X/Y used (Z remaining)
-                # Example: 0/2 used (2 remaining), 1/2 used (1 remaining), 2/2 used (0 remaining)
-                st.info(f"📊 **Analyses:** {uploads_used}/{uploads_limit} used ({uploads_remaining} remaining)")
+        
+        if limit_info or (uploads_limit > 0):
+            # Only show limit info if limit is set (greater than 0)
+            if uploads_limit > 0:
+                if uploads_remaining == float('inf') or uploads_remaining == -1:
+                    st.info(f"📊 **Analyses:** Unlimited")
+                else:
+                    # Display: X/Y used (Z remaining)
+                    # Example: 0/2 used (2 remaining), 1/2 used (1 remaining), 2/2 used (0 remaining)
+                    st.info(f"📊 **Analyses:** {uploads_used}/{uploads_limit} used ({uploads_remaining} remaining)")
         
         # Check if limit exceeded
         if not can_start:
