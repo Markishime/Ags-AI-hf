@@ -588,7 +588,7 @@ def show_results_page():
                 # CRITICAL: Send analysis completion to CropDrive website AFTER successful save
                 # This must happen AFTER Firestore save to ensure user_id is available
                 try:
-                    from utils.cropdrive_integration import send_analysis_complete, get_user_id
+                    from utils.cropdrive_integration import send_analysis_complete, get_user_id, request_config_update
                     
                     # Get user_id to verify it's available
                     user_id = get_user_id()
@@ -661,6 +661,12 @@ def show_results_page():
                         }
                     )
                     logger.info(f"✅ ANALYSIS_COMPLETE message sent successfully")
+
+                    # Request updated config after a short delay to get updated upload counts
+                    import time
+                    time.sleep(1)  # Small delay before requesting config update
+                    request_config_update()
+                    logger.info("📤 Requested updated config after analysis completion")
                     
                 except ImportError:
                     # CropDrive integration not available, skip

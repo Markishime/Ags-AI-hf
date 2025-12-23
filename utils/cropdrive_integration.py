@@ -42,21 +42,28 @@ def inject_parent_communication():
             
             // Handle initial configuration
             if (data.type === 'CONFIG') {
-                userConfig = {
-                    language: data.language || 'en',
+                console.log('📥 Received CONFIG from website:', data);
+
+                // Store user information for later use
+                window.userConfig = {
                     userId: data.userId,
-                    plan: data.plan || 'none',
-                    userEmail: data.userEmail || '',
-                    userName: data.userName || '',
-                    uploadsUsed: data.uploadsUsed || 0,
-                    uploadsLimit: data.uploadsLimit || 0,
-                    uploadLimitExceeded: data.uploadLimitExceeded || false,
-                    uploadsRemaining: data.uploadsRemaining !== undefined ? data.uploadsRemaining : (data.uploadsLimit || 0) - (data.uploadsUsed || 0)
+                    userEmail: data.userEmail,
+                    userName: data.userName,
+                    plan: data.plan,
+                    uploadsUsed: data.uploadsUsed,
+                    uploadsLimit: data.uploadsLimit,
+                    uploadLimitExceeded: data.uploadLimitExceeded,
+                    uploadsRemaining: data.uploadsRemaining,
+                    language: data.language
                 };
+
+                userConfig = window.userConfig;
                 currentLanguage = userConfig.language;
                 if (currentLanguage !== 'en' && currentLanguage !== 'ms') {
                     currentLanguage = 'en';
                 }
+
+                console.log('✅ Stored user config:', window.userConfig);
                 
                 // Store in localStorage
                 localStorage.setItem('cropdrive_language', currentLanguage);
@@ -121,25 +128,36 @@ def inject_parent_communication():
             
             // Handle CONFIG updates without reload (for upload count updates)
             if (data.type === 'CONFIG_UPDATE' || (data.type === 'CONFIG' && !data.fullReload)) {
+                console.log('📥 Received CONFIG_UPDATE from website:', data);
+
                 // Update upload counts without full reload
                 if (data.uploadsUsed !== undefined || data.uploadsLimit !== undefined) {
                     const newUsed = data.uploadsUsed !== undefined ? data.uploadsUsed : parseInt(localStorage.getItem('cropdrive_uploadsUsed') || '0');
                     const newLimit = data.uploadsLimit !== undefined ? data.uploadsLimit : parseInt(localStorage.getItem('cropdrive_uploadsLimit') || '0');
                     const newRemaining = data.uploadsRemaining !== undefined ? data.uploadsRemaining : Math.max(0, newLimit - newUsed);
-                    
+
+                    // Update window.userConfig if it exists
+                    if (window.userConfig) {
+                        window.userConfig.uploadsUsed = newUsed;
+                        window.userConfig.uploadsLimit = newLimit;
+                        window.userConfig.uploadLimitExceeded = data.uploadLimitExceeded || false;
+                        window.userConfig.uploadsRemaining = newRemaining;
+                    }
+
                     localStorage.setItem('cropdrive_uploadsUsed', String(newUsed));
                     localStorage.setItem('cropdrive_uploadsLimit', String(newLimit));
                     localStorage.setItem('cropdrive_uploadsRemaining', String(newRemaining));
-                    
+
                     // Update URL params
                     const url = new URL(window.location.href);
                     url.searchParams.set('uploadsUsed', String(newUsed));
                     url.searchParams.set('uploadsLimit', String(newLimit));
                     url.searchParams.set('uploadsRemaining', String(newRemaining));
                     window.history.replaceState({}, '', url);
-                    
+
                     console.log(`📊 Upload count updated: ${{newUsed}}/${{newLimit}} used (${{newRemaining}} remaining)`);
-                    
+                    console.log('✅ Updated window.userConfig:', window.userConfig);
+
                     // Trigger Streamlit rerun to update UI
                     if (window.parent !== window) {{
                         window.parent.postMessage({{
@@ -173,6 +191,77 @@ def inject_parent_communication():
             }
         });
         
+        // Helper function for safe postMessage
+        function safePostMessage(message, targetOrigin = '*') {
+            try {
+                window.parent.postMessage(message, targetOrigin);
+                console.log(`✅ Message sent to ${targetOrigin}:`, message.type);
+                return true;
+            } catch (error) {
+                console.error(`❌ Failed to send message to ${targetOrigin}:`, error);
+                return false;
+            }
+        }
+
+        // Helper function to send ANALYSIS_COMPLETE message
+        function sendAnalysisComplete(analysisResults) {
+            console.log('📊 Sending ANALYSIS_COMPLETE message:', analysisResults);
+
+            const message = {
+                type: 'ANALYSIS_COMPLETE',
+                userId: window.userConfig?.userId, // Must be included
+                title: `Analysis Report - ${new Date().toLocaleDateString()}`,
+                analysisType: analysisResults.analysisType || 'soil', // 'soil', 'leaf', or 'both'
+                summary: analysisResults.summary || '',
+                recommendationsCount: analysisResults.recommendationsCount || 0,
+                fileUrl: analysisResults.fileUrl || null,
+                analysisData: analysisResults.analysisData || null,
+                timestamp: new Date().toISOString()
+            };
+
+            // CRITICAL: Use '*' as target origin
+            try {
+                window.parent.postMessage(message, '*');
+                console.log('✅ ANALYSIS_COMPLETE message sent successfully');
+
+                // Store as backup in case message fails
+                try {
+                    sessionStorage.setItem('analysis_results', JSON.stringify(message));
+                    console.log('💾 Stored analysis results in sessionStorage');
+                } catch (e) {
+                    console.log('⚠️ Could not store in sessionStorage');
+                }
+            } catch (error) {
+                console.error('❌ Error sending ANALYSIS_COMPLETE:', error);
+
+                // Fallback: Try with specific origin
+                try {
+                    window.parent.postMessage(message, 'https://www.cropdrive.ai');
+                    console.log('✅ ANALYSIS_COMPLETE sent with specific origin');
+                } catch (e2) {
+                    console.error('❌ Failed with specific origin too');
+                }
+            }
+        }
+
+        // Helper function to request config update
+        function requestConfigUpdate() {
+            console.log('📤 Requesting updated CONFIG from parent...');
+
+            const message = {
+                type: 'REQUEST_CONFIG_UPDATE',
+                userId: window.userConfig?.userId,
+                timestamp: Date.now()
+            };
+
+            try {
+                window.parent.postMessage(message, '*');
+                console.log('✅ REQUEST_CONFIG_UPDATE sent');
+            } catch (error) {
+                console.error('❌ Error sending REQUEST_CONFIG_UPDATE:', error);
+            }
+        }
+
         // Check URL parameters on page load
         window.addEventListener('load', function() {
             const urlParams = new URLSearchParams(window.location.search);
@@ -322,6 +411,41 @@ def initialize_integration():
 # STEP 3: Send analysis results to website
 # ============================================================================
 
+def request_config_update():
+    """
+    Request updated CONFIG from parent window after analysis
+    This should be called after analysis completes to get updated upload counts
+    """
+    from streamlit.components.v1 import html
+    import json
+
+    request_js = f"""
+    <script>
+    (function() {{
+        console.log('📤 Requesting updated CONFIG from parent...');
+
+        const message = {{
+            type: 'REQUEST_CONFIG_UPDATE',
+            userId: window.userConfig?.userId || '',
+            timestamp: Date.now()
+        }};
+
+        try {{
+            window.parent.postMessage(message, '*');
+            console.log('✅ REQUEST_CONFIG_UPDATE sent');
+        }} catch (error) {{
+            console.error('❌ Error sending REQUEST_CONFIG_UPDATE:', error);
+        }}
+    }})();
+    </script>
+    """
+
+    html(request_js, height=0)
+
+# ============================================================================
+# STEP 3: Send analysis results to website
+# ============================================================================
+
 def send_analysis_complete(
     title: str,
     analysis_type: str,  # 'soil' or 'leaf'
@@ -390,6 +514,13 @@ def send_analysis_complete(
             'analysisData': analysis_data or {},
             'timestamp': datetime.now().isoformat()
         }
+
+        # Store as backup in case message fails
+        try:
+            sessionStorage.setItem('analysis_results', json.dumps(message))
+            logger.info('💾 Stored analysis results in sessionStorage')
+        except Exception as e:
+            logger.warning(f'⚠️ Could not store in sessionStorage: {e}')
         
         # Log the complete message for debugging
         logger.info(f"📤 Sending ANALYSIS_COMPLETE message: userId={user_id}, title={title}, type={analysis_type}")
@@ -397,61 +528,38 @@ def send_analysis_complete(
         
         # CRITICAL: Use '*' as target origin to avoid origin mismatch errors
         # The parent page will verify the message origin on its side
-        # Use multiple methods to ensure message is sent even if one fails
         send_js = f"""
         <script>
         (function() {{
             try {{
                 const message = {json.dumps(message)};
                 console.log('📊 Sending ANALYSIS_COMPLETE message:', message);
-                console.log('📊 Message userId:', message.userId);
-                console.log('📊 Message type:', message.type);
-                
-                // Method 1: Direct postMessage (primary method)
-                if (window.parent && window.parent !== window) {{
-                    window.parent.postMessage(message, '*');
-                    console.log('✅ ANALYSIS_COMPLETE message sent via window.parent.postMessage');
-                }} else {{
-                    console.warn('⚠️ window.parent not available, trying alternative methods');
-                }}
-                
-                // Method 2: Try top.postMessage as fallback
-                if (window.top && window.top !== window && window.top !== window.parent) {{
-                    try {{
-                        window.top.postMessage(message, '*');
-                        console.log('✅ ANALYSIS_COMPLETE message sent via window.top.postMessage');
-                    }} catch (e) {{
-                        console.warn('⚠️ window.top.postMessage failed:', e);
-                    }}
-                }}
-                
-                // Method 3: Try with a small delay (in case parent isn't ready)
-                setTimeout(function() {{
-                    if (window.parent && window.parent !== window) {{
-                        window.parent.postMessage(message, '*');
-                        console.log('✅ ANALYSIS_COMPLETE message sent via delayed postMessage');
-                    }}
-                }}, 100);
-                
-                // Method 4: Try again after a longer delay
-                setTimeout(function() {{
-                    if (window.parent && window.parent !== window) {{
-                        window.parent.postMessage(message, '*');
-                        console.log('✅ ANALYSIS_COMPLETE message sent via second delayed postMessage');
-                    }}
-                }}, 500);
-                
-                console.log('✅ ANALYSIS_COMPLETE message send attempts completed');
-            }} catch (error) {{
-                console.error('❌ Error sending ANALYSIS_COMPLETE message:', error);
-                // Try one more time with basic postMessage
+
+                // CRITICAL: Use '*' as target origin
                 try {{
-                    const message = {json.dumps(message)};
                     window.parent.postMessage(message, '*');
-                    console.log('✅ ANALYSIS_COMPLETE message sent via fallback method');
-                }} catch (e) {{
-                    console.error('❌ All methods failed to send ANALYSIS_COMPLETE:', e);
+                    console.log('✅ ANALYSIS_COMPLETE message sent successfully');
+
+                    // Store as backup in case message fails
+                    try {{
+                        sessionStorage.setItem('analysis_results', JSON.stringify(message));
+                        console.log('💾 Stored analysis results in sessionStorage');
+                    }} catch (e) {{
+                        console.log('⚠️ Could not store in sessionStorage');
+                    }}
+                }} catch (error) {{
+                    console.error('❌ Error sending ANALYSIS_COMPLETE:', error);
+
+                    // Fallback: Try with specific origin
+                    try {{
+                        window.parent.postMessage(message, 'https://www.cropdrive.ai');
+                        console.log('✅ ANALYSIS_COMPLETE sent with specific origin');
+                    }} catch (e2) {{
+                        console.error('❌ Failed with specific origin too');
+                    }}
                 }}
+            }} catch (error) {{
+                console.error('❌ Critical error in ANALYSIS_COMPLETE sending:', error);
             }}
         }})();
         </script>
@@ -675,4 +783,39 @@ def send_language_change(new_language: str):
     
     # Trigger rerun to apply language change
     st.rerun()
+
+# ============================================================================
+# STEP 5: Safe postMessage utility
+# ============================================================================
+
+def safe_post_message(message, target_origin='*'):
+    """
+    Safely send postMessage with comprehensive error handling
+
+    Args:
+        message: Message object to send
+        target_origin: Target origin for postMessage ('*' by default)
+    """
+    from streamlit.components.v1 import html
+    import json
+
+    safe_js = f"""
+    <script>
+    (function() {{
+        const message = {json.dumps(message)};
+        const targetOrigin = '{target_origin}';
+
+        try {{
+            window.parent.postMessage(message, targetOrigin);
+            console.log(`✅ Message sent to ${{targetOrigin}}:`, message.type);
+            return true;
+        }} catch (error) {{
+            console.error(`❌ Failed to send message to ${{targetOrigin}}:`, error);
+            return false;
+        }}
+    }})();
+    </script>
+    """
+
+    html(safe_js, height=0)
 

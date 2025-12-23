@@ -53,7 +53,8 @@ try:
         is_feature_available,
         send_feature_restricted,
         get_user_plan,
-        get_user_id
+        get_user_id,
+        request_config_update
     )
     CROPDRIVE_INTEGRATION_AVAILABLE = True
 except ImportError:
@@ -64,7 +65,8 @@ except ImportError:
             is_feature_available,
             send_feature_restricted,
             get_user_plan,
-            get_user_id
+            get_user_id,
+            request_config_update
         )
         CROPDRIVE_INTEGRATION_AVAILABLE = True
     except ImportError:
