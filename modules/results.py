@@ -552,10 +552,21 @@ def show_results_page():
                 working_indicator = st.empty()
             
             # Process the new analysis with enhanced progress tracking
-            results_data = process_new_analysis(st.session_state.analysis_data, progress_bar, status_text, time_estimate, step_indicator, working_indicator)
+            try:
+                results_data = process_new_analysis(st.session_state.analysis_data, progress_bar, status_text, time_estimate, step_indicator, working_indicator)
+            except Exception as e:
+                logger.error(f"❌ Error during analysis processing: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                results_data = {'success': False, 'message': f'Processing error: {str(e)}'}
+            finally:
+                # Clear the analysis_data from session state after processing (success or failure)
+                if 'analysis_data' in st.session_state:
+                    del st.session_state.analysis_data
             
-            # Clear the analysis_data from session state after processing
-            del st.session_state.analysis_data
+            # Check if analysis was successful
+            if not results_data:
+                results_data = {'success': False, 'message': 'Analysis returned no results'}
             
             if results_data and results_data.get('success', False):
                 # Clear progress container
@@ -622,11 +633,19 @@ def show_results_page():
                     logger = logging.getLogger(__name__)
                     logger.warning(f"CropDrive integration error: {e}")
             else:
-                st.error(f"❌ Analysis failed: {results_data.get('message', 'Unknown error')}")
+                # Analysis failed - show error and don't try to load existing results
+                error_message = results_data.get('message', 'Unknown error') if results_data else 'No results returned'
+                st.error(f"❌ **Analysis Failed**: {error_message}")
                 st.info("💡 **Tip:** Make sure your uploaded files are clear images of soil and leaf analysis reports.")
+                st.info("💡 **Tip:** Please check the file quality and try uploading again.")
+                
+                # Offer to go back to upload page
+                if st.button("📤 Try Again - Upload Files", type="primary", use_container_width=True):
+                    st.session_state.current_page = 'upload'
+                    st.rerun()
                 return
         else:
-            # Load existing results from Firestore
+            # No new analysis data - try to load existing results from Firestore
             results_data = load_latest_results()
         
         if not results_data or not results_data.get('success', True):
@@ -1323,12 +1342,12 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         if not isinstance(soil_data, dict) or not soil_data.get('success') or not soil_samples:
             logger.error("Soil data extraction failed - no valid data found")
             st.error("❌ **Soil Analysis Failed**: Unable to extract data from uploaded soil report. Please check the image quality and try again.")
-            return
+            return {'success': False, 'message': 'Soil data extraction failed - no valid data found'}
 
         if not isinstance(leaf_data, dict) or not leaf_data.get('success') or not leaf_samples:
             logger.error("Leaf data extraction failed - no valid data found")
             st.error("❌ **Leaf Analysis Failed**: Unable to extract data from uploaded leaf report. Please check the image quality and try again.")
-            return
+            return {'success': False, 'message': 'Leaf data extraction failed - no valid data found'}
 
         status_text.text("🌱 **Step 2/5:** Data extraction completed successfully ✅")
         if time_estimate:
@@ -1490,7 +1509,7 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         if not transformed_soil_data['data']['samples'] and not transformed_leaf_data['data']['samples']:
             logger.error("❌ No valid data for analysis - both soil and leaf samples are empty")
             st.error("❌ **Analysis Failed**: No valid data found for analysis. Please ensure your uploaded files contain readable soil and leaf analysis data.")
-            return
+            return {'success': False, 'message': 'No valid data for analysis - both soil and leaf samples are empty'}
 
         try:
             analysis_results = analysis_engine.generate_comprehensive_analysis(
@@ -1505,8 +1524,22 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
             logger.error(f"❌ Analysis failed: {str(e)}")
             import traceback
             logger.error(f"❌ Analysis traceback: {traceback.format_exc()}")
-            st.error(f"❌ **Analysis Failed**: {str(e)}")
-            return
+            
+            # Check if it's a timeout/connection error
+            error_msg = str(e).lower()
+            if "timeout" in error_msg or "aborted" in error_msg or "bodystreambuffer" in error_msg or "connection" in error_msg:
+                st.error("❌ **Analysis Timeout**: The analysis took too long or the connection was interrupted.")
+                st.info("💡 **Tip:** Large files may take longer to process. Please ensure you have a stable internet connection and try again.")
+                st.info("💡 **Alternative:** Try refreshing the page and starting the analysis again.")
+                return {'success': False, 'message': 'Analysis timeout or connection interrupted'}
+            elif "quota" in error_msg or "429" in error_msg:
+                st.error("❌ **API Quota Exceeded**: The analysis service is temporarily unavailable due to high demand.")
+                st.info("💡 **Tip:** Please try again in a few minutes.")
+                return {'success': False, 'message': 'API quota exceeded'}
+            else:
+                st.error(f"❌ **Analysis Failed**: {str(e)}")
+                st.info("💡 **Tip:** Please check your uploaded files and try again. If the problem persists, contact support.")
+                return {'success': False, 'message': f'Analysis failed: {str(e)}'}
         
         # Step 7: Generating Insights with animation
         current_step = 7
