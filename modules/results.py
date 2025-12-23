@@ -1530,7 +1530,7 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
             status_text.text("🔬 **Step 4/5:** Starting comprehensive AI analysis... 🔄")
             progress_bar.progress(70)
             if time_estimate:
-                time_estimate.text("⏱️ This may take 2-5 minutes. Please keep this page open...")
+                time_estimate.text("⏱️ This may take 5-8 minutes. Please keep this page open...")
             
             analysis_results = analysis_engine.generate_comprehensive_analysis(
                 soil_data=transformed_soil_data,
@@ -7345,15 +7345,15 @@ def _extract_and_render_markdown_tables(raw_text: str) -> str:
         rendered_count = 0
 
         # More flexible regex for markdown tables - handle various formats
-        # Look for Table X: title followed by markdown table
+        # Look for Table X: title or Jadual X: title (Malaysian) followed by markdown table
         table_pattern = re.compile(
-            r'(?:^|\n)(Table\s*\d+\s*:\s*(?P<title>[^\n]+?)\s*\n)'  # caption line
+            r'(?:^|\n)((?:Table|Jadual)\s*\d+\s*:\s*(?P<title>[^\n]+?)\s*\n)'  # caption line (English or Malaysian)
             r'(?P<table>'
             r'\|[^\n]*\|\s*\n'             # header row
             r'\|[-\s|:]+\|\s*\n'           # separator row (more flexible)
             r'(?:\|[^\n]*\|\s*\n)+'        # data rows
             r')',
-            re.MULTILINE
+            re.MULTILINE | re.IGNORECASE
         )
 
         matches = list(table_pattern.finditer(text))

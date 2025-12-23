@@ -1509,14 +1509,18 @@ class PDFReportGenerator:
         
         # Interpretations section (consistent with Step 2)
         if 'interpretations' in analysis_data and analysis_data['interpretations']:
-            story.append(Paragraph(f"📝 {self._t('pdf_interpretations', 'Interpretations')}", self.styles['Heading3']))
             interpretations = analysis_data['interpretations']
-            if isinstance(interpretations, list):
-                for i, interpretation in enumerate(interpretations, 1):
-                    story.append(Paragraph(f"{self._t('pdf_interpretation', 'Interpretation')} {i}:", self.styles['Heading4']))
-                    story.append(Paragraph(self._sanitize_text_persona(str(interpretation)), self.styles['CustomBody']))
-                    story.append(Spacer(1, 6))
-            story.append(Spacer(1, 8))
+            # Only display if interpretations is a non-empty list with actual content
+            if isinstance(interpretations, list) and len(interpretations) > 0:
+                # Filter out empty strings, empty lists, and None values
+                valid_interpretations = [i for i in interpretations if i and str(i).strip() and str(i).strip() != '[]' and str(i).strip() != 'None']
+                if valid_interpretations:
+                    story.append(Paragraph(f"📝 {self._t('pdf_interpretations', 'Interpretations')}", self.styles['Heading3']))
+                    for i, interpretation in enumerate(valid_interpretations, 1):
+                        story.append(Paragraph(f"{self._t('pdf_interpretation', 'Interpretation')} {i}:", self.styles['Heading4']))
+                        story.append(Paragraph(self._sanitize_text_persona(str(interpretation)), self.styles['CustomBody']))
+                        story.append(Spacer(1, 6))
+                    story.append(Spacer(1, 8))
         
     def _create_step3_pdf_content(self, story, analysis_data):
         """Create Step 3 PDF content matching results page format"""
@@ -1606,14 +1610,18 @@ class PDFReportGenerator:
         
         # Interpretations section (consistent with Step 2)
         if 'interpretations' in analysis_data and analysis_data['interpretations']:
-            story.append(Paragraph(f"📝 {self._t('pdf_interpretations', 'Interpretations')}", self.styles['Heading3']))
             interpretations = analysis_data['interpretations']
-            if isinstance(interpretations, list):
-                for i, interpretation in enumerate(interpretations, 1):
-                    story.append(Paragraph(f"{self._t('pdf_interpretation', 'Interpretation')} {i}:", self.styles['Heading4']))
-                    story.append(Paragraph(self._sanitize_text_persona(str(interpretation)), self.styles['CustomBody']))
-                    story.append(Spacer(1, 6))
-            story.append(Spacer(1, 8))
+            # Only display if interpretations is a non-empty list with actual content
+            if isinstance(interpretations, list) and len(interpretations) > 0:
+                # Filter out empty strings, empty lists, and None values
+                valid_interpretations = [i for i in interpretations if i and str(i).strip() and str(i).strip() != '[]' and str(i).strip() != 'None']
+                if valid_interpretations:
+                    story.append(Paragraph(f"📝 {self._t('pdf_interpretations', 'Interpretations')}", self.styles['Heading3']))
+                    for i, interpretation in enumerate(valid_interpretations, 1):
+                        story.append(Paragraph(f"{self._t('pdf_interpretation', 'Interpretation')} {i}:", self.styles['Heading4']))
+                        story.append(Paragraph(self._sanitize_text_persona(str(interpretation)), self.styles['CustomBody']))
+                        story.append(Spacer(1, 6))
+                    story.append(Spacer(1, 8))
         
         # Key Findings section (at the end, consistent with Step 2)
         if 'key_findings' in analysis_data and analysis_data['key_findings']:
@@ -1682,14 +1690,18 @@ class PDFReportGenerator:
         
         # Interpretations section
         if 'interpretations' in analysis_data and analysis_data['interpretations']:
-            story.append(Paragraph(f"📝 {self._t('pdf_interpretations', 'Interpretations')}", self.styles['Heading3']))
             interpretations = analysis_data['interpretations']
-            if isinstance(interpretations, list):
-                for i, interpretation in enumerate(interpretations, 1):
-                    story.append(Paragraph(f"{self._t('pdf_interpretation', 'Interpretation')} {i}:", self.styles['Heading4']))
-                    story.append(Paragraph(self._sanitize_text_persona(str(interpretation)), self.styles['CustomBody']))
-                    story.append(Spacer(1, 6))
-            story.append(Spacer(1, 8))
+            # Only display if interpretations is a non-empty list with actual content
+            if isinstance(interpretations, list) and len(interpretations) > 0:
+                # Filter out empty strings, empty lists, and None values
+                valid_interpretations = [i for i in interpretations if i and str(i).strip() and str(i).strip() != '[]' and str(i).strip() != 'None']
+                if valid_interpretations:
+                    story.append(Paragraph(f"📝 {self._t('pdf_interpretations', 'Interpretations')}", self.styles['Heading3']))
+                    for i, interpretation in enumerate(valid_interpretations, 1):
+                        story.append(Paragraph(f"{self._t('pdf_interpretation', 'Interpretation')} {i}:", self.styles['Heading4']))
+                        story.append(Paragraph(self._sanitize_text_persona(str(interpretation)), self.styles['CustomBody']))
+                        story.append(Spacer(1, 6))
+                    story.append(Spacer(1, 8))
 
     def _create_nutrient_status_tables_pdf(self, story, analysis_data, main_analysis_results=None):
         """Create nutrient status tables matching results page format"""
@@ -7210,42 +7222,42 @@ class PDFReportGenerator:
         conclusion_parts = []
         
         # Analysis overview
-        conclusion_parts.append("""
-        <b>Analysis Overview:</b><br/>
-        This comprehensive agricultural analysis has systematically evaluated your oil palm plantation's current nutritional status and identified critical areas for improvement. The step-by-step analysis reveals specific challenges and opportunities that directly impact your plantation's productivity and profitability.
+        conclusion_parts.append(f"""
+        <b>{self._t('pdf_analysis_overview', 'Analysis Overview')}:</b><br/>
+        {self._t('pdf_analysis_overview_text', "This comprehensive agricultural analysis has systematically evaluated your oil palm plantation's current nutritional status and identified critical areas for improvement. The step-by-step analysis reveals specific challenges and opportunities that directly impact your plantation's productivity and profitability.")}
         """)
         
         # Key findings summary
         if step_analysis:
-            conclusion_parts.append("""
-        <b>Key Findings Summary:</b><br/>
-        The analysis has identified several critical factors affecting your plantation's performance. These findings provide a clear roadmap for targeted interventions that will maximize your return on investment while ensuring sustainable agricultural practices.
+            conclusion_parts.append(f"""
+        <b>{self._t('pdf_key_findings_summary', 'Key Findings Summary')}:</b><br/>
+        {self._t('pdf_key_findings_summary_text', "The analysis has identified several critical factors affecting your plantation's performance. These findings provide a clear roadmap for targeted interventions that will maximize your return on investment while ensuring sustainable agricultural practices.")}
         """)
         
         # Economic impact
         if economic_forecast:
-            conclusion_parts.append("""
-        <b>Economic Impact Assessment:</b><br/>
-        The economic analysis demonstrates significant potential for improved profitability through strategic interventions. The investment scenarios presented show clear pathways to enhanced yields and increased revenue, with medium investment approaches typically offering the optimal balance between cost-effectiveness and yield improvement.
+            conclusion_parts.append(f"""
+        <b>{self._t('pdf_economic_impact_assessment', 'Economic Impact Assessment')}:</b><br/>
+        {self._t('pdf_economic_impact_text', 'The economic analysis demonstrates significant potential for improved profitability through strategic interventions. The investment scenarios presented show clear pathways to enhanced yields and increased revenue, with medium investment approaches typically offering the optimal balance between cost-effectiveness and yield improvement.')}
         """)
         
         # Yield projections
         if yield_forecast:
-            conclusion_parts.append("""
-        <b>5-Year Yield Projections:</b><br/>
-        The yield forecast analysis provides a detailed roadmap for sustainable growth over the next five years. These projections are based on realistic investment scenarios and account for seasonal variations, market conditions, and implementation timelines. The forecast demonstrates the potential for substantial yield improvements with proper management and targeted interventions.
+            conclusion_parts.append(f"""
+        <b>{self._t('pdf_yield_projections', '5-Year Yield Projections')}:</b><br/>
+        {self._t('pdf_yield_projections_text', 'The yield forecast analysis provides a detailed roadmap for sustainable growth over the next five years. These projections are based on realistic investment scenarios and account for seasonal variations, market conditions, and implementation timelines. The forecast demonstrates the potential for substantial yield improvements with proper management and targeted interventions.')}
         """)
         
         # Implementation recommendations
-        conclusion_parts.append("""
-        <b>Implementation Strategy:</b><br/>
-        Successful implementation of these recommendations requires a phased approach, beginning with high-priority interventions and gradually expanding to comprehensive management practices. Regular monitoring and adaptive management will be essential to achieving the projected outcomes and ensuring long-term sustainability.
+        conclusion_parts.append(f"""
+        <b>{self._t('pdf_implementation_strategy', 'Implementation Strategy')}:</b><br/>
+        {self._t('pdf_implementation_strategy_text', 'Successful implementation of these recommendations requires a phased approach, beginning with high-priority interventions and gradually expanding to comprehensive management practices. Regular monitoring and adaptive management will be essential to achieving the projected outcomes and ensuring long-term sustainability.')}
         """)
         
         # Long-term outlook
-        conclusion_parts.append("""
-        <b>Long-term Outlook:</b><br/>
-        The analysis indicates strong potential for sustained productivity improvements and enhanced profitability. By following the recommended strategies and maintaining consistent monitoring practices, your plantation can achieve significant yield increases while contributing to sustainable agricultural intensification goals. The 5-year projections provide a clear vision for long-term success and continued growth.
+        conclusion_parts.append(f"""
+        <b>{self._t('pdf_long_term_outlook', 'Long-term Outlook')}:</b><br/>
+        {self._t('pdf_long_term_outlook_text', "The analysis indicates strong potential for sustained productivity improvements and enhanced profitability. By following the recommended strategies and maintaining consistent monitoring practices, your plantation can achieve significant yield increases while contributing to sustainable agricultural intensification goals. The 5-year projections provide a clear vision for long-term success and continued growth.")}
         """)
         
         # Combine all conclusion parts
@@ -7255,9 +7267,9 @@ class PDFReportGenerator:
         story.append(Spacer(1, 20))
         
         # Add final summary paragraph
-        final_summary = """
-        <b>Final Summary:</b><br/>
-        This analysis provides a comprehensive foundation for optimizing your oil palm plantation's performance. The combination of detailed nutritional assessment, economic analysis, and yield projections offers a clear path forward for achieving improved productivity and profitability. Implementation of the recommended strategies will position your plantation for sustainable success and long-term growth.
+        final_summary = f"""
+        <b>{self._t('pdf_final_summary', 'Final Summary')}:</b><br/>
+        {self._t('pdf_final_summary_text', "This analysis provides a comprehensive foundation for optimizing your oil palm plantation's performance. The combination of detailed nutritional assessment, economic analysis, and yield projections offers a clear path forward for achieving improved productivity and profitability. Implementation of the recommended strategies will position your plantation for sustainable success and long-term growth.")}
         """
         
         story.append(Paragraph(final_summary, self.styles['CustomBody']))
