@@ -1918,16 +1918,33 @@ def send_analysis_complete(analysis_results):
             try:
                 query_params = st.query_params
                 user_id = query_params.get('userId', '')
-            except Exception:
-                pass
+                if user_id:
+                    logger.info(f"✅ Retrieved user_id from URL params: {user_id}")
+            except Exception as url_error:
+                logger.warning(f"⚠️ Could not get user_id from URL params: {url_error}")
         
         # Try to get from CropDrive integration if available
         if not user_id:
             try:
                 from utils.cropdrive_integration import get_user_id
                 user_id = get_user_id()
+                if user_id:
+                    logger.info(f"✅ Retrieved user_id from CropDrive integration: {user_id}")
             except ImportError:
-                pass
+                logger.warning("⚠️ CropDrive integration not available")
+            except Exception as integration_error:
+                logger.warning(f"⚠️ Error getting user_id from CropDrive: {integration_error}")
+        
+        # Log user_id status
+        if not user_id:
+            logger.warning("⚠️ WARNING: user_id is empty - message will be sent without userId")
+            logger.warning(f"⚠️ Session state user_id: {st.session_state.get('user_id', 'NOT SET')}")
+            logger.warning(f"⚠️ Session state user_config: {st.session_state.get('user_config', {})}")
+        else:
+            logger.info(f"✅ User ID found: {user_id}")
+        
+        # Ensure user_id is a string
+        user_id = str(user_id) if user_id else ''
         
         # Determine analysis type from results
         analysis_type = 'soil'  # Default
@@ -2004,44 +2021,105 @@ def send_analysis_complete(analysis_results):
                 'firestoreSaved': False
             }
         
+        # Ensure all values are JSON-serializable (strings, numbers, None, bool)
+        title = analysis_results.get('title', f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}') if isinstance(analysis_results, dict) else f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}'
+        title = str(title)[:200] if title else f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}'
+        
+        summary_text = summary or "Comprehensive soil and leaf analysis completed successfully."
+        summary_text = str(summary_text)[:500] if summary_text else "Comprehensive soil and leaf analysis completed successfully."
+        
+        file_url = analysis_results.get('file_url') if isinstance(analysis_results, dict) else None
+        file_url = str(file_url) if file_url else None
+        
+        # Ensure analysis_data_simple values are also serializable
+        if isinstance(analysis_data_simple, dict):
+            analysis_data_simple = {
+                'resultId': str(analysis_data_simple.get('resultId')) if analysis_data_simple.get('resultId') else None,
+                'timestamp': str(analysis_data_simple.get('timestamp', datetime.now().isoformat())),
+                'status': str(analysis_data_simple.get('status', 'completed')),
+                'userId': str(analysis_data_simple.get('userId', user_id)) if analysis_data_simple.get('userId') or user_id else '',
+                'firestoreSaved': bool(analysis_data_simple.get('firestoreSaved', False))
+            }
+        
         message = {
             'type': 'ANALYSIS_COMPLETE',  # MUST be exactly this string
-            'userId': user_id or '',  # From CONFIG message or session state
-            'title': analysis_results.get('title', f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}') if isinstance(analysis_results, dict) else f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
-            'analysisType': analysis_type,
-            'summary': summary or "Comprehensive soil and leaf analysis completed successfully.",
-            'recommendationsCount': recommendations_count,
-            'fileUrl': analysis_results.get('file_url') if isinstance(analysis_results, dict) else None,
+            'userId': user_id,  # Already converted to string above
+            'title': title,
+            'analysisType': str(analysis_type),
+            'summary': summary_text,
+            'recommendationsCount': int(recommendations_count) if recommendations_count else 0,
+            'fileUrl': file_url,
             'analysisData': analysis_data_simple,  # Simplified to avoid serialization issues
             'timestamp': datetime.now().isoformat(),
         }
         
         logger.info(f"📤 Sending ANALYSIS_COMPLETE message: userId={user_id}, type={analysis_type}")
+        logger.info(f"📤 Message keys: {list(message.keys())}")
+        
+        # Ensure all message values are JSON-serializable
+        # Convert any non-serializable types to strings
+        def make_serializable(obj):
+            """Recursively make object JSON-serializable"""
+            if isinstance(obj, datetime):
+                return obj.isoformat()
+            elif isinstance(obj, dict):
+                return {k: make_serializable(v) for k, v in obj.items()}
+            elif isinstance(obj, (list, tuple)):
+                return [make_serializable(item) for item in obj]
+            elif hasattr(obj, '__dict__'):
+                return make_serializable(obj.__dict__)
+            elif isinstance(obj, (int, float, str, bool, type(None))):
+                return obj
+            else:
+                return str(obj)
+        
+        # Make message serializable
+        message_serializable = make_serializable(message)
         
         # Serialize message to JSON string safely
         try:
-            message_json = json.dumps(message, default=str)  # Use default=str to handle any non-serializable objects
+            message_json = json.dumps(message_serializable, default=str, ensure_ascii=False)
         except Exception as json_error:
             logger.error(f"❌ Error serializing message to JSON: {json_error}")
-            # Create a simplified message
-            message = {
+            import traceback
+            logger.error(f"JSON error traceback: {traceback.format_exc()}")
+            # Create a simplified message with only essential fields
+            simplified_message = {
                 'type': 'ANALYSIS_COMPLETE',
-                'userId': user_id or '',
-                'title': f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
-                'analysisType': analysis_type,
-                'summary': summary or "Analysis completed successfully.",
-                'recommendationsCount': recommendations_count,
+                'userId': str(user_id) if user_id else '',
+                'title': str(message.get('title', f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}')),
+                'analysisType': str(analysis_type),
+                'summary': str(summary or "Analysis completed successfully.")[:500],  # Limit length
+                'recommendationsCount': int(recommendations_count),
                 'fileUrl': None,
-                'analysisData': {'resultId': analysis_results.get('data', {}).get('resultId') if isinstance(analysis_results, dict) else None},
+                'analysisData': {
+                    'resultId': str(analysis_results.get('data', {}).get('resultId')) if isinstance(analysis_results, dict) and isinstance(analysis_results.get('data'), dict) else None
+                },
                 'timestamp': datetime.now().isoformat(),
             }
-            message_json = json.dumps(message, default=str)
+            try:
+                message_json = json.dumps(simplified_message, default=str, ensure_ascii=False)
+                logger.info(f"✅ Created simplified message for JSON serialization")
+            except Exception as simplified_error:
+                logger.error(f"❌ Even simplified message failed: {simplified_error}")
+                # Last resort: absolute minimal message
+                minimal_json = json.dumps({
+                    'type': 'ANALYSIS_COMPLETE',
+                    'userId': str(user_id) if user_id else '',
+                    'title': f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
+                    'analysisType': 'soil',
+                    'summary': 'Analysis completed.',
+                    'recommendationsCount': 0,
+                    'timestamp': datetime.now().isoformat()
+                }, default=str)
+                message_json = minimal_json
         
         logger.info(f"📤 Message payload: {message_json[:500]}...")  # Log first 500 chars
         
         # CRITICAL: Use '*' as target origin to avoid browser errors
         # This matches the exact specification from the user
         # Use multiple attempts to ensure message is sent
+        # Use height=1 instead of 0 to ensure component renders
         html(f"""
         <script>
         (function() {{
@@ -2050,18 +2128,34 @@ def send_analysis_complete(analysis_results):
                 console.log('📊 Sending ANALYSIS_COMPLETE message:', message);
                 console.log('📊 Message type:', message.type);
                 console.log('📊 Message userId:', message.userId);
+                console.log('📊 Message title:', message.title);
+                
+                // Validate message has required fields
+                if (!message.type || message.type !== 'ANALYSIS_COMPLETE') {{
+                    console.error('❌ Invalid message type:', message.type);
+                    return;
+                }}
                 
                 // Method 1: Direct postMessage
                 if (window.parent && window.parent !== window) {{
-                    window.parent.postMessage(message, '*');
-                    console.log('✅ ANALYSIS_COMPLETE message sent successfully');
+                    try {{
+                        window.parent.postMessage(message, '*');
+                        console.log('✅ ANALYSIS_COMPLETE message sent successfully');
+                    }} catch (postError) {{
+                        console.error('❌ Error in postMessage:', postError);
+                        throw postError;
+                    }}
                 }} else {{
                     console.warn('⚠️ window.parent not available, trying delayed retry');
                     // Retry after a short delay
                     setTimeout(function() {{
                         if (window.parent && window.parent !== window) {{
-                            window.parent.postMessage(message, '*');
-                            console.log('✅ ANALYSIS_COMPLETE message sent via retry');
+                            try {{
+                                window.parent.postMessage(message, '*');
+                                console.log('✅ ANALYSIS_COMPLETE message sent via retry');
+                            }} catch (retryError) {{
+                                console.error('❌ Retry failed:', retryError);
+                            }}
                         }} else {{
                             console.error('❌ Failed to send ANALYSIS_COMPLETE: window.parent not available');
                         }}
@@ -2069,7 +2163,10 @@ def send_analysis_complete(analysis_results):
                 }}
             }} catch (error) {{
                 console.error('❌ Error sending ANALYSIS_COMPLETE:', error);
-                console.error('❌ Error details:', error.message, error.stack);
+                console.error('❌ Error name:', error.name);
+                console.error('❌ Error message:', error.message);
+                console.error('❌ Error stack:', error.stack);
+                
                 // Try one more time with basic postMessage
                 try {{
                     const message = {message_json};
@@ -2079,11 +2176,12 @@ def send_analysis_complete(analysis_results):
                     }}
                 }} catch (e) {{
                     console.error('❌ All attempts to send ANALYSIS_COMPLETE failed:', e);
+                    console.error('❌ Final error:', e.message, e.stack);
                 }}
             }}
         }})();
         </script>
-        """, height=0)
+        """, height=1)
         
         logger.info(f"✅ ANALYSIS_COMPLETE message sent: userId={user_id}, type={analysis_type}")
         
@@ -2091,11 +2189,28 @@ def send_analysis_complete(analysis_results):
         logger.error(f"❌ CRITICAL ERROR in send_analysis_complete: {e}")
         import traceback
         logger.error(f"Traceback: {traceback.format_exc()}")
+        
         # Try to send a minimal message even if there's an error
+        # This ensures the website knows analysis completed even if details are missing
         try:
+            # Get user_id from multiple sources for fallback
+            fallback_user_id = st.session_state.get('user_id', '')
+            if not fallback_user_id:
+                try:
+                    query_params = st.query_params
+                    fallback_user_id = query_params.get('userId', '')
+                except Exception:
+                    pass
+            if not fallback_user_id:
+                try:
+                    from utils.cropdrive_integration import get_user_id
+                    fallback_user_id = get_user_id()
+                except Exception:
+                    pass
+            
             minimal_message = {
                 'type': 'ANALYSIS_COMPLETE',
-                'userId': st.session_state.get('user_id', ''),
+                'userId': str(fallback_user_id) if fallback_user_id else '',
                 'title': f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
                 'analysisType': 'soil',
                 'summary': 'Analysis completed successfully.',
@@ -2104,14 +2219,40 @@ def send_analysis_complete(analysis_results):
                 'analysisData': {},
                 'timestamp': datetime.now().isoformat(),
             }
+            
+            # Ensure all values are JSON-serializable
+            minimal_message_json = json.dumps(minimal_message, default=str)
+            
             html(f"""
             <script>
-            console.error('⚠️ Sending minimal ANALYSIS_COMPLETE message due to error');
-            window.parent.postMessage({json.dumps(minimal_message)}, '*');
+            (function() {{
+                try {{
+                    console.error('⚠️ Sending minimal ANALYSIS_COMPLETE message due to error');
+                    const message = {minimal_message_json};
+                    console.log('📊 Minimal message:', message);
+                    if (window.parent && window.parent !== window) {{
+                        window.parent.postMessage(message, '*');
+                        console.log('✅ Minimal ANALYSIS_COMPLETE sent successfully');
+                    }} else {{
+                        console.warn('⚠️ window.parent not available for minimal message');
+                        setTimeout(function() {{
+                            if (window.parent && window.parent !== window) {{
+                                window.parent.postMessage(message, '*');
+                                console.log('✅ Minimal ANALYSIS_COMPLETE sent via retry');
+                            }}
+                        }}, 500);
+                    }}
+                }} catch (fallbackError) {{
+                    console.error('❌ Failed to send minimal ANALYSIS_COMPLETE:', fallbackError);
+                }}
+            }})();
             </script>
-            """, height=0)
+            """, height=1)
+            logger.info(f"✅ Sent minimal ANALYSIS_COMPLETE message as fallback")
         except Exception as fallback_error:
             logger.error(f"❌ Failed to send fallback ANALYSIS_COMPLETE: {fallback_error}")
+            import traceback
+            logger.error(f"Fallback traceback: {traceback.format_exc()}")
 
 
 def _send_analysis_complete_inline(results_data, analysis_results=None):
