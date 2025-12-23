@@ -6,6 +6,10 @@ Handles communication with parent window when embedded in CropDrive website
 import streamlit as st
 from streamlit.components.v1 import html
 import json
+import logging
+
+# Configure logger
+logger = logging.getLogger(__name__)
 
 # ============================================================================
 # STEP 1: JavaScript for parent window communication
@@ -274,7 +278,8 @@ def send_analysis_complete(
     analysis_data: dict = None
 ):
     """
-    Send analysis completion message to parent window (CropDrive website)
+    CRITICAL: Send analysis completion message to parent window (CropDrive website)
+    This message MUST be sent after every analysis completes to save results to Firestore.
     
     Args:
         title: Report title (required)
@@ -286,77 +291,165 @@ def send_analysis_complete(
     """
     from datetime import datetime
     
-    # Include user ID in the analysis complete message
-    user_id = get_user_id()
-    user_email = get_user_email()
-    
-    # Log user info for debugging
-    logger.info(f"🔍 DEBUG send_analysis_complete - user_id: {user_id}, user_email: {user_email}")
-    
-    # Warn if user_id is missing (critical for parent page to save analysis)
-    if not user_id:
-        logger.warning("⚠️ WARNING: user_id is empty when sending ANALYSIS_COMPLETE message!")
-        logger.warning(f"⚠️ Session state user_id: {st.session_state.get('user_id', 'NOT SET')}")
-        logger.warning(f"⚠️ Session state user_config: {st.session_state.get('user_config', {})}")
-        # Try to get from URL params as fallback
+    try:
+        # Include user ID in the analysis complete message
+        user_id = get_user_id()
+        user_email = get_user_email()
+        
+        # Log user info for debugging
+        logger.info(f"🔍 DEBUG send_analysis_complete - user_id: {user_id}, user_email: {user_email}")
+        
+        # Warn if user_id is missing (critical for parent page to save analysis)
+        if not user_id:
+            logger.warning("⚠️ WARNING: user_id is empty when sending ANALYSIS_COMPLETE message!")
+            logger.warning(f"⚠️ Session state user_id: {st.session_state.get('user_id', 'NOT SET')}")
+            logger.warning(f"⚠️ Session state user_config: {st.session_state.get('user_config', {})}")
+            # Try to get from URL params as fallback
+            try:
+                query_params = st.query_params
+                user_id = query_params.get('userId', '')
+                if user_id:
+                    logger.info(f"✅ Retrieved user_id from URL params: {user_id}")
+            except Exception as e:
+                logger.error(f"❌ Failed to get user_id from URL params: {e}")
+        
+        # Ensure analysis_data includes timestamp if not already present
+        if analysis_data is None:
+            analysis_data = {}
+        
+        # Add timestamp if not already in analysis_data
+        if 'timestamp' not in analysis_data:
+            analysis_data['timestamp'] = datetime.now().isoformat()
+        
+        # Ensure userId is in analysis_data as well (for redundancy)
+        if 'userId' not in analysis_data:
+            analysis_data['userId'] = user_id
+        
+        # CRITICAL: Build message with exact format expected by parent page
+        message = {
+            'type': 'ANALYSIS_COMPLETE',  # MUST be exactly this string
+            'userId': user_id or '',  # CRITICAL: Must match current authenticated user
+            'title': title or f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
+            'analysisType': analysis_type or 'soil',  # 'soil', 'leaf', or 'both'
+            'summary': summary or '',
+            'recommendationsCount': int(recommendations_count) if recommendations_count else 0,
+            'fileUrl': file_url or None,
+            'analysisData': analysis_data or {},
+            'timestamp': datetime.now().isoformat()
+        }
+        
+        # Log the complete message for debugging
+        logger.info(f"📤 Sending ANALYSIS_COMPLETE message: userId={user_id}, title={title}, type={analysis_type}")
+        logger.info(f"📤 Message payload: {json.dumps(message, indent=2)}")
+        
+        # CRITICAL: Use '*' as target origin to avoid origin mismatch errors
+        # The parent page will verify the message origin on its side
+        # Use multiple methods to ensure message is sent even if one fails
+        send_js = f"""
+        <script>
+        (function() {{
+            try {{
+                const message = {json.dumps(message)};
+                console.log('📊 Sending ANALYSIS_COMPLETE message:', message);
+                console.log('📊 Message userId:', message.userId);
+                console.log('📊 Message type:', message.type);
+                
+                // Method 1: Direct postMessage (primary method)
+                if (window.parent && window.parent !== window) {{
+                    window.parent.postMessage(message, '*');
+                    console.log('✅ ANALYSIS_COMPLETE message sent via window.parent.postMessage');
+                }} else {{
+                    console.warn('⚠️ window.parent not available, trying alternative methods');
+                }}
+                
+                // Method 2: Try top.postMessage as fallback
+                if (window.top && window.top !== window && window.top !== window.parent) {{
+                    try {{
+                        window.top.postMessage(message, '*');
+                        console.log('✅ ANALYSIS_COMPLETE message sent via window.top.postMessage');
+                    }} catch (e) {{
+                        console.warn('⚠️ window.top.postMessage failed:', e);
+                    }}
+                }}
+                
+                // Method 3: Try with a small delay (in case parent isn't ready)
+                setTimeout(function() {{
+                    if (window.parent && window.parent !== window) {{
+                        window.parent.postMessage(message, '*');
+                        console.log('✅ ANALYSIS_COMPLETE message sent via delayed postMessage');
+                    }}
+                }}, 100);
+                
+                // Method 4: Try again after a longer delay
+                setTimeout(function() {{
+                    if (window.parent && window.parent !== window) {{
+                        window.parent.postMessage(message, '*');
+                        console.log('✅ ANALYSIS_COMPLETE message sent via second delayed postMessage');
+                    }}
+                }}, 500);
+                
+                console.log('✅ ANALYSIS_COMPLETE message send attempts completed');
+            }} catch (error) {{
+                console.error('❌ Error sending ANALYSIS_COMPLETE message:', error);
+                // Try one more time with basic postMessage
+                try {{
+                    const message = {json.dumps(message)};
+                    window.parent.postMessage(message, '*');
+                    console.log('✅ ANALYSIS_COMPLETE message sent via fallback method');
+                }} catch (e) {{
+                    console.error('❌ All methods failed to send ANALYSIS_COMPLETE:', e);
+                }}
+            }}
+        }})();
+        </script>
+        """
+        
+        # Inject the JavaScript
+        html(send_js, height=0)
+        
+        # Also log in Python
+        logger.info(f"✅ ANALYSIS_COMPLETE message HTML injected for user_id: {user_id}")
+        
+        # Show success message to user
+        st.success("✅ Analysis completed! Results are being saved...")
+        
+    except Exception as e:
+        # CRITICAL: Log error but don't fail silently
+        logger.error(f"❌ CRITICAL ERROR in send_analysis_complete: {e}")
+        import traceback
+        logger.error(f"❌ Traceback: {traceback.format_exc()}")
+        
+        # Try to send a minimal message even if there's an error
         try:
-            query_params = st.query_params
-            user_id = query_params.get('userId', '')
-            if user_id:
-                logger.info(f"✅ Retrieved user_id from URL params: {user_id}")
-        except Exception as e:
-            logger.error(f"❌ Failed to get user_id from URL params: {e}")
-    
-    # Ensure analysis_data includes timestamp if not already present
-    if analysis_data is None:
-        analysis_data = {}
-    
-    # Add timestamp if not already in analysis_data
-    if 'timestamp' not in analysis_data:
-        analysis_data['timestamp'] = datetime.now().isoformat()
-    
-    # Ensure userId is in analysis_data as well (for redundancy)
-    if 'userId' not in analysis_data:
-        analysis_data['userId'] = user_id
-    
-    message = {
-        'type': 'ANALYSIS_COMPLETE',
-        'userId': user_id,  # CRITICAL: Must match current authenticated user
-        'title': title,
-        'analysisType': analysis_type,
-        'summary': summary or '',
-        'recommendationsCount': recommendations_count,
-        'fileUrl': file_url,
-        'analysisData': analysis_data or {},
-        'timestamp': datetime.now().isoformat()
-    }
-    
-    # Log the complete message for debugging
-    logger.info(f"📤 Sending ANALYSIS_COMPLETE message: userId={user_id}, title={title}, type={analysis_type}")
-    
-    # IMPORTANT: Use '*' as target origin to avoid origin mismatch errors
-    # The parent page will verify the message origin on its side
-    send_js = f"""
-    <script>
-    (function() {{
-        const message = {json.dumps(message)};
-        console.log('📤 Sending ANALYSIS_COMPLETE message:', message);
-        console.log('📤 Message userId:', message.userId);
-        console.log('📤 Message type:', message.type);
-        
-        // Send message to parent window
-        window.parent.postMessage(message, '*');
-        
-        // Also log after sending
-        console.log('✅ ANALYSIS_COMPLETE message sent successfully');
-    }})();
-    </script>
-    """
-    
-    html(send_js, height=0)
-    
-    # Also log in Python
-    logger.info(f"✅ ANALYSIS_COMPLETE message HTML injected for user_id: {user_id}")
+            minimal_message = {
+                'type': 'ANALYSIS_COMPLETE',
+                'userId': get_user_id() or '',
+                'title': title or 'Analysis Report',
+                'analysisType': analysis_type or 'soil',
+                'summary': summary or '',
+                'recommendationsCount': 0,
+                'fileUrl': None,
+                'analysisData': {},
+                'timestamp': datetime.now().isoformat()
+            }
+            
+            fallback_js = f"""
+            <script>
+            try {{
+                const message = {json.dumps(minimal_message)};
+                console.error('⚠️ Sending minimal ANALYSIS_COMPLETE message due to error');
+                if (window.parent && window.parent !== window) {{
+                    window.parent.postMessage(message, '*');
+                    console.log('✅ Minimal ANALYSIS_COMPLETE message sent');
+                }}
+            }} catch (e) {{
+                console.error('❌ Failed to send minimal ANALYSIS_COMPLETE:', e);
+            }}
+            </script>
+            """
+            html(fallback_js, height=0)
+        except Exception as fallback_error:
+            logger.error(f"❌ Failed to send fallback ANALYSIS_COMPLETE message: {fallback_error}")
 
 # ============================================================================
 # STEP 4: Handle plan-based features

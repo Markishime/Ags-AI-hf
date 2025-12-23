@@ -930,51 +930,82 @@ def validate_firestore_data(data):
         return False
 
 def store_analysis_to_firestore(analysis_results, result_id):
-    """Store analysis results to Firestore with proper data flattening"""
+    """
+    CRITICAL: Store analysis results to Firestore with user ID.
+    This function MUST save the analysis with the current user's ID so the website can fetch it.
+    
+    Args:
+        analysis_results: The analysis results dict to save
+        result_id: Unique identifier for this analysis
+        
+    Returns:
+        bool: True if saved successfully, False otherwise
+    """
     try:
         db = get_firestore_client()
         if not db:
+            logger.error("❌ Firestore client not available")
             raise Exception("Firestore client not available")
         
-        # Get user info from CropDrive integration (if available) or session state
+        # CRITICAL: Get user ID from multiple sources (prioritize most reliable)
+        user_id = None
+        user_email = None
+        user_name = None
+        
+        # Method 1: Try CropDrive integration first (most reliable)
         if CROPDRIVE_INTEGRATION_AVAILABLE:
-            user_id = get_user_id()
-            user_email = get_user_email()
-            user_name = get_user_name()
-        else:
-            # Fallback to session state
+            try:
+                user_id = get_user_id()
+                user_email = get_user_email()
+                user_name = get_user_name()
+                if user_id:
+                    logger.info(f"✅ Got user_id from CropDrive integration: {user_id}")
+            except Exception as e:
+                logger.warning(f"⚠️ CropDrive integration failed: {e}")
+        
+        # Method 2: Try session state
+        if not user_id:
             user_id = st.session_state.get('user_id', '')
             user_email = st.session_state.get('user_email', '')
             user_name = st.session_state.get('user_name', '')
+            if user_id:
+                logger.info(f"✅ Got user_id from session state: {user_id}")
         
-        # If user_id is still empty, try to get from URL params (fallback)
+        # Method 3: Try URL params (fallback)
         if not user_id:
             try:
                 query_params = st.query_params
                 user_id = query_params.get('userId', '')
                 if user_id:
-                    logger.info(f"✅ Retrieved user_id from URL params for Firestore: {user_id}")
+                    logger.info(f"✅ Retrieved user_id from URL params: {user_id}")
                     # Also update session state for future use
                     st.session_state.user_id = user_id
                     if not user_email:
                         user_email = query_params.get('userEmail', '')
                         if user_email:
                             st.session_state.user_email = user_email
+                    if not user_name:
+                        user_name = query_params.get('userName', '')
+                        if user_name:
+                            st.session_state.user_name = user_name
             except Exception as e:
                 logger.error(f"❌ Failed to get user_id from URL params: {e}")
         
-        # Skip saving to Firestore if user is not authenticated (anonymous users)
+        # CRITICAL: Skip saving to Firestore if user is not authenticated
+        # The website needs user_id to query and fetch analyses
         if not user_id:
-            logger.warning("⚠️ Skipping Firestore storage - user ID not found (anonymous user)")
+            logger.warning("⚠️ Skipping Firestore storage - user ID not found")
             logger.warning(f"⚠️ Session state user_id: {st.session_state.get('user_id', 'NOT SET')}")
             logger.warning(f"⚠️ Session state user_config: {st.session_state.get('user_config', {})}")
+            logger.warning("⚠️ Analysis will not be accessible from website without user_id")
             return False
         
-        # Create the document data structure for Firestore
+        # CRITICAL: Create the document data structure for Firestore
+        # The website queries by 'user_id' field, so this MUST be included
         current_time = datetime.now()
         firestore_data = {
             'id': result_id,
-            'user_id': user_id,  # Primary identifier from CropDrive
+            'user_id': user_id,  # CRITICAL: Website queries by this field
             'user_email': user_email if user_email else None,
             'user_name': user_name if user_name else None,
             'timestamp': current_time.isoformat(),  # Convert to ISO string
@@ -984,7 +1015,9 @@ def store_analysis_to_firestore(analysis_results, result_id):
             'analysis_results': analysis_results
         }
         
-        logger.info(f"💾 Storing analysis {result_id} for user_id: {user_id}, user_email: {user_email}")
+        logger.info(f"💾 Storing analysis {result_id} to Firestore for user_id: {user_id}")
+        logger.info(f"💾 User email: {user_email}, User name: {user_name}")
+        logger.info(f"💾 Document will be queryable by: user_id == '{user_id}'")
         
         # Pre-process analysis_results to handle datetime objects and complex structures
         analysis_results = preprocess_analysis_results_for_firestore(analysis_results)
@@ -996,16 +1029,22 @@ def store_analysis_to_firestore(analysis_results, result_id):
         if not validate_firestore_data(firestore_data):
             logger.warning("Data validation failed, but proceeding with storage")
         
-        # Store in the analysis_results collection
+        # CRITICAL: Store in the analysis_results collection
+        # The website queries this collection with: where('user_id', '==', user_id)
         doc_ref = db.collection('analysis_results').document(result_id)
         doc_ref.set(firestore_data)
         
         logger.info(f"✅ Analysis {result_id} stored to Firestore successfully")
+        logger.info(f"✅ Document ID: {result_id}, User ID: {user_id}")
+        logger.info(f"✅ Website can now fetch this analysis with: where('user_id', '==', '{user_id}')")
         return True
         
     except Exception as e:
-        logger.error(f"❌ Error storing analysis to Firestore: {e}")
-        raise e
+        logger.error(f"❌ CRITICAL ERROR storing analysis to Firestore: {e}")
+        import traceback
+        logger.error(f"❌ Traceback: {traceback.format_exc()}")
+        # Don't raise - return False so calling code knows save failed
+        return False
 
 
 def flatten_nested_arrays_for_firestore(data, preserve_keys=None):
@@ -1735,16 +1774,25 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         
         logger.info(f"🔍 DEBUG - User info before Firestore save: user_id={display_user_id}, user_email={display_user_email}")
         
-        # Store in Firestore for future access
+        # CRITICAL: Store in Firestore for website to fetch
+        # This MUST happen with user_id so the website can query by user_id
         firestore_saved = False
         try:
+            logger.info(f"💾 Attempting to save analysis {result_id} to Firestore...")
+            logger.info(f"💾 Current user_id: {display_user_id}")
+            logger.info(f"💾 Current user_email: {display_user_email}")
+            
             firestore_saved = store_analysis_to_firestore(analysis_results, result_id)
+            
             if firestore_saved:
                 logger.info(f"✅ Successfully stored analysis {result_id} to Firestore")
+                logger.info(f"✅ Website can now fetch this analysis for user_id: {display_user_id}")
+                logger.info(f"✅ Query: db.collection('analysis_results').where('user_id', '==', '{display_user_id}')")
             else:
-                logger.warning(f"⚠️ Firestore storage skipped (no user_id or other reason)")
+                logger.warning(f"⚠️ Firestore storage skipped - user_id not available")
+                logger.warning(f"⚠️ Analysis will not be accessible from website")
         except Exception as e:
-            logger.error(f"❌ Failed to store analysis to Firestore: {e}")
+            logger.error(f"❌ CRITICAL: Failed to store analysis to Firestore: {e}")
             import traceback
             logger.error(f"Traceback: {traceback.format_exc()}")
             # Continue with session state storage as fallback
@@ -1767,11 +1815,229 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
             'firestore_saved': firestore_saved  # Track if saved to Firestore
         }
         
+        # CRITICAL: Send ANALYSIS_COMPLETE message IMMEDIATELY after analysis completes
+        # This ensures results are saved to Firestore and upload counts are updated
+        try:
+            logger.info(f"📤 CRITICAL: Sending ANALYSIS_COMPLETE message after analysis completion...")
+            logger.info(f"📤 Analysis ID: {result_id}, User ID: {display_user_id}")
+            
+            # Prepare analysis_results in the format expected by send_analysis_complete
+            analysis_data_for_message = {
+                'title': f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
+                'type': 'soil',
+                'summary': '',
+                'recommendations_count': 0,
+                'file_url': None,
+                'data': display_data,
+                **analysis_results  # Include all analysis results
+            }
+            
+            # Determine analysis type
+            if display_data.get('soil_data') and display_data.get('leaf_data'):
+                analysis_data_for_message['type'] = 'both'
+            elif display_data.get('leaf_data'):
+                analysis_data_for_message['type'] = 'leaf'
+            
+            # Call send_analysis_complete with the prepared data
+            send_analysis_complete(analysis_data_for_message)
+            logger.info(f"✅ ANALYSIS_COMPLETE message sent successfully from process_new_analysis")
+            
+        except Exception as e:
+            logger.error(f"❌ CRITICAL ERROR sending ANALYSIS_COMPLETE in process_new_analysis: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # Don't fail the analysis if message sending fails, but log it
+        
         return display_data
         
     except Exception as e:
         st.error(f"Error processing analysis: {str(e)}")
         return {'success': False, 'message': f'Processing error: {str(e)}'}
+
+
+def send_analysis_complete(analysis_results):
+    """
+    CRITICAL: Send ANALYSIS_COMPLETE message to parent window immediately 
+    after analysis completes. This ensures results are saved to Firestore 
+    and upload counts are updated.
+    
+    This function matches the exact specification required by the website.
+    
+    Args:
+        analysis_results: The analysis results dict with all analysis data
+    """
+    from streamlit.components.v1 import html
+    import json
+    
+    try:
+        # Get user ID from session state (set from CONFIG message)
+        user_id = st.session_state.get('user_id', '')
+        
+        # Try to get from URL params as fallback
+        if not user_id:
+            try:
+                query_params = st.query_params
+                user_id = query_params.get('userId', '')
+            except Exception:
+                pass
+        
+        # Try to get from CropDrive integration if available
+        if not user_id:
+            try:
+                from utils.cropdrive_integration import get_user_id
+                user_id = get_user_id()
+            except ImportError:
+                pass
+        
+        # Determine analysis type from results
+        analysis_type = 'soil'  # Default
+        if isinstance(analysis_results, dict):
+            if analysis_results.get('soil_data') and analysis_results.get('leaf_data'):
+                analysis_type = 'both'
+            elif analysis_results.get('leaf_data'):
+                analysis_type = 'leaf'
+            elif analysis_results.get('type'):
+                analysis_type = analysis_results.get('type')
+        
+        # Extract summary and recommendations count
+        summary = analysis_results.get('summary', '') if isinstance(analysis_results, dict) else ''
+        recommendations_count = analysis_results.get('recommendations_count', 0) if isinstance(analysis_results, dict) else 0
+        
+        # If summary not directly available, try to extract from step_by_step_analysis
+        if not summary and isinstance(analysis_results, dict):
+            step_analysis = analysis_results.get('step_by_step_analysis', [])
+            if step_analysis:
+                for step in step_analysis[:3]:
+                    if 'summary' in step:
+                        summary_text = step.get('summary', '')
+                        summary = summary_text[:200] + "..." if len(summary_text) > 200 else summary_text
+                        break
+                    elif 'key_findings' in step:
+                        findings = step.get('key_findings', [])
+                        if isinstance(findings, list) and findings:
+                            summary = findings[0][:200] + "..." if len(findings[0]) > 200 else findings[0]
+                            break
+        
+        # If recommendations_count not available, count from step_by_step_analysis
+        if recommendations_count == 0 and isinstance(analysis_results, dict):
+            step_analysis = analysis_results.get('step_by_step_analysis', [])
+            if step_analysis:
+                for step in step_analysis:
+                    if 'recommendations' in step:
+                        recs = step['recommendations']
+                        if isinstance(recs, list):
+                            recommendations_count += len(recs)
+                        elif isinstance(recs, str):
+                            rec_lines = [r for r in recs.split('\n') if r.strip()]
+                            recommendations_count += len(rec_lines)
+        
+        # Prepare the message - MUST match exact format expected by parent page
+        message = {
+            'type': 'ANALYSIS_COMPLETE',  # MUST be exactly this string
+            'userId': user_id,  # From CONFIG message or session state
+            'title': analysis_results.get('title', f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}') if isinstance(analysis_results, dict) else f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
+            'analysisType': analysis_type,
+            'summary': summary or "Comprehensive soil and leaf analysis completed successfully.",
+            'recommendationsCount': recommendations_count,
+            'fileUrl': analysis_results.get('file_url') if isinstance(analysis_results, dict) else None,
+            'analysisData': analysis_results.get('data') if isinstance(analysis_results, dict) else analysis_results,
+            'timestamp': datetime.now().isoformat(),
+        }
+        
+        logger.info(f"📤 Sending ANALYSIS_COMPLETE message: userId={user_id}, type={analysis_type}")
+        logger.info(f"📤 Message payload: {json.dumps(message, indent=2)}")
+        
+        # CRITICAL: Use '*' as target origin to avoid browser errors
+        # This matches the exact specification from the user
+        html(f"""
+        <script>
+        console.log('📊 Sending ANALYSIS_COMPLETE message:', {json.dumps(message)});
+        window.parent.postMessage({json.dumps(message)}, '*');
+        console.log('✅ ANALYSIS_COMPLETE message sent successfully');
+        </script>
+        """, height=0)
+        
+        logger.info(f"✅ ANALYSIS_COMPLETE message sent: userId={user_id}, type={analysis_type}")
+        
+    except Exception as e:
+        logger.error(f"❌ CRITICAL ERROR in send_analysis_complete: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        # Try to send a minimal message even if there's an error
+        try:
+            minimal_message = {
+                'type': 'ANALYSIS_COMPLETE',
+                'userId': st.session_state.get('user_id', ''),
+                'title': f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
+                'analysisType': 'soil',
+                'summary': 'Analysis completed successfully.',
+                'recommendationsCount': 0,
+                'fileUrl': None,
+                'analysisData': {},
+                'timestamp': datetime.now().isoformat(),
+            }
+            html(f"""
+            <script>
+            console.error('⚠️ Sending minimal ANALYSIS_COMPLETE message due to error');
+            window.parent.postMessage({json.dumps(minimal_message)}, '*');
+            </script>
+            """, height=0)
+        except Exception as fallback_error:
+            logger.error(f"❌ Failed to send fallback ANALYSIS_COMPLETE: {fallback_error}")
+
+
+def _send_analysis_complete_inline(results_data, analysis_results=None):
+    """
+    Wrapper function that calls send_analysis_complete with proper data structure.
+    This ensures compatibility with existing code.
+    """
+    try:
+        # Prepare analysis_results dict in the format expected by send_analysis_complete
+        if analysis_results:
+            analysis_data = {
+                'title': results_data.get('title', f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}'),
+                'type': 'soil',
+                'summary': '',
+                'recommendations_count': 0,
+                'file_url': results_data.get('file_url'),
+                'data': {
+                    'resultId': results_data.get('id'),
+                    'timestamp': results_data.get('timestamp').isoformat() if hasattr(results_data.get('timestamp'), 'isoformat') else str(results_data.get('timestamp', datetime.now())),
+                    'status': 'completed',
+                    'userId': results_data.get('user_id'),
+                    'firestoreSaved': results_data.get('firestore_saved', False)
+                },
+                **analysis_results  # Include all analysis results
+            }
+        else:
+            analysis_data = {
+                'title': results_data.get('title', f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}'),
+                'type': 'soil',
+                'summary': '',
+                'recommendations_count': 0,
+                'file_url': results_data.get('file_url'),
+                'data': results_data
+            }
+        
+        # Determine analysis type
+        if results_data.get('soil_data') and results_data.get('leaf_data'):
+            analysis_data['type'] = 'both'
+        elif results_data.get('leaf_data'):
+            analysis_data['type'] = 'leaf'
+        
+        # Call the main send_analysis_complete function
+        send_analysis_complete(analysis_data)
+        
+    except Exception as e:
+        logger.error(f"❌ Error in _send_analysis_complete_inline: {e}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
+        # Fallback: try calling send_analysis_complete directly with results_data
+        try:
+            send_analysis_complete(results_data)
+        except Exception as fallback_error:
+            logger.error(f"❌ Fallback also failed: {fallback_error}")
+
 
 def get_analysis_results_from_data(results_data):
     """Helper function to get analysis results from either results_data or session state"""
