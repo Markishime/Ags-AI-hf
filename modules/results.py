@@ -1564,11 +1564,11 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         # Insights generation (optimized - no delays)
         status_text.text(f"📈 **{t('analysis_step', 'Step')} 5/5:** {t('analysis_generating_insights_recs', 'Generating insights and recommendations...')} 🔄")
         time_estimate.text(f"⏱️ {t('analysis_creating_recommendations', 'Creating actionable recommendations...')}")
-        step_indicator.text(f"📋 Step {current_step} of {total_steps} - Insights")
+        step_indicator.text(f"📋 {t('analysis_step', 'Step')} {current_step} {t('analysis_of', 'of')} {total_steps} - {t('analysis_insights', 'Insights')}")
         
         status_text.text(f"📈 **{t('analysis_step', 'Step')} 5/5:** {t('analysis_generating_insights_recs', 'Generating insights and recommendations...')} ✅")
         if time_estimate:
-            time_estimate.text("⏱️ Estimated time remaining: ~20 seconds")
+            time_estimate.text(f"⏱️ {t('analysis_time_remaining', 'Estimated time remaining')}: ~20 {t('analysis_seconds', 'seconds')}")
         if step_indicator:
             step_indicator.text(f"📋 {t('analysis_step', 'Step')} {current_step} {t('analysis_of', 'of')} {total_steps}")
         
