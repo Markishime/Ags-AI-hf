@@ -1713,9 +1713,13 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
             'analysis_results': analysis_results  # Include analysis results for raw data display
         }
         
+        logger.info(f"🔍 DEBUG - Returning display_data with success={display_data.get('success')}, id={display_data.get('id')}")
         return display_data
         
     except Exception as e:
+        logger.error(f"❌ Error in process_new_analysis: {str(e)}")
+        import traceback
+        logger.error(f"Traceback: {traceback.format_exc()}")
         st.error(f"Error processing analysis: {str(e)}")
         return {'success': False, 'message': f'Processing error: {str(e)}'}
 
