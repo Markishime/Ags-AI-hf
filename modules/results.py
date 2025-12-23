@@ -3,32 +3,8 @@ import sys
 import os
 from datetime import datetime
 import pandas as pd
+import plotly.graph_objects as go
 import logging
-
-# Optional imports
-try:
-    import plotly.graph_objects as go
-    PLOTLY_AVAILABLE = True
-except ImportError:
-    PLOTLY_AVAILABLE = False
-    go = None
-
-    # Create a mock plotly object to prevent import errors
-    class MockGo:
-        def Figure(self, *args, **kwargs):
-            return None
-        def Bar(self, *args, **kwargs):
-            return None
-        def Scatter(self, *args, **kwargs):
-            return None
-        def Indicator(self, *args, **kwargs):
-            return None
-        def Pie(self, *args, **kwargs):
-            return None
-        def Heatmap(self, *args, **kwargs):
-            return None
-
-    go = MockGo()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -39,57 +15,14 @@ sys.path.append(os.path.join(
     os.path.dirname(os.path.dirname(__file__)), 'utils'))
 
 # Import utilities
-try:
-    from utils.firebase_config import get_firestore_client, COLLECTIONS
-    from google.cloud.firestore import Query, FieldFilter
-    FIREBASE_AVAILABLE = True
-except ImportError:
-    FIREBASE_AVAILABLE = False
-    COLLECTIONS = {'analysis_results': 'analysis_results'}
-    def get_firestore_client():
-        return None
-    Query = None
-    FieldFilter = None
-
-try:
-    from utils.pdf_utils import PDFReportGenerator
-    PDF_AVAILABLE = True
-except ImportError:
-    PDF_AVAILABLE = False
-    PDFReportGenerator = None
-
-try:
-    from utils.analysis_engine import AnalysisEngine
-    ANALYSIS_AVAILABLE = True
-except ImportError:
-    ANALYSIS_AVAILABLE = False
-    AnalysisEngine = None
-
-try:
-    from utils.ocr_utils import extract_data_from_image
-    OCR_AVAILABLE = True
-except ImportError:
-    OCR_AVAILABLE = False
-    def extract_data_from_image(*args, **kwargs):
-        return None
-
-try:
-    from modules.admin import get_active_prompt
-    ADMIN_AVAILABLE = True
-except ImportError:
-    ADMIN_AVAILABLE = False
-    def get_active_prompt():
-        return {'prompt_text': 'Analyze soil and leaf data for oil palm health'}
-
-try:
-    from utils.feedback_system import (
-        display_feedback_section as display_feedback_section_util)
-    FEEDBACK_AVAILABLE = True
-except ImportError:
-    FEEDBACK_AVAILABLE = False
-    def display_feedback_section_util(*args, **kwargs):
-        pass
-
+from utils.firebase_config import get_firestore_client, COLLECTIONS
+from google.cloud.firestore import Query, FieldFilter
+from utils.pdf_utils import PDFReportGenerator
+from utils.analysis_engine import AnalysisEngine
+from utils.ocr_utils import extract_data_from_image
+from modules.admin import get_active_prompt
+from utils.feedback_system import (
+    display_feedback_section as display_feedback_section_util)
 from utils.translations import t, get_language
 
 # Import CropDrive integration for user ID
@@ -579,13 +512,8 @@ def show_results_page():
     
     # Check for new analysis data and process it
     try:
-        # Initialize results_data to None
-        results_data = None
-        
         # Check if there's new analysis data to process
         if 'analysis_data' in st.session_state and st.session_state.analysis_data:
-            # Mark that analysis is starting
-            st.session_state.analysis_in_progress = True
             # Enhanced loading interface for non-technical users
             st.markdown("### 🔬 Analyzing Your Agricultural Reports")
             st.info("📊 Our AI system is processing your soil and leaf analysis data. This may take a few moments...")
@@ -624,33 +552,10 @@ def show_results_page():
                 working_indicator = st.empty()
             
             # Process the new analysis with enhanced progress tracking
-            try:
-                # Add a note about keeping the page open
-                st.info("⏳ **Important:** Please keep this page open during analysis. The process may take 2-5 minutes.")
-                
-                results_data = process_new_analysis(st.session_state.analysis_data, progress_bar, status_text, time_estimate, step_indicator, working_indicator)
-            except KeyboardInterrupt:
-                logger.warning("Analysis interrupted by user")
-                results_data = {'success': False, 'message': 'Analysis was interrupted. Please try again.'}
-            except Exception as e:
-                error_msg = str(e).lower()
-                logger.error(f"❌ Error during analysis processing: {str(e)}")
-                import traceback
-                logger.error(f"Traceback: {traceback.format_exc()}")
-                
-                # Handle specific error types
-                if "bodystreambuffer" in error_msg or "aborted" in error_msg:
-                    results_data = {'success': False, 'message': 'Connection was interrupted during analysis. Please refresh the page and try again.'}
-                elif "timeout" in error_msg:
-                    results_data = {'success': False, 'message': 'Analysis timed out. Please try again with smaller files or check your connection.'}
-                else:
-                    results_data = {'success': False, 'message': f'Processing error: {str(e)}'}
-            finally:
-                # Clear the analysis_data from session state after processing (success or failure)
-                if 'analysis_data' in st.session_state:
-                    del st.session_state.analysis_data
-                # Clear the in-progress flag
-                st.session_state.analysis_in_progress = False
+            results_data = process_new_analysis(st.session_state.analysis_data, progress_bar, status_text, time_estimate, step_indicator, working_indicator)
+            
+            # Clear the analysis_data from session state after processing
+            del st.session_state.analysis_data
             
             if results_data and results_data.get('success', False):
                 # Clear progress container
@@ -717,38 +622,14 @@ def show_results_page():
                     logger = logging.getLogger(__name__)
                     logger.warning(f"CropDrive integration error: {e}")
             else:
-                # Analysis failed - show error message
-                error_msg = results_data.get('message', 'Unknown error') if results_data else 'No results returned from analysis'
-                logger.error(f"❌ Analysis failed: {error_msg}")
-                st.error(f"❌ Analysis failed: {error_msg}")
+                st.error(f"❌ Analysis failed: {results_data.get('message', 'Unknown error')}")
                 st.info("💡 **Tip:** Make sure your uploaded files are clear images of soil and leaf analysis reports.")
-                
-                # Try to load existing results as fallback (in case there are previous results)
-                results_data = load_latest_results()
-                if not results_data or not results_data.get('success', True):
-                    # No fallback results available, show error and return
-                    return
-        
-        # Only load existing results if we don't already have results_data from processing
-        if not results_data:
-            # Check if analysis is in progress - if so, don't show "no results" yet
-            analysis_in_progress = st.session_state.get('analysis_in_progress', False)
-            if analysis_in_progress:
-                logger.info("⏳ Analysis in progress, waiting for completion...")
-                st.info("⏳ Analysis is still in progress. Please wait...")
                 return
-            
-            logger.info("🔍 No results_data from processing, loading from Firestore/session state")
+        else:
+            # Load existing results from Firestore
             results_data = load_latest_results()
         
-        # Validate results_data before displaying
-        if not results_data:
-            logger.warning("No results_data found - showing no results message")
-            display_no_results_message()
-            return
-        
-        if not results_data.get('success', True):
-            logger.warning(f"Results data indicates failure: {results_data.get('message', 'Unknown error')}")
+        if not results_data or not results_data.get('success', True):
             display_no_results_message()
             return
         
@@ -1612,46 +1493,19 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
             return
 
         try:
-            # Update status before starting long-running analysis
-            status_text.text("🔬 **Step 4/5:** Starting comprehensive AI analysis... 🔄")
-            progress_bar.progress(70)
-            time_estimate.text("⏱️ This may take 2-5 minutes. Please keep this page open...")
-            
-            # Run analysis with better error handling
-            try:
-                analysis_results = analysis_engine.generate_comprehensive_analysis(
-                    soil_data=transformed_soil_data,
-                    leaf_data=transformed_leaf_data,
-                    land_yield_data=land_yield_data,
-                    prompt_text=active_prompt.get('prompt_text', '')
-                )
-                logger.info(f"✅ Analysis completed successfully")
-                logger.info(f"🔍 Analysis results keys: {list(analysis_results.keys()) if isinstance(analysis_results, dict) else 'None'}")
-            except KeyboardInterrupt:
-                # Handle user interruption
-                logger.warning("Analysis interrupted by user")
-                raise Exception("Analysis was interrupted. Please try again.")
-            except Exception as analysis_error:
-                # Re-raise to be caught by outer handler
-                raise analysis_error
-                
+            analysis_results = analysis_engine.generate_comprehensive_analysis(
+                soil_data=transformed_soil_data,
+                leaf_data=transformed_leaf_data,
+                land_yield_data=land_yield_data,
+                prompt_text=active_prompt.get('prompt_text', '')
+            )
+            logger.info(f"✅ Analysis completed successfully")
+            logger.info(f"🔍 Analysis results keys: {list(analysis_results.keys()) if isinstance(analysis_results, dict) else 'None'}")
         except Exception as e:
             logger.error(f"❌ Analysis failed: {str(e)}")
             import traceback
             logger.error(f"❌ Analysis traceback: {traceback.format_exc()}")
-            
-            # Check if it's a timeout/connection error
-            error_msg = str(e).lower()
-            if "timeout" in error_msg or "aborted" in error_msg or "bodystreambuffer" in error_msg or "connection" in error_msg:
-                st.error("❌ **Analysis Timeout**: The analysis took too long or the connection was interrupted.")
-                st.info("💡 **Tip:** Large files may take longer to process. Please ensure you have a stable internet connection and try again.")
-                st.info("💡 **Alternative:** Try refreshing the page and starting the analysis again.")
-            elif "quota" in error_msg or "429" in error_msg:
-                st.error("❌ **API Quota Exceeded**: The analysis service is temporarily unavailable due to high demand.")
-                st.info("💡 **Tip:** Please try again in a few minutes.")
-            else:
-                st.error(f"❌ **Analysis Failed**: {str(e)}")
-                st.info("💡 **Tip:** Please check your uploaded files and try again. If the problem persists, contact support.")
+            st.error(f"❌ **Analysis Failed**: {str(e)}")
             return
         
         # Step 7: Generating Insights with animation

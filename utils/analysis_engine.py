@@ -2720,7 +2720,7 @@ class PromptAnalyzer:
             # Get current language for multilingual support
             current_language = self._get_current_language()
             language_instruction = self._get_language_instruction(current_language)
-
+            
             # This ensures the LLM follows the exact steps configured by the user
             system_prompt = f"""This is an expert agronomic analysis system for oil palm cultivation in Malaysia.
             The analysis must be conducted according to the SPECIFIC step instructions from the active prompt configuration and provide detailed, accurate results using neutral, third-person language only.
