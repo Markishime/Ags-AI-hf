@@ -512,8 +512,12 @@ def show_results_page():
     
     # Check for new analysis data and process it
     try:
+        # Initialize results_data to None
+        results_data = None
+        
         # Check if there's new analysis data to process
         if 'analysis_data' in st.session_state and st.session_state.analysis_data:
+            logger.info("🔍 DEBUG - Found analysis_data in session state, starting processing...")
             # Enhanced loading interface for non-technical users
             st.markdown("### 🔬 Analyzing Your Agricultural Reports")
             st.info("📊 Our AI system is processing your soil and leaf analysis data. This may take a few moments...")
@@ -553,20 +557,25 @@ def show_results_page():
             
             # Process the new analysis with enhanced progress tracking
             try:
+                logger.info("🔍 DEBUG - Calling process_new_analysis...")
                 results_data = process_new_analysis(st.session_state.analysis_data, progress_bar, status_text, time_estimate, step_indicator, working_indicator)
+                logger.info(f"🔍 DEBUG - process_new_analysis returned: {type(results_data)}, success={results_data.get('success') if results_data else 'None'}")
             except Exception as e:
                 logger.error(f"❌ Error during analysis processing: {str(e)}")
                 import traceback
                 logger.error(f"Traceback: {traceback.format_exc()}")
                 results_data = {'success': False, 'message': f'Processing error: {str(e)}'}
             finally:
-                # Clear the analysis_data from session state after processing (success or failure)
-                if 'analysis_data' in st.session_state:
+                # Only clear analysis_data if we have a result (success or failure)
+                # This prevents clearing it if the page reruns during processing
+                if results_data is not None and 'analysis_data' in st.session_state:
+                    logger.info("🔍 DEBUG - Clearing analysis_data from session state")
                     del st.session_state.analysis_data
             
             # Check if analysis was successful
             if not results_data:
-                results_data = {'success': False, 'message': 'Analysis returned no results'}
+                logger.error("🔍 DEBUG - process_new_analysis returned None!")
+                results_data = {'success': False, 'message': 'Analysis returned no results - the analysis function did not return any data'}
             
             if results_data and results_data.get('success', False):
                 # Clear progress container
@@ -646,9 +655,15 @@ def show_results_page():
                 return
         else:
             # No new analysis data - try to load existing results from Firestore
+            logger.info("🔍 DEBUG - No analysis_data in session state, trying to load existing results...")
             results_data = load_latest_results()
+            logger.info(f"🔍 DEBUG - load_latest_results returned: {type(results_data)}, success={results_data.get('success') if results_data else 'None'}")
         
         if not results_data or not results_data.get('success', True):
+            logger.warning(f"🔍 DEBUG - No valid results_data. results_data={results_data}")
+            if results_data and not results_data.get('success', True):
+                error_msg = results_data.get('message', 'Unknown error')
+                st.error(f"❌ **Error**: {error_msg}")
             display_no_results_message()
             return
         
