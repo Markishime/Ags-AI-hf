@@ -475,12 +475,16 @@ TRANSLATIONS = {
         'upload_type': 'Jenis',
         'upload_ocr_preview': 'Pemprosesan & Pratonton Data OCR',
         'upload_refresh_ocr': 'Segar Semula OCR',
+        'upload_last_processed': 'Terakhir diproses',
         'upload_soil_data_summary': 'Ringkasan Analisis Tanah',
         'upload_leaf_data_summary': 'Ringkasan Analisis Daun',
         'upload_raw_text': 'Data Teks Mentah yang Diekstrak',
         'upload_structured_data': 'Data OCR Berstruktur (Format JSON)',
         'upload_extracted_samples': 'Diekstrak {} sampel terus dari fail {}',
         'upload_raw_ocr': 'Teks OCR Mentah (Rujukan Sahaja)',
+        'upload_ai_analysis_note': 'Data ini akan digunakan oleh AI untuk analisis. Setiap ID sampel mengandungi nilai parameternya:',
+        'upload_land_yield_info': 'Maklumat Tanah & Hasil (Diperlukan)',
+        'upload_land_yield_desc': 'Penting untuk menjana ramalan ekonomi yang tepat dan unjuran hasil 5 tahun',
         
         # Results
         'results_title': 'Hasil Analisis',
