@@ -557,6 +557,7 @@ TRANSLATIONS = {
         'results_summary_statistics': 'Statistik Ringkasan',
         'results_parameter_statistics': 'Statistik Parameter',
         'results_individual_sample_data': 'Data Sampel Individu',
+        'results_data_format_error': 'Ralat format data hasil analisis',
         'results_projected_yield': 'Hasil Unjuran',
         
         # Executive Summary (Malaysian)
