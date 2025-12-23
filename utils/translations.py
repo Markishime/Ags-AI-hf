@@ -677,7 +677,7 @@ TRANSLATIONS = {
         'analysis_generating_insights': 'Menjana pandangan...',
         'analysis_computing_results': 'Mengira hasil...',
         'analysis_optimizing': 'Mengoptimumkan analisis...',
-        'analysis_finalizing': 'Menyelesaikan laporan...',
+        'analysis_finalizing_report': 'Menyelesaikan laporan...',
         'analysis_almost_done': 'Hampir siap...',
         'analysis_preparing_results': 'Menyediakan hasil...',
         'analysis_saving': 'Menyimpan',
