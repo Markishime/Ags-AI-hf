@@ -947,9 +947,27 @@ def store_analysis_to_firestore(analysis_results, result_id):
             user_email = st.session_state.get('user_email', '')
             user_name = st.session_state.get('user_name', '')
         
+        # If user_id is still empty, try to get from URL params (fallback)
+        if not user_id:
+            try:
+                query_params = st.query_params
+                user_id = query_params.get('userId', '')
+                if user_id:
+                    logger.info(f"✅ Retrieved user_id from URL params for Firestore: {user_id}")
+                    # Also update session state for future use
+                    st.session_state.user_id = user_id
+                    if not user_email:
+                        user_email = query_params.get('userEmail', '')
+                        if user_email:
+                            st.session_state.user_email = user_email
+            except Exception as e:
+                logger.error(f"❌ Failed to get user_id from URL params: {e}")
+        
         # Skip saving to Firestore if user is not authenticated (anonymous users)
         if not user_id:
-            logger.info("Skipping Firestore storage - user ID not found (anonymous user)")
+            logger.warning("⚠️ Skipping Firestore storage - user ID not found (anonymous user)")
+            logger.warning(f"⚠️ Session state user_id: {st.session_state.get('user_id', 'NOT SET')}")
+            logger.warning(f"⚠️ Session state user_config: {st.session_state.get('user_config', {})}")
             return False
         
         # Create the document data structure for Firestore
