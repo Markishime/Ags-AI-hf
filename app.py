@@ -137,6 +137,80 @@ except Exception as e:
 # (ambient-light-sensor, battery, document-domain, etc.) are harmless and come from
 # Streamlit's default security headers. They do not affect functionality.
 
+# Fix accessibility issues: Ensure all form inputs have id/name attributes and proper labels
+st.markdown("""
+<script>
+(function() {
+    // Fix form field accessibility issues
+    function fixFormAccessibility() {
+        // Find all input, select, and textarea elements without id or name
+        const formFields = document.querySelectorAll('input, select, textarea');
+        
+        formFields.forEach((field, index) => {
+            // Add id if missing
+            if (!field.id) {
+                // Try to get id from Streamlit's key attribute or generate one
+                const streamlitKey = field.getAttribute('data-testid') || 
+                                    field.getAttribute('aria-label') ||
+                                    field.getAttribute('placeholder') ||
+                                    field.type || 'field';
+                const baseId = streamlitKey.replace(/[^a-zA-Z0-9]/g, '_').toLowerCase();
+                field.id = baseId + '_' + index + '_' + Date.now();
+            }
+            
+            // Add name if missing (use id as name)
+            if (!field.name && field.id) {
+                field.name = field.id;
+            }
+            
+            // Ensure label association
+            if (field.id) {
+                // Check if label exists for this field
+                const label = document.querySelector(`label[for="${field.id}"]`);
+                if (!label) {
+                    // Try to find parent label
+                    const parentLabel = field.closest('label');
+                    if (parentLabel && !parentLabel.getAttribute('for')) {
+                        parentLabel.setAttribute('for', field.id);
+                    } else if (!parentLabel) {
+                        // Create label if field has aria-label or placeholder
+                        const labelText = field.getAttribute('aria-label') || 
+                                         field.getAttribute('placeholder') || 
+                                         field.getAttribute('title') ||
+                                         'Form field';
+                        const newLabel = document.createElement('label');
+                        newLabel.setAttribute('for', field.id);
+                        newLabel.textContent = labelText;
+                        newLabel.style.visuallyHidden = 'true';
+                        newLabel.style.position = 'absolute';
+                        newLabel.style.left = '-9999px';
+                        field.parentNode.insertBefore(newLabel, field);
+                    }
+                }
+            }
+        });
+    }
+    
+    // Run on page load
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', fixFormAccessibility);
+    } else {
+        fixFormAccessibility();
+    }
+    
+    // Also run after Streamlit updates (using MutationObserver)
+    const observer = new MutationObserver(function(mutations) {
+        fixFormAccessibility();
+    });
+    
+    observer.observe(document.body, {
+        childList: true,
+        subtree: true
+    });
+})();
+</script>
+""", unsafe_allow_html=True)
+
 # Hide Streamlit branding and user profile elements
 st.markdown(
             """
