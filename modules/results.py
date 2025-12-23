@@ -1493,6 +1493,12 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
             return
 
         try:
+            # Update status before starting long-running analysis
+            status_text.text("🔬 **Step 4/5:** Starting comprehensive AI analysis... 🔄")
+            progress_bar.progress(70)
+            if time_estimate:
+                time_estimate.text("⏱️ This may take 2-5 minutes. Please keep this page open...")
+            
             analysis_results = analysis_engine.generate_comprehensive_analysis(
                 soil_data=transformed_soil_data,
                 leaf_data=transformed_leaf_data,
@@ -1501,12 +1507,31 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
             )
             logger.info(f"✅ Analysis completed successfully")
             logger.info(f"🔍 Analysis results keys: {list(analysis_results.keys()) if isinstance(analysis_results, dict) else 'None'}")
+        except KeyboardInterrupt:
+            # Handle user interruption
+            logger.warning("Analysis interrupted by user")
+            st.error("❌ **Analysis Interrupted**: The analysis was interrupted. Please try again.")
+            return {'success': False, 'message': 'Analysis was interrupted by user'}
         except Exception as e:
             logger.error(f"❌ Analysis failed: {str(e)}")
             import traceback
             logger.error(f"❌ Analysis traceback: {traceback.format_exc()}")
-            st.error(f"❌ **Analysis Failed**: {str(e)}")
-            return
+            
+            # Check if it's a timeout/connection error
+            error_msg = str(e).lower()
+            if "timeout" in error_msg or "aborted" in error_msg or "bodystreambuffer" in error_msg or "connection" in error_msg:
+                st.error("❌ **Analysis Timeout**: The analysis took too long or the connection was interrupted.")
+                st.info("💡 **Tip:** Large files may take longer to process. Please ensure you have a stable internet connection and try again.")
+                st.info("💡 **Alternative:** Try refreshing the page and starting the analysis again.")
+                return {'success': False, 'message': 'Analysis timeout or connection interrupted'}
+            elif "quota" in error_msg or "429" in error_msg:
+                st.error("❌ **API Quota Exceeded**: The analysis service is temporarily unavailable due to high demand.")
+                st.info("💡 **Tip:** Please try again in a few minutes.")
+                return {'success': False, 'message': 'API quota exceeded'}
+            else:
+                st.error(f"❌ **Analysis Failed**: {str(e)}")
+                st.info("💡 **Tip:** Please check your uploaded files and try again. If the problem persists, contact support.")
+                return {'success': False, 'message': f'Analysis failed: {str(e)}'}
         
         # Step 7: Generating Insights with animation
         current_step = 7
