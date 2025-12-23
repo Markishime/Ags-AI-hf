@@ -4,7 +4,13 @@ import os
 import time
 from datetime import datetime
 
-
+# Page configuration - MUST be the first Streamlit command
+st.set_page_config(
+    page_title="CropDrive™ AI Assistant",
+    page_icon="🌴",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
 
 # Ensure project root and utils are on sys.path
 repo_root = os.path.dirname(__file__)
@@ -21,7 +27,7 @@ except ImportError:
     try:
         from firebase_config import initialize_firebase, initialize_admin_codes
     except ImportError as e:
-        st.error(f"Failed to import firebase_config: {e}")
+        print(f"Warning: Failed to import firebase_config: {e}")
         initialize_firebase = None
         initialize_admin_codes = None
 
@@ -31,7 +37,7 @@ except ImportError:
     try:
         from translations import translate, t, get_language, set_language, toggle_language
     except ImportError as e:
-        st.error(f"Failed to import translations: {e}")
+        print(f"Warning: Failed to import translations: {e}")
         # Provide fallback functions
         def translate(text, lang=None): return text
         def t(key): return key
@@ -125,13 +131,7 @@ except Exception as e:
     traceback.print_exc()
     admin_panel_func = None
 
-# Page configuration
-st.set_page_config(
-    page_title="CropDrive™ AI Assistant",
-    page_icon="🌴",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# Page configuration is now at the top of the file
 
 # Hide Streamlit branding and user profile elements
 st.markdown(
