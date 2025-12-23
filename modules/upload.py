@@ -349,7 +349,7 @@ def show_ocr_preview(file, file_type: str, container_type: str) -> None:
     """Enhanced OCR preview with step-by-step processing display"""
     
     # Header section (removed expander to avoid nesting issues)
-    st.markdown("### 🔍 OCR Data Processing & Preview")
+    st.markdown(f"### 🔍 {t('upload_ocr_preview', 'OCR Data Processing & Preview')}")
     
     # Processing status indicators
     status_container = st.container()
@@ -361,7 +361,7 @@ def show_ocr_preview(file, file_type: str, container_type: str) -> None:
                               key=f"refresh_{container_type}_ocr", 
                               help="Re-process the image with OCR")
     with col_timestamp:
-        st.caption(f"Last processed: {datetime.now().strftime('%H:%M:%S')}")
+        st.caption(f"{t('upload_last_processed', 'Last processed')}: {datetime.now().strftime('%H:%M:%S')}")
     
     # Perform OCR processing quietly without step indicators
     try:
@@ -565,9 +565,9 @@ def show_ocr_preview(file, file_type: str, container_type: str) -> None:
                             structured_data[container_key] = samples_data
                             
                             # Display structured data directly
-                            st.markdown("### 📝 Raw Extracted Text Data")
-                            st.markdown("#### 📊 Structured OCR Data (JSON Format)")
-                            st.markdown(f"**✅ Extracted {len(samples_data)} samples directly from {container_type} file**")
+                            st.markdown(f"### 📝 {t('upload_raw_text', 'Raw Extracted Text Data')}")
+                            st.markdown(f"#### 📊 {t('upload_structured_data', 'Structured OCR Data (JSON Format)')}")
+                            st.markdown(f"**✅ {t('upload_extracted_samples', 'Extracted {} samples directly from {} file').format(len(samples_data), container_type)}**")
                             
                             try:
                                 import json
@@ -909,8 +909,8 @@ def upload_section():
     
     # Land/Yield Size Data Section
     st.markdown("---")
-    st.markdown("### 🌾 Land & Yield Information (Required)")
-    st.markdown("*Essential for generating accurate economic forecasts and 5-year yield projections*")
+    st.markdown(f"### 🌾 {t('upload_land_yield_info', 'Land & Yield Information (Required)')}")
+    st.markdown(f"*{t('upload_land_yield_desc', 'Essential for generating accurate economic forecasts and 5-year yield projections')}*")
     
     col1, col2, col3 = st.columns(3)
     
@@ -1686,9 +1686,9 @@ def _show_raw_text_as_json(raw_text: str, container_type: str, ocr_result: dict 
     structured_data = format_raw_text_as_structured_json(raw_text, container_type)
 
     # Raw Extracted Text Data - display as structured JSON
-    st.markdown("### 📝 Raw Extracted Text Data")
-    st.markdown("#### 📊 Structured OCR Data (JSON Format)")
-    st.markdown("**This data will be used by the AI for analysis. Each sample ID contains its parameter values:**")
+    st.markdown(f"### 📝 {t('upload_raw_text', 'Raw Extracted Text Data')}")
+    st.markdown(f"#### 📊 {t('upload_structured_data', 'Structured OCR Data (JSON Format)')}")
+    st.markdown(f"**{t('upload_ai_analysis_note', 'This data will be used by the AI for analysis. Each sample ID contains its parameter values:')}**")
 
     # Display the structured JSON with better formatting
     try:

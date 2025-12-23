@@ -110,12 +110,16 @@ TRANSLATIONS = {
         'upload_type': 'Type',
         'upload_ocr_preview': 'OCR Data Processing & Preview',
         'upload_refresh_ocr': 'Refresh OCR',
+        'upload_last_processed': 'Last processed',
         'upload_soil_data_summary': 'Soil Analysis Summary',
         'upload_leaf_data_summary': 'Leaf Analysis Summary',
         'upload_raw_text': 'Raw Extracted Text Data',
         'upload_structured_data': 'Structured OCR Data (JSON Format)',
         'upload_extracted_samples': 'Extracted {} samples directly from {} file',
         'upload_raw_ocr': 'Raw OCR Text (Reference Only)',
+        'upload_ai_analysis_note': 'This data will be used by the AI for analysis. Each sample ID contains its parameter values:',
+        'upload_land_yield_info': 'Land & Yield Information (Required)',
+        'upload_land_yield_desc': 'Essential for generating accurate economic forecasts and 5-year yield projections',
         
         # Results
         'results_title': 'Analysis Results',
