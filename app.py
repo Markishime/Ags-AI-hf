@@ -133,6 +133,10 @@ except Exception as e:
 
 # Page configuration is now at the top of the file
 
+# Note: Browser console warnings about "Unrecognized feature" for Permissions Policy
+# (ambient-light-sensor, battery, document-domain, etc.) are harmless and come from
+# Streamlit's default security headers. They do not affect functionality.
+
 # Hide Streamlit branding and user profile elements
 st.markdown(
             """
