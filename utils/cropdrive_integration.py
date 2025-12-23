@@ -310,19 +310,11 @@ def send_analysis_complete(
         'timestamp': datetime.now().isoformat()
     }
     
-    # Send to all allowed origins
-    allowed_origins = [
-        'https://cropdrive.ai',
-        'https://cropdrive-f5exleg55-mark-lloyd-cuizons-projects.vercel.app',
-        'http://localhost:3000'
-    ]
-    
+    # IMPORTANT: Use '*' as target origin to avoid origin mismatch errors
+    # The parent page will verify the message origin on its side
     send_js = f"""
     <script>
-    const allowedOrigins = {json.dumps(allowed_origins)};
-    allowedOrigins.forEach(origin => {{
-        window.parent.postMessage({json.dumps(message)}, origin);
-    }});
+    window.parent.postMessage({json.dumps(message)}, '*');
     console.log('📤 Sent analysis complete message:', {json.dumps(message)});
     </script>
     """
@@ -368,18 +360,11 @@ def send_feature_restricted(required_plan: str, feature_name: str):
         'featureName': feature_name
     }
     
-    allowed_origins = [
-        'https://cropdrive.ai',
-        'https://cropdrive-f5exleg55-mark-lloyd-cuizons-projects.vercel.app',
-        'http://localhost:3000'
-    ]
-    
+    # IMPORTANT: Use '*' as target origin to avoid origin mismatch errors
+    # The parent page will verify the message origin on its side
     send_js = f"""
     <script>
-    const allowedOrigins = {json.dumps(allowed_origins)};
-    allowedOrigins.forEach(origin => {{
-        window.parent.postMessage({json.dumps(message)}, origin);
-    }});
+    window.parent.postMessage({json.dumps(message)}, '*');
     </script>
     """
     
@@ -489,19 +474,11 @@ def send_language_change(new_language: str):
         'language': new_language
     }
     
-    # Get allowed origins from the JavaScript (should match)
-    allowed_origins = [
-        'https://cropdrive.ai',
-        'https://cropdrive-f5exleg55-mark-lloyd-cuizons-projects.vercel.app',
-        'http://localhost:3000'
-    ]
-    
+    # IMPORTANT: Use '*' as target origin to avoid origin mismatch errors
+    # The parent page will verify the message origin on its side
     send_js = f"""
     <script>
-    const allowedOrigins = {json.dumps(allowed_origins)};
-    allowedOrigins.forEach(origin => {{
-        window.parent.postMessage({json.dumps(message)}, origin);
-    }});
+    window.parent.postMessage({json.dumps(message)}, '*');
     console.log('📤 Sent language change request:', {json.dumps(message)});
     
     // Also update URL
