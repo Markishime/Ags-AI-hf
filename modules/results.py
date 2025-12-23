@@ -3,8 +3,32 @@ import sys
 import os
 from datetime import datetime
 import pandas as pd
-import plotly.graph_objects as go
 import logging
+
+# Optional imports
+try:
+    import plotly.graph_objects as go
+    PLOTLY_AVAILABLE = True
+except ImportError:
+    PLOTLY_AVAILABLE = False
+    go = None
+
+    # Create a mock plotly object to prevent import errors
+    class MockGo:
+        def Figure(self, *args, **kwargs):
+            return None
+        def Bar(self, *args, **kwargs):
+            return None
+        def Scatter(self, *args, **kwargs):
+            return None
+        def Indicator(self, *args, **kwargs):
+            return None
+        def Pie(self, *args, **kwargs):
+            return None
+        def Heatmap(self, *args, **kwargs):
+            return None
+
+    go = MockGo()
 
 # Configure logging
 logging.basicConfig(level=logging.INFO)
@@ -15,14 +39,57 @@ sys.path.append(os.path.join(
     os.path.dirname(os.path.dirname(__file__)), 'utils'))
 
 # Import utilities
-from utils.firebase_config import get_firestore_client, COLLECTIONS
-from google.cloud.firestore import Query, FieldFilter
-from utils.pdf_utils import PDFReportGenerator
-from utils.analysis_engine import AnalysisEngine
-from utils.ocr_utils import extract_data_from_image
-from modules.admin import get_active_prompt
-from utils.feedback_system import (
-    display_feedback_section as display_feedback_section_util)
+try:
+    from utils.firebase_config import get_firestore_client, COLLECTIONS
+    from google.cloud.firestore import Query, FieldFilter
+    FIREBASE_AVAILABLE = True
+except ImportError:
+    FIREBASE_AVAILABLE = False
+    COLLECTIONS = {'analysis_results': 'analysis_results'}
+    def get_firestore_client():
+        return None
+    Query = None
+    FieldFilter = None
+
+try:
+    from utils.pdf_utils import PDFReportGenerator
+    PDF_AVAILABLE = True
+except ImportError:
+    PDF_AVAILABLE = False
+    PDFReportGenerator = None
+
+try:
+    from utils.analysis_engine import AnalysisEngine
+    ANALYSIS_AVAILABLE = True
+except ImportError:
+    ANALYSIS_AVAILABLE = False
+    AnalysisEngine = None
+
+try:
+    from utils.ocr_utils import extract_data_from_image
+    OCR_AVAILABLE = True
+except ImportError:
+    OCR_AVAILABLE = False
+    def extract_data_from_image(*args, **kwargs):
+        return None
+
+try:
+    from modules.admin import get_active_prompt
+    ADMIN_AVAILABLE = True
+except ImportError:
+    ADMIN_AVAILABLE = False
+    def get_active_prompt():
+        return {'prompt_text': 'Analyze soil and leaf data for oil palm health'}
+
+try:
+    from utils.feedback_system import (
+        display_feedback_section as display_feedback_section_util)
+    FEEDBACK_AVAILABLE = True
+except ImportError:
+    FEEDBACK_AVAILABLE = False
+    def display_feedback_section_util(*args, **kwargs):
+        pass
+
 from utils.translations import t, get_language
 
 # Import CropDrive integration for user ID
@@ -517,6 +584,8 @@ def show_results_page():
         
         # Check if there's new analysis data to process
         if 'analysis_data' in st.session_state and st.session_state.analysis_data:
+            # Mark that analysis is starting
+            st.session_state.analysis_in_progress = True
             # Enhanced loading interface for non-technical users
             st.markdown("### 🔬 Analyzing Your Agricultural Reports")
             st.info("📊 Our AI system is processing your soil and leaf analysis data. This may take a few moments...")
@@ -555,10 +624,19 @@ def show_results_page():
                 working_indicator = st.empty()
             
             # Process the new analysis with enhanced progress tracking
-            results_data = process_new_analysis(st.session_state.analysis_data, progress_bar, status_text, time_estimate, step_indicator, working_indicator)
-            
-            # Clear the analysis_data from session state after processing
-            del st.session_state.analysis_data
+            try:
+                results_data = process_new_analysis(st.session_state.analysis_data, progress_bar, status_text, time_estimate, step_indicator, working_indicator)
+            except Exception as e:
+                logger.error(f"❌ Error during analysis processing: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                results_data = {'success': False, 'message': f'Processing error: {str(e)}'}
+            finally:
+                # Clear the analysis_data from session state after processing (success or failure)
+                if 'analysis_data' in st.session_state:
+                    del st.session_state.analysis_data
+                # Clear the in-progress flag
+                st.session_state.analysis_in_progress = False
             
             if results_data and results_data.get('success', False):
                 # Clear progress container
@@ -624,33 +702,28 @@ def show_results_page():
                     import logging
                     logger = logging.getLogger(__name__)
                     logger.warning(f"CropDrive integration error: {e}")
-                
-                # Ensure results_data has analysis_results if not already present
-                if 'analysis_results' not in results_data or not results_data.get('analysis_results'):
-                    analysis_results = get_analysis_results_from_data(results_data)
-                    if analysis_results:
-                        results_data['analysis_results'] = analysis_results
-                    else:
-                        logger.warning("⚠️ No analysis_results found after processing - checking session state")
-                        # Try to get from session state
-                        result_id = results_data.get('id')
-                        if result_id and 'stored_analysis_results' in st.session_state:
-                            if result_id in st.session_state.stored_analysis_results:
-                                results_data['analysis_results'] = st.session_state.stored_analysis_results[result_id]
-                                logger.info(f"✅ Found analysis_results in session state for {result_id}")
-                
-                # Mark that we have results_data from processing
-                logger.info(f"✅ Analysis processing completed. Results data ID: {results_data.get('id')}")
-                logger.info(f"🔍 Results data has analysis_results: {'analysis_results' in results_data and bool(results_data.get('analysis_results'))}")
-                
-                # Continue to display results below (don't reload)
             else:
-                st.error(f"❌ Analysis failed: {results_data.get('message', 'Unknown error') if results_data else 'No results returned'}")
+                # Analysis failed - show error message
+                error_msg = results_data.get('message', 'Unknown error') if results_data else 'No results returned from analysis'
+                logger.error(f"❌ Analysis failed: {error_msg}")
+                st.error(f"❌ Analysis failed: {error_msg}")
                 st.info("💡 **Tip:** Make sure your uploaded files are clear images of soil and leaf analysis reports.")
-                return
+                
+                # Try to load existing results as fallback (in case there are previous results)
+                results_data = load_latest_results()
+                if not results_data or not results_data.get('success', True):
+                    # No fallback results available, show error and return
+                    return
         
         # Only load existing results if we don't already have results_data from processing
         if not results_data:
+            # Check if analysis is in progress - if so, don't show "no results" yet
+            analysis_in_progress = st.session_state.get('analysis_in_progress', False)
+            if analysis_in_progress:
+                logger.info("⏳ Analysis in progress, waiting for completion...")
+                st.info("⏳ Analysis is still in progress. Please wait...")
+                return
+            
             logger.info("🔍 No results_data from processing, loading from Firestore/session state")
             results_data = load_latest_results()
         
@@ -664,24 +737,6 @@ def show_results_page():
             logger.warning(f"Results data indicates failure: {results_data.get('message', 'Unknown error')}")
             display_no_results_message()
             return
-        
-        # Ensure analysis_results is available in results_data
-        if 'analysis_results' not in results_data or not results_data.get('analysis_results'):
-            analysis_results = get_analysis_results_from_data(results_data)
-            if analysis_results:
-                results_data['analysis_results'] = analysis_results
-            else:
-                logger.warning("No analysis_results found in results_data or session state")
-                # Try to get from session state directly
-                if 'stored_analysis_results' in st.session_state and st.session_state.stored_analysis_results:
-                    result_id = results_data.get('id')
-                    if result_id and result_id in st.session_state.stored_analysis_results:
-                        results_data['analysis_results'] = st.session_state.stored_analysis_results[result_id]
-                    else:
-                        # Get latest
-                        latest_id = max(st.session_state.stored_analysis_results.keys())
-                        results_data['analysis_results'] = st.session_state.stored_analysis_results[latest_id]
-                        results_data['id'] = latest_id
         
         # Display results in organized sections
         st.markdown('<div class="print-show">', unsafe_allow_html=True)
@@ -852,36 +907,21 @@ def load_latest_results():
         
         # Check if there are any stored analysis results in session state (newly completed)
         if 'stored_analysis_results' in st.session_state and st.session_state.stored_analysis_results:
-            try:
-                # Get the most recent analysis result from session state
-                latest_id = max(st.session_state.stored_analysis_results.keys())
-                latest_analysis = st.session_state.stored_analysis_results[latest_id]
-                
-                logger.info(f"🔍 DEBUG - Loading from stored_analysis_results: {latest_id}")
-                logger.info(f"🔍 DEBUG - Latest analysis keys: {list(latest_analysis.keys()) if isinstance(latest_analysis, dict) else 'Not a dict'}")
-                
-                # Create results data structure
-                results_data = {
-                    'id': latest_id,
-                    'user_email': st.session_state.get('user_email'),
-                    'timestamp': datetime.now(),
-                    'status': 'completed',
-                    'report_types': ['soil', 'leaf'],
-                    'success': True,
-                    'analysis_results': latest_analysis
-                }
-                
-                # Ensure we have analysis_results
-                if not results_data.get('analysis_results'):
-                    logger.warning(f"⚠️ No analysis_results in stored data for {latest_id}")
-                    return None
-                
-                return results_data
-            except Exception as e:
-                logger.error(f"❌ Error loading from stored_analysis_results: {str(e)}")
-                import traceback
-                logger.error(f"Traceback: {traceback.format_exc()}")
-                # Continue to try Firestore
+            # Get the most recent analysis result from session state
+            latest_id = max(st.session_state.stored_analysis_results.keys())
+            latest_analysis = st.session_state.stored_analysis_results[latest_id]
+            
+            # Create results data structure
+            results_data = {
+                'id': latest_id,
+                'user_email': st.session_state.get('user_email'),
+                'timestamp': datetime.now(),
+                'status': 'completed',
+                'report_types': ['soil', 'leaf'],
+                'success': True,
+                'analysis_results': latest_analysis
+            }
+            return results_data
         
         # If no stored results, try to load from Firestore (optional - only if user is logged in)
         db = get_firestore_client()
