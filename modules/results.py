@@ -522,16 +522,16 @@ def show_results_page():
             progress_container = st.container()
             with progress_container:
                 # Add system status indicator with heartbeat
-                st.markdown("""
+                st.markdown(f"""
                 <div style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); 
                     padding: 15px; border-radius: 10px; margin-bottom: 20px; 
                     text-align: center; animation: pulse 2s infinite;">
                     <h4 style="color: white; margin: 0; font-size: 18px;">
-                        🔄 Analysis in Progress
+                        🔄 {t('analysis_in_progress', 'Analysis in Progress')}
                     </h4>
                     <p style="color: rgba(255,255,255,0.9); margin: 5px 0 0 0; 
                         font-size: 14px;">
-                        Our AI is analyzing your agricultural data. Please wait...
+                        {t('analysis_ai_analyzing', 'Our AI is analyzing your agricultural data. Please wait...')}
                     </p>
                 </div>
                 <style>
@@ -1132,9 +1132,9 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         
         # Step 1: Initial validation (optimized - no delays)
         progress_bar.progress(10)
-        status_text.text("🔍 **Step 1/5:** Validating uploaded files... ✅")
+        status_text.text(f"🔍 **{t('analysis_step', 'Step')} 1/5:** {t('analysis_validating_files', 'Validating uploaded files...')} ✅")
         if working_indicator:
-            working_indicator.markdown("🔄 **Processing:** Validating files...")
+            working_indicator.markdown(f"🔄 **{t('analysis_processing', 'Processing')}:** {t('analysis_validating', 'Validating files...')}")
         
         
         
@@ -1150,7 +1150,7 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         current_step = 2
         progress_bar.progress(30)
 
-        status_text.text("🌱 **Step 2/5:** Extracting data from analysis reports... 🔄")
+        status_text.text(f"🌱 **{t('analysis_step', 'Step')} 2/5:** {t('analysis_extracting_data', 'Extracting data from analysis reports...')} 🔄")
 
         # First priority: Check for pre-processed structured OCR data from upload
         structured_soil_data = None
@@ -1238,7 +1238,7 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         # Fallback to OCR extraction if structured data is not available
         if not structured_soil_data:
             logger.info("🔄 Falling back to OCR extraction for soil data")
-            status_text.text("🌱 **Step 2/5:** Extracting soil data via OCR... 🔄")
+            status_text.text(f"🌱 **{t('analysis_step', 'Step')} 2/5:** {t('analysis_extracting_soil', 'Extracting soil data via OCR...')} 🔄")
 
             # Check file type and process accordingly
             import os
@@ -1279,7 +1279,7 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
 
         if not structured_leaf_data:
             logger.info("🔄 Falling back to OCR extraction for leaf data")
-            status_text.text("🌿 **Step 2/5:** Extracting leaf data via OCR... 🔄")
+            status_text.text(f"🌿 **{t('analysis_step', 'Step')} 2/5:** {t('analysis_extracting_leaf', 'Extracting leaf data via OCR...')} 🔄")
 
             # Check file type and process accordingly
             import os
@@ -1353,20 +1353,20 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
             st.error("❌ **Leaf Analysis Failed**: Unable to extract data from uploaded leaf report. Please check the image quality and try again.")
             return
 
-        status_text.text("🌱 **Step 2/5:** Data extraction completed successfully ✅")
+        status_text.text(f"🌱 **{t('analysis_step', 'Step')} 2/5:** {t('analysis_extraction_completed', 'Data extraction completed successfully')} ✅")
         if time_estimate:
-            time_estimate.text("⏱️ Estimated time remaining: ~60 seconds")
+            time_estimate.text(f"⏱️ {t('analysis_time_remaining', 'Estimated time remaining')}: ~60 {t('analysis_seconds', 'seconds')}")
         if step_indicator:
-            step_indicator.text(f"📋 Step {current_step} of {total_steps}")
+            step_indicator.text(f"📋 {t('analysis_step', 'Step')} {current_step} {t('analysis_of', 'of')} {total_steps}")
         
         # Step 3: Data Validation (optimized)
         current_step = 3
         progress_bar.progress(50)
-        status_text.text("✅ **Step 3/5:** Processing extracted data...")
+        status_text.text(f"✅ **{t('analysis_step', 'Step')} 3/5:** {t('analysis_processing_data', 'Processing extracted data...')}")
         if time_estimate:
-            time_estimate.text("⏱️ Estimated time remaining: ~60 seconds")
+            time_estimate.text(f"⏱️ {t('analysis_time_remaining', 'Estimated time remaining')}: ~60 {t('analysis_seconds', 'seconds')}")
         if step_indicator:
-            step_indicator.text(f"📋 Step {current_step} of {total_steps}")
+            step_indicator.text(f"📋 {t('analysis_step', 'Step')} {current_step} {t('analysis_of', 'of')} {total_steps}")
         
         # Get active prompt
         active_prompt = get_active_prompt()
@@ -1376,24 +1376,24 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         # Step 4: AI Analysis (optimized)
         current_step = 4
         progress_bar.progress(70)
-        status_text.text("🤖 **Step 4/5:** Running AI analysis...")
+        status_text.text(f"🤖 **{t('analysis_step', 'Step')} 4/5:** {t('analysis_running_ai', 'Running AI analysis...')}")
         if time_estimate:
-            time_estimate.text("⏱️ Estimated time remaining: ~30 seconds")
+            time_estimate.text(f"⏱️ {t('analysis_time_remaining', 'Estimated time remaining')}: ~30 {t('analysis_seconds', 'seconds')}")
         if step_indicator:
-            step_indicator.text(f"📋 Step {current_step} of {total_steps}")
+            step_indicator.text(f"📋 {t('analysis_step', 'Step')} {current_step} {t('analysis_of', 'of')} {total_steps}")
         
         analysis_engine = AnalysisEngine()
         
         # Analysis processing (optimized - no delays)
-        status_text.text("🔬 **Step 4/5:** Running comprehensive agricultural analysis... 🔄")
-        time_estimate.text("⏱️ Processing data patterns and generating insights...")
-        step_indicator.text(f"📋 Step {current_step} of {total_steps} - AI Analysis")
+        status_text.text(f"🔬 **{t('analysis_step', 'Step')} 4/5:** {t('analysis_running_comprehensive', 'Running comprehensive agricultural analysis...')} 🔄")
+        time_estimate.text(f"⏱️ {t('analysis_processing_patterns', 'Processing data patterns and generating insights...')}")
+        step_indicator.text(f"📋 {t('analysis_step', 'Step')} {current_step} {t('analysis_of', 'of')} {total_steps} - {t('analysis_ai_analysis', 'AI Analysis')}")
         
-        status_text.text("🔬 **Step 4/5:** Running comprehensive agricultural analysis... ✅")
+        status_text.text(f"🔬 **{t('analysis_step', 'Step')} 4/5:** {t('analysis_running_comprehensive', 'Running comprehensive agricultural analysis...')} ✅")
         if time_estimate:
-            time_estimate.text("⏱️ Estimated time remaining: ~15 seconds")
+            time_estimate.text(f"⏱️ {t('analysis_time_remaining', 'Estimated time remaining')}: ~15 {t('analysis_seconds', 'seconds')}")
         if step_indicator:
-            step_indicator.text(f"📋 Step {current_step} of {total_steps}")
+            step_indicator.text(f"📋 {t('analysis_step', 'Step')} {current_step} {t('analysis_of', 'of')} {total_steps}")
         
         # Transform data structure to match analysis engine expectations
         transformed_soil_samples = []
@@ -1517,10 +1517,10 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
 
         try:
             # Update status before starting long-running analysis
-            status_text.text("🔬 **Step 4/5:** Starting comprehensive AI analysis... 🔄")
+            status_text.text(f"🔬 **{t('analysis_step', 'Step')} 4/5:** {t('analysis_starting_comprehensive', 'Starting comprehensive AI analysis...')} 🔄")
             progress_bar.progress(70)
             if time_estimate:
-                time_estimate.text("⏱️ This may take 2-5 minutes. Please keep this page open...")
+                time_estimate.text(f"⏱️ {t('analysis_may_take', 'This may take 2-5 minutes. Please keep this page open...')}")
             
             analysis_results = analysis_engine.generate_comprehensive_analysis(
                 soil_data=transformed_soil_data,
@@ -1562,15 +1562,15 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         
         
         # Insights generation (optimized - no delays)
-        status_text.text("📈 **Step 5/5:** Generating insights and recommendations... 🔄")
-        time_estimate.text("⏱️ Creating actionable recommendations...")
+        status_text.text(f"📈 **{t('analysis_step', 'Step')} 5/5:** {t('analysis_generating_insights_recs', 'Generating insights and recommendations...')} 🔄")
+        time_estimate.text(f"⏱️ {t('analysis_creating_recommendations', 'Creating actionable recommendations...')}")
         step_indicator.text(f"📋 Step {current_step} of {total_steps} - Insights")
         
-        status_text.text("📈 **Step 5/5:** Generating insights and recommendations... ✅")
+        status_text.text(f"📈 **{t('analysis_step', 'Step')} 5/5:** {t('analysis_generating_insights_recs', 'Generating insights and recommendations...')} ✅")
         if time_estimate:
             time_estimate.text("⏱️ Estimated time remaining: ~20 seconds")
         if step_indicator:
-            step_indicator.text(f"📋 Step {current_step} of {total_steps}")
+            step_indicator.text(f"📋 {t('analysis_step', 'Step')} {current_step} {t('analysis_of', 'of')} {total_steps}")
         
         # Step 8: Saving Results with animation
         current_step = 8
@@ -1586,7 +1586,7 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         if time_estimate:
             time_estimate.text("⏱️ Estimated time remaining: ~10 seconds")
         if step_indicator:
-            step_indicator.text(f"📋 Step {current_step} of {total_steps}")
+            step_indicator.text(f"📋 {t('analysis_step', 'Step')} {current_step} {t('analysis_of', 'of')} {total_steps}")
         
         user_email = st.session_state.get('user_email')
         user_id = st.session_state.get('user_id', 'anonymous')
