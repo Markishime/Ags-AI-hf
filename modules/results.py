@@ -2140,6 +2140,28 @@ def send_analysis_complete(analysis_results):
         
         logger.info(f"📤 Message payload: {message_json[:500]}...")  # Log first 500 chars
         
+        # CRITICAL: Optimistically update upload count in session state BEFORE sending message
+        # This ensures UI updates immediately while waiting for parent confirmation
+        try:
+            current_used = st.session_state.get('uploads_used', 0)
+            current_limit = st.session_state.get('uploads_limit', 0)
+            if current_limit > 0:  # Only update if limit is set
+                new_used = current_used + 1
+                st.session_state.uploads_used = new_used
+                st.session_state.uploads_remaining = max(0, current_limit - new_used)
+                logger.info(f"✅ Optimistically updated upload count: {new_used}/{current_limit} used ({st.session_state.uploads_remaining} remaining)")
+                
+                # Also update URL params to reflect new count
+                try:
+                    query_params = st.query_params
+                    query_params['uploadsUsed'] = str(new_used)
+                    query_params['uploadsRemaining'] = str(st.session_state.uploads_remaining)
+                    logger.info(f"✅ Updated URL params with new upload count")
+                except Exception as url_error:
+                    logger.warning(f"⚠️ Could not update URL params: {url_error}")
+        except Exception as count_error:
+            logger.warning(f"⚠️ Could not update upload count optimistically: {count_error}")
+        
         # CRITICAL: Use '*' as target origin to ensure message reaches parent
         # Also try specific origin and store in sessionStorage as backup
         # Use multiple attempts with delays to ensure parent listener is ready
@@ -2166,6 +2188,45 @@ def send_analysis_complete(analysis_results):
                     console.log('✅ Stored analysis results in sessionStorage as backup');
                 }} catch (storageError) {{
                     console.warn('⚠️ Could not store in sessionStorage:', storageError);
+                }}
+                
+                // CRITICAL: Optimistically increment upload count in sessionStorage
+                // This ensures the UI updates immediately while waiting for parent confirmation
+                try {{
+                    const currentUsed = parseInt(sessionStorage.getItem('cropdrive_uploadsUsed') || '0');
+                    const currentLimit = parseInt(sessionStorage.getItem('cropdrive_uploadsLimit') || '0');
+                    if (currentLimit > 0) {{  // Only update if limit is set
+                        const newUsed = currentUsed + 1;
+                        sessionStorage.setItem('cropdrive_uploadsUsed', String(newUsed));
+                        const newRemaining = Math.max(0, currentLimit - newUsed);
+                        sessionStorage.setItem('cropdrive_uploadsRemaining', String(newRemaining));
+                        console.log(`✅ Optimistically updated upload count: ${{newUsed}}/${{currentLimit}} used (${{newRemaining}} remaining)`);
+                        
+                        // Also update URL params to reflect new count
+                        const url = new URL(window.location.href);
+                        url.searchParams.set('uploadsUsed', String(newUsed));
+                        url.searchParams.set('uploadsRemaining', String(newRemaining));
+                        window.history.replaceState({{}}, '', url);
+                        console.log('✅ Updated URL params with new upload count');
+                        
+                        // Trigger a small delay then check if we need to refresh the page
+                        // This ensures the upload count display updates
+                        setTimeout(function() {{
+                            // Check if we're on the upload page and trigger a refresh
+                            const currentUrl = window.location.href;
+                            if (currentUrl.includes('upload') || currentUrl.includes('page=upload')) {{
+                                console.log('🔄 Triggering page refresh to update upload count display');
+                                // Use Streamlit's rerun mechanism if available
+                                if (window.parent !== window) {{
+                                    window.parent.postMessage({{
+                                        type: 'STREAMLIT_RERUN'
+                                    }}, '*');
+                                }}
+                            }}
+                        }}, 500);
+                    }}
+                }} catch (countError) {{
+                    console.warn('⚠️ Could not update upload count:', countError);
                 }}
                 
                 // Function to send message with multiple origin attempts

@@ -85,6 +85,9 @@ def inject_parent_communication():
                 url.searchParams.set('uploadsRemaining', String(userConfig.uploadsRemaining));
                 window.history.replaceState({}, '', url);
                 
+                // Log upload count update for debugging
+                console.log(`📊 Upload count updated via CONFIG: ${{userConfig.uploadsUsed}}/${{userConfig.uploadsLimit}} used (${{userConfig.uploadsRemaining}} remaining)`);
+                
                 // Notify parent that config was received
                 window.parent.postMessage({
                     type: 'CONFIG_RECEIVED',
@@ -99,6 +102,36 @@ def inject_parent_communication():
                 
                 // Reload to apply changes
                 window.location.reload();
+            }
+            
+            // Handle CONFIG updates without reload (for upload count updates)
+            if (data.type === 'CONFIG_UPDATE' || (data.type === 'CONFIG' && !data.fullReload)) {
+                // Update upload counts without full reload
+                if (data.uploadsUsed !== undefined || data.uploadsLimit !== undefined) {
+                    const newUsed = data.uploadsUsed !== undefined ? data.uploadsUsed : parseInt(localStorage.getItem('cropdrive_uploadsUsed') || '0');
+                    const newLimit = data.uploadsLimit !== undefined ? data.uploadsLimit : parseInt(localStorage.getItem('cropdrive_uploadsLimit') || '0');
+                    const newRemaining = data.uploadsRemaining !== undefined ? data.uploadsRemaining : Math.max(0, newLimit - newUsed);
+                    
+                    localStorage.setItem('cropdrive_uploadsUsed', String(newUsed));
+                    localStorage.setItem('cropdrive_uploadsLimit', String(newLimit));
+                    localStorage.setItem('cropdrive_uploadsRemaining', String(newRemaining));
+                    
+                    // Update URL params
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('uploadsUsed', String(newUsed));
+                    url.searchParams.set('uploadsLimit', String(newLimit));
+                    url.searchParams.set('uploadsRemaining', String(newRemaining));
+                    window.history.replaceState({}, '', url);
+                    
+                    console.log(`📊 Upload count updated: ${{newUsed}}/${{newLimit}} used (${{newRemaining}} remaining)`);
+                    
+                    // Trigger Streamlit rerun to update UI
+                    if (window.parent !== window) {{
+                        window.parent.postMessage({{
+                            type: 'STREAMLIT_RERUN'
+                        }}, '*');
+                    }}
+                }
             }
             
             // Handle language change
@@ -258,10 +291,15 @@ def initialize_integration():
     st.session_state.user_config['userName'] = user_name
     
     # Store upload limits in session state
+    # CRITICAL: Always update from URL params to get latest values (parent may have updated them)
+    # This ensures upload counts stay in sync with parent website
     st.session_state.uploads_used = uploads_used
     st.session_state.uploads_limit = uploads_limit
     st.session_state.upload_limit_exceeded = upload_limit_exceeded
     st.session_state.uploads_remaining = uploads_remaining
+    
+    # Log upload count for debugging
+    logger.info(f"📊 Upload count from URL: {uploads_used}/{uploads_limit} used ({uploads_remaining} remaining)")
     
     return current_lang, user_plan, features
 
