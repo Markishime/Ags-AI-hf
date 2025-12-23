@@ -1586,7 +1586,7 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         if time_estimate:
             time_estimate.text("⏱️ Estimated time remaining: ~10 seconds")
         if step_indicator:
-            step_indicator.text(f"📋 {t('analysis_step', 'Step')} {current_step} {t('analysis_of', 'of')} {total_steps}")
+            step_indicator.text(f"📋 Step {current_step} of {total_steps}")
         
         user_email = st.session_state.get('user_email')
         user_id = st.session_state.get('user_id', 'anonymous')
@@ -1599,9 +1599,9 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         progress_bar.progress(100)
         
         # Completion (optimized - no delays)
-        status_text.text("🎉 **Analysis Complete!** Your comprehensive agricultural report is ready. ✅")
+        status_text.text(f"🎉 **{t('analysis_complete', 'Analysis Complete!')}** {t('analysis_report_ready', 'Your comprehensive agricultural report is ready.')} ✅")
         if working_indicator:
-            working_indicator.markdown("🎉 **Analysis Complete!** ✅")
+            working_indicator.markdown(f"🎉 **{t('analysis_complete', 'Analysis Complete!')}** ✅")
         
         # Clear all progress indicators
         status_text.empty()
