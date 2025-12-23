@@ -1120,14 +1120,14 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
         # Create animated loading indicators
         loading_indicators = ["⏳", "🔄", "⚡", "🌟", "💫", "✨", "🎯", "🚀"]
         processing_messages = [
-            "Processing your data...",
-            "Analyzing patterns...",
-            "Generating insights...",
-            "Computing results...",
-            "Optimizing analysis...",
-            "Finalizing report...",
-            "Almost done...",
-            "Preparing results..."
+            t('analysis_processing_data_msg', 'Processing your data...'),
+            t('analysis_analyzing_patterns', 'Analyzing patterns...'),
+            t('analysis_generating_insights', 'Generating insights...'),
+            t('analysis_computing_results', 'Computing results...'),
+            t('analysis_optimizing', 'Optimizing analysis...'),
+            t('analysis_finalizing', 'Finalizing report...'),
+            t('analysis_almost_done', 'Almost done...'),
+            t('analysis_preparing_results', 'Preparing results...')
         ]
         
         # Step 1: Initial validation (optimized - no delays)
