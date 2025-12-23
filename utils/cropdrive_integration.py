@@ -197,7 +197,7 @@ def initialize_integration():
     uploads_used = query_params.get('uploadsUsed', '0')
     uploads_limit = query_params.get('uploadsLimit', '0')
     upload_limit_exceeded = query_params.get('uploadLimitExceeded', 'false')
-    uploads_remaining = query_params.get('uploadsRemaining', '0')
+    uploads_remaining_param = query_params.get('uploadsRemaining', '')
     
     # Convert to appropriate types
     try:
@@ -215,14 +215,23 @@ def initialize_integration():
     except (AttributeError, ValueError):
         upload_limit_exceeded = False
     
-    try:
-        uploads_remaining_str = str(uploads_remaining)
-        if uploads_remaining_str.lower() == 'infinity' or uploads_remaining_str == '-1':
-            uploads_remaining = float('inf')
-        else:
-            uploads_remaining = int(uploads_remaining) if uploads_remaining else 0
-    except (ValueError, TypeError):
-        uploads_remaining = 0
+    # Calculate uploads_remaining ourselves: limit - used
+    # This ensures correct calculation regardless of what parent sends
+    if uploads_limit == 0 or uploads_limit == -1:
+        # No limit or unlimited plan
+        uploads_remaining = float('inf')
+    else:
+        # Calculate remaining: limit - used
+        uploads_remaining = max(0, uploads_limit - uploads_used)
+    
+    # Override with parent's value only if it indicates unlimited (-1 or infinity)
+    if uploads_remaining_param:
+        try:
+            uploads_remaining_str = str(uploads_remaining_param).lower()
+            if uploads_remaining_str == 'infinity' or uploads_remaining_str == '-1' or uploads_remaining_str == 'inf':
+                uploads_remaining = float('inf')
+        except (ValueError, TypeError):
+            pass  # Use our calculated value
     
     # Store user config in session state
     if 'user_config' not in st.session_state:
@@ -409,24 +418,33 @@ def can_start_analysis():
     Returns:
         True if analysis can start, False otherwise
     """
-    # Check if upload limit is exceeded
+    # Get current values
+    uploads_used = st.session_state.get('uploads_used', 0)
+    uploads_limit = st.session_state.get('uploads_limit', 0)
     upload_limit_exceeded = st.session_state.get('upload_limit_exceeded', False)
+    uploads_remaining = st.session_state.get('uploads_remaining', 0)
+    
+    # If upload_limit_exceeded flag is set, block analysis
     if upload_limit_exceeded:
         return False
     
-    # Check remaining uploads
-    uploads_remaining = st.session_state.get('uploads_remaining', 0)
-    
-    # If uploads_remaining is infinity or -1, allow unlimited analyses
-    if uploads_remaining == float('inf') or uploads_remaining == -1:
+    # If no limit set (0 or -1), allow unlimited analyses
+    if uploads_limit == 0 or uploads_limit == -1:
         return True
     
-    # If uploads_remaining is 0 or less, block analysis
-    if uploads_remaining <= 0:
-        return False
+    # Recalculate remaining to ensure accuracy: limit - used
+    calculated_remaining = max(0, uploads_limit - uploads_used)
     
-    # Otherwise, allow analysis
-    return True
+    # If calculated remaining is infinity, allow
+    if calculated_remaining == float('inf'):
+        return True
+    
+    # If calculated remaining is greater than 0, allow analysis
+    if calculated_remaining > 0:
+        return True
+    
+    # Otherwise, block (remaining is 0 or less)
+    return False
 
 def get_upload_limit_info():
     """
@@ -438,7 +456,12 @@ def get_upload_limit_info():
     uploads_used = st.session_state.get('uploads_used', 0)
     uploads_limit = st.session_state.get('uploads_limit', 0)
     upload_limit_exceeded = st.session_state.get('upload_limit_exceeded', False)
-    uploads_remaining = st.session_state.get('uploads_remaining', 0)
+    
+    # Calculate remaining: limit - used (ensure accuracy)
+    if uploads_limit == 0 or uploads_limit == -1:
+        uploads_remaining = float('inf')
+    else:
+        uploads_remaining = max(0, uploads_limit - uploads_used)
     
     return {
         'uploads_used': uploads_used,

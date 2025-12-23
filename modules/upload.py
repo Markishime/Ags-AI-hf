@@ -1081,10 +1081,13 @@ def upload_section():
             uploads_limit = limit_info.get('uploads_limit', 0)
             uploads_remaining = limit_info.get('uploads_remaining', 0)
             
+            # Only show limit info if limit is set (greater than 0)
             if uploads_limit > 0:
                 if uploads_remaining == float('inf') or uploads_remaining == -1:
                     st.info(f"📊 **Analyses:** Unlimited")
                 else:
+                    # Display: X/Y used (Z remaining)
+                    # Example: 0/2 used (2 remaining), 1/2 used (1 remaining), 2/2 used (0 remaining)
                     st.info(f"📊 **Analyses:** {uploads_used}/{uploads_limit} used ({uploads_remaining} remaining)")
         
         # Check if limit exceeded
