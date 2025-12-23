@@ -642,8 +642,7 @@ def show_results_page():
                     pass
                 except Exception as e:
                     # Log error but don't break the app
-                    import logging
-                    logger = logging.getLogger(__name__)
+                    # Use the global logger defined at module level
                     logger.warning(f"CropDrive integration error: {e}")
             else:
                 st.error(f"❌ Analysis failed: {results_data.get('message', 'Unknown error')}")
