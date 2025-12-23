@@ -625,15 +625,25 @@ def show_results_page():
                         analysis_type = 'leaf'
                     
                     # Send completion message
+                    # Get timestamp in ISO format
+                    timestamp = results_data.get('timestamp')
+                    if timestamp:
+                        if hasattr(timestamp, 'isoformat'):
+                            timestamp_str = timestamp.isoformat()
+                        else:
+                            timestamp_str = str(timestamp)
+                    else:
+                        timestamp_str = datetime.now().isoformat()
+                    
                     send_analysis_complete(
-                        title=f'Agricultural Analysis - {datetime.now().strftime("%Y-%m-%d %H:%M")}',
+                        title=f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
                         analysis_type=analysis_type,
                         summary=summary or "Comprehensive soil and leaf analysis completed successfully.",
                         recommendations_count=recommendations_count,
                         file_url=None,  # Could add URL to PDF if generated
                         analysis_data={
                             'resultId': results_data.get('id'),
-                            'timestamp': results_data.get('timestamp').isoformat() if hasattr(results_data.get('timestamp'), 'isoformat') else str(results_data.get('timestamp')),
+                            'timestamp': timestamp_str,
                             'status': 'completed'
                         }
                     )

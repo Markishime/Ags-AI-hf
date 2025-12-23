@@ -43,7 +43,11 @@ def inject_parent_communication():
                     userId: data.userId,
                     plan: data.plan || 'none',
                     userEmail: data.userEmail || '',
-                    userName: data.userName || ''
+                    userName: data.userName || '',
+                    uploadsUsed: data.uploadsUsed || 0,
+                    uploadsLimit: data.uploadsLimit || 0,
+                    uploadLimitExceeded: data.uploadLimitExceeded || false,
+                    uploadsRemaining: data.uploadsRemaining !== undefined ? data.uploadsRemaining : (data.uploadsLimit || 0) - (data.uploadsUsed || 0)
                 };
                 currentLanguage = userConfig.language;
                 if (currentLanguage !== 'en' && currentLanguage !== 'ms') {
@@ -56,6 +60,10 @@ def inject_parent_communication():
                 localStorage.setItem('cropdrive_userEmail', userConfig.userEmail || '');
                 localStorage.setItem('cropdrive_userName', userConfig.userName || '');
                 localStorage.setItem('cropdrive_plan', userConfig.plan || 'none');
+                localStorage.setItem('cropdrive_uploadsUsed', String(userConfig.uploadsUsed));
+                localStorage.setItem('cropdrive_uploadsLimit', String(userConfig.uploadsLimit));
+                localStorage.setItem('cropdrive_uploadLimitExceeded', String(userConfig.uploadLimitExceeded));
+                localStorage.setItem('cropdrive_uploadsRemaining', String(userConfig.uploadsRemaining));
                 
                 // Update URL parameters
                 const url = new URL(window.location.href);
@@ -67,7 +75,17 @@ def inject_parent_communication():
                 url.searchParams.set('userEmail', userConfig.userEmail || '');
                 url.searchParams.set('userName', userConfig.userName || '');
                 url.searchParams.set('plan', userConfig.plan || 'none');
+                url.searchParams.set('uploadsUsed', String(userConfig.uploadsUsed));
+                url.searchParams.set('uploadsLimit', String(userConfig.uploadsLimit));
+                url.searchParams.set('uploadLimitExceeded', String(userConfig.uploadLimitExceeded));
+                url.searchParams.set('uploadsRemaining', String(userConfig.uploadsRemaining));
                 window.history.replaceState({}, '', url);
+                
+                // Notify parent that config was received
+                window.parent.postMessage({
+                    type: 'CONFIG_RECEIVED',
+                    userId: userConfig.userId
+                }, '*');
                 
                 // Notify parent that language was set
                 window.parent.postMessage({
@@ -115,6 +133,11 @@ def inject_parent_communication():
             const userIdParam = urlParams.get('userId');
             const userEmailParam = urlParams.get('userEmail');
             const userNameParam = urlParams.get('userName');
+            const uploadsUsedParam = urlParams.get('uploadsUsed');
+            const uploadsLimitParam = urlParams.get('uploadsLimit');
+            const uploadLimitExceededParam = urlParams.get('uploadLimitExceeded');
+            const uploadsRemainingParam = urlParams.get('uploadsRemaining');
+            
             if (userIdParam) {
                 localStorage.setItem('cropdrive_userId', userIdParam);
             }
@@ -123,6 +146,18 @@ def inject_parent_communication():
             }
             if (userNameParam) {
                 localStorage.setItem('cropdrive_userName', userNameParam);
+            }
+            if (uploadsUsedParam !== null) {
+                localStorage.setItem('cropdrive_uploadsUsed', uploadsUsedParam);
+            }
+            if (uploadsLimitParam !== null) {
+                localStorage.setItem('cropdrive_uploadsLimit', uploadsLimitParam);
+            }
+            if (uploadLimitExceededParam !== null) {
+                localStorage.setItem('cropdrive_uploadLimitExceeded', uploadLimitExceededParam);
+            }
+            if (uploadsRemainingParam !== null) {
+                localStorage.setItem('cropdrive_uploadsRemaining', uploadsRemainingParam);
             }
         });
     })();
@@ -158,6 +193,37 @@ def initialize_integration():
     features_str = query_params.get('features', '')
     features = features_str.split(',') if features_str else []
     
+    # Get upload limits from URL parameters
+    uploads_used = query_params.get('uploadsUsed', '0')
+    uploads_limit = query_params.get('uploadsLimit', '0')
+    upload_limit_exceeded = query_params.get('uploadLimitExceeded', 'false')
+    uploads_remaining = query_params.get('uploadsRemaining', '0')
+    
+    # Convert to appropriate types
+    try:
+        uploads_used = int(uploads_used) if uploads_used else 0
+    except (ValueError, TypeError):
+        uploads_used = 0
+    
+    try:
+        uploads_limit = int(uploads_limit) if uploads_limit else 0
+    except (ValueError, TypeError):
+        uploads_limit = 0
+    
+    try:
+        upload_limit_exceeded = upload_limit_exceeded.lower() == 'true' if upload_limit_exceeded else False
+    except (AttributeError, ValueError):
+        upload_limit_exceeded = False
+    
+    try:
+        uploads_remaining_str = str(uploads_remaining)
+        if uploads_remaining_str.lower() == 'infinity' or uploads_remaining_str == '-1':
+            uploads_remaining = float('inf')
+        else:
+            uploads_remaining = int(uploads_remaining) if uploads_remaining else 0
+    except (ValueError, TypeError):
+        uploads_remaining = 0
+    
     # Store user config in session state
     if 'user_config' not in st.session_state:
         st.session_state.user_config = {
@@ -177,6 +243,12 @@ def initialize_integration():
     # Update user_config with email and name
     st.session_state.user_config['userEmail'] = user_email
     st.session_state.user_config['userName'] = user_name
+    
+    # Store upload limits in session state
+    st.session_state.uploads_used = uploads_used
+    st.session_state.uploads_limit = uploads_limit
+    st.session_state.upload_limit_exceeded = upload_limit_exceeded
+    st.session_state.uploads_remaining = uploads_remaining
     
     return current_lang, user_plan, features
 
@@ -203,20 +275,30 @@ def send_analysis_complete(
         file_url: URL to analysis file/image (optional)
         analysis_data: Additional analysis data dict (optional)
     """
+    from datetime import datetime
+    
     # Include user ID in the analysis complete message
     user_id = get_user_id()
     user_email = get_user_email()
     
+    # Ensure analysis_data includes timestamp if not already present
+    if analysis_data is None:
+        analysis_data = {}
+    
+    # Add timestamp if not already in analysis_data
+    if 'timestamp' not in analysis_data:
+        analysis_data['timestamp'] = datetime.now().isoformat()
+    
     message = {
         'type': 'ANALYSIS_COMPLETE',
+        'userId': user_id,
         'title': title,
         'analysisType': analysis_type,
         'summary': summary or '',
         'recommendationsCount': recommendations_count,
         'fileUrl': file_url,
         'analysisData': analysis_data or {},
-        'userId': user_id,
-        'userEmail': user_email
+        'timestamp': datetime.now().isoformat()
     }
     
     # Send to all allowed origins
@@ -319,6 +401,51 @@ def get_user_name():
     if not user_name:
         user_name = st.session_state.get('user_config', {}).get('userName', '')
     return user_name
+
+def can_start_analysis():
+    """
+    Check if user can start a new analysis based on upload limits
+    
+    Returns:
+        True if analysis can start, False otherwise
+    """
+    # Check if upload limit is exceeded
+    upload_limit_exceeded = st.session_state.get('upload_limit_exceeded', False)
+    if upload_limit_exceeded:
+        return False
+    
+    # Check remaining uploads
+    uploads_remaining = st.session_state.get('uploads_remaining', 0)
+    
+    # If uploads_remaining is infinity or -1, allow unlimited analyses
+    if uploads_remaining == float('inf') or uploads_remaining == -1:
+        return True
+    
+    # If uploads_remaining is 0 or less, block analysis
+    if uploads_remaining <= 0:
+        return False
+    
+    # Otherwise, allow analysis
+    return True
+
+def get_upload_limit_info():
+    """
+    Get upload limit information for display
+    
+    Returns:
+        Dictionary with upload limit information
+    """
+    uploads_used = st.session_state.get('uploads_used', 0)
+    uploads_limit = st.session_state.get('uploads_limit', 0)
+    upload_limit_exceeded = st.session_state.get('upload_limit_exceeded', False)
+    uploads_remaining = st.session_state.get('uploads_remaining', 0)
+    
+    return {
+        'uploads_used': uploads_used,
+        'uploads_limit': uploads_limit,
+        'upload_limit_exceeded': upload_limit_exceeded,
+        'uploads_remaining': uploads_remaining
+    }
 
 def send_language_change(new_language: str):
     """Send language change notification to parent window when language changes within Streamlit"""

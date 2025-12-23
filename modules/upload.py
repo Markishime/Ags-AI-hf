@@ -1060,10 +1060,52 @@ def upload_section():
     
     land_yield_provided = land_size > 0 and current_yield > 0
     
+    # Check upload limits before allowing analysis
+    can_start = True
+    limit_info = None
+    try:
+        from utils.cropdrive_integration import can_start_analysis, get_upload_limit_info
+        can_start = can_start_analysis()
+        limit_info = get_upload_limit_info()
+    except ImportError:
+        # CropDrive integration not available, allow analysis
+        pass
+    except Exception:
+        # Error checking limits, allow analysis to proceed
+        pass
+    
     if soil_uploaded and leaf_uploaded and land_yield_provided:
-        if st.button(f"🚀 {t('upload_start_analysis')}", type="primary", use_container_width=True, key="start_analysis"):
+        # Show upload limit info if available
+        if limit_info:
+            uploads_used = limit_info.get('uploads_used', 0)
+            uploads_limit = limit_info.get('uploads_limit', 0)
+            uploads_remaining = limit_info.get('uploads_remaining', 0)
+            
+            if uploads_limit > 0:
+                if uploads_remaining == float('inf') or uploads_remaining == -1:
+                    st.info(f"📊 **Analyses:** Unlimited")
+                else:
+                    st.info(f"📊 **Analyses:** {uploads_used}/{uploads_limit} used ({uploads_remaining} remaining)")
+        
+        # Check if limit exceeded
+        if not can_start:
+            st.error("❌ **Analysis Limit Reached**")
+            st.info("💡 You have reached your analysis limit. Please upgrade your plan to continue analyzing lab reports.")
+            st.button(f"🚀 {t('upload_start_analysis')}", disabled=True, use_container_width=True, key="start_analysis_disabled_limit")
+        elif st.button(f"🚀 {t('upload_start_analysis')}", type="primary", use_container_width=True, key="start_analysis"):
             # Ensure files are valid before passing to analysis
             try:
+                # Double-check limit before starting (in case it changed)
+                try:
+                    from utils.cropdrive_integration import can_start_analysis
+                    if not can_start_analysis():
+                        st.error("❌ **Analysis Limit Reached**")
+                        st.info("💡 You have reached your analysis limit. Please upgrade your plan to continue analyzing lab reports.")
+                        st.stop()
+                except Exception:
+                    # If check fails, allow to proceed
+                    pass
+                
                 soil_file = st.session_state.soil_file
                 leaf_file = st.session_state.leaf_file
                 
