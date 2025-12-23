@@ -512,6 +512,9 @@ def show_results_page():
     
     # Check for new analysis data and process it
     try:
+        # Initialize results_data to None
+        results_data = None
+        
         # Check if there's new analysis data to process
         if 'analysis_data' in st.session_state and st.session_state.analysis_data:
             # Enhanced loading interface for non-technical users
@@ -621,17 +624,64 @@ def show_results_page():
                     import logging
                     logger = logging.getLogger(__name__)
                     logger.warning(f"CropDrive integration error: {e}")
+                
+                # Ensure results_data has analysis_results if not already present
+                if 'analysis_results' not in results_data or not results_data.get('analysis_results'):
+                    analysis_results = get_analysis_results_from_data(results_data)
+                    if analysis_results:
+                        results_data['analysis_results'] = analysis_results
+                    else:
+                        logger.warning("⚠️ No analysis_results found after processing - checking session state")
+                        # Try to get from session state
+                        result_id = results_data.get('id')
+                        if result_id and 'stored_analysis_results' in st.session_state:
+                            if result_id in st.session_state.stored_analysis_results:
+                                results_data['analysis_results'] = st.session_state.stored_analysis_results[result_id]
+                                logger.info(f"✅ Found analysis_results in session state for {result_id}")
+                
+                # Mark that we have results_data from processing
+                logger.info(f"✅ Analysis processing completed. Results data ID: {results_data.get('id')}")
+                logger.info(f"🔍 Results data has analysis_results: {'analysis_results' in results_data and bool(results_data.get('analysis_results'))}")
+                
+                # Continue to display results below (don't reload)
             else:
-                st.error(f"❌ Analysis failed: {results_data.get('message', 'Unknown error')}")
+                st.error(f"❌ Analysis failed: {results_data.get('message', 'Unknown error') if results_data else 'No results returned'}")
                 st.info("💡 **Tip:** Make sure your uploaded files are clear images of soil and leaf analysis reports.")
                 return
-        else:
-            # Load existing results from Firestore
+        
+        # Only load existing results if we don't already have results_data from processing
+        if not results_data:
+            logger.info("🔍 No results_data from processing, loading from Firestore/session state")
             results_data = load_latest_results()
         
-        if not results_data or not results_data.get('success', True):
+        # Validate results_data before displaying
+        if not results_data:
+            logger.warning("No results_data found - showing no results message")
             display_no_results_message()
             return
+        
+        if not results_data.get('success', True):
+            logger.warning(f"Results data indicates failure: {results_data.get('message', 'Unknown error')}")
+            display_no_results_message()
+            return
+        
+        # Ensure analysis_results is available in results_data
+        if 'analysis_results' not in results_data or not results_data.get('analysis_results'):
+            analysis_results = get_analysis_results_from_data(results_data)
+            if analysis_results:
+                results_data['analysis_results'] = analysis_results
+            else:
+                logger.warning("No analysis_results found in results_data or session state")
+                # Try to get from session state directly
+                if 'stored_analysis_results' in st.session_state and st.session_state.stored_analysis_results:
+                    result_id = results_data.get('id')
+                    if result_id and result_id in st.session_state.stored_analysis_results:
+                        results_data['analysis_results'] = st.session_state.stored_analysis_results[result_id]
+                    else:
+                        # Get latest
+                        latest_id = max(st.session_state.stored_analysis_results.keys())
+                        results_data['analysis_results'] = st.session_state.stored_analysis_results[latest_id]
+                        results_data['id'] = latest_id
         
         # Display results in organized sections
         st.markdown('<div class="print-show">', unsafe_allow_html=True)
@@ -802,21 +852,36 @@ def load_latest_results():
         
         # Check if there are any stored analysis results in session state (newly completed)
         if 'stored_analysis_results' in st.session_state and st.session_state.stored_analysis_results:
-            # Get the most recent analysis result from session state
-            latest_id = max(st.session_state.stored_analysis_results.keys())
-            latest_analysis = st.session_state.stored_analysis_results[latest_id]
-            
-            # Create results data structure
-            results_data = {
-                'id': latest_id,
-                'user_email': st.session_state.get('user_email'),
-                'timestamp': datetime.now(),
-                'status': 'completed',
-                'report_types': ['soil', 'leaf'],
-                'success': True,
-                'analysis_results': latest_analysis
-            }
-            return results_data
+            try:
+                # Get the most recent analysis result from session state
+                latest_id = max(st.session_state.stored_analysis_results.keys())
+                latest_analysis = st.session_state.stored_analysis_results[latest_id]
+                
+                logger.info(f"🔍 DEBUG - Loading from stored_analysis_results: {latest_id}")
+                logger.info(f"🔍 DEBUG - Latest analysis keys: {list(latest_analysis.keys()) if isinstance(latest_analysis, dict) else 'Not a dict'}")
+                
+                # Create results data structure
+                results_data = {
+                    'id': latest_id,
+                    'user_email': st.session_state.get('user_email'),
+                    'timestamp': datetime.now(),
+                    'status': 'completed',
+                    'report_types': ['soil', 'leaf'],
+                    'success': True,
+                    'analysis_results': latest_analysis
+                }
+                
+                # Ensure we have analysis_results
+                if not results_data.get('analysis_results'):
+                    logger.warning(f"⚠️ No analysis_results in stored data for {latest_id}")
+                    return None
+                
+                return results_data
+            except Exception as e:
+                logger.error(f"❌ Error loading from stored_analysis_results: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                # Continue to try Firestore
         
         # If no stored results, try to load from Firestore (optional - only if user is logged in)
         db = get_firestore_client()
