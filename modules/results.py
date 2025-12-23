@@ -2142,25 +2142,35 @@ def send_analysis_complete(analysis_results):
         
         # CRITICAL: Optimistically update upload count in session state BEFORE sending message
         # This ensures UI updates immediately while waiting for parent confirmation
+        # NOTE: This is optimistic - the parent website MUST also increment the count
+        # If parent sends back a CONFIG with old count, it will overwrite this optimistic update
         try:
             current_used = st.session_state.get('uploads_used', 0)
             current_limit = st.session_state.get('uploads_limit', 0)
+            logger.info(f"📊 Current upload count before optimistic update: {current_used}/{current_limit}")
+            
             if current_limit > 0:  # Only update if limit is set
                 new_used = current_used + 1
                 st.session_state.uploads_used = new_used
                 st.session_state.uploads_remaining = max(0, current_limit - new_used)
-                logger.info(f"✅ Optimistically updated upload count: {new_used}/{current_limit} used ({st.session_state.uploads_remaining} remaining)")
+                logger.info(f"✅ Optimistically updated upload count: {current_used} → {new_used}/{current_limit} used ({st.session_state.uploads_remaining} remaining)")
+                logger.info(f"⚠️ NOTE: Parent website MUST increment upload count when it receives ANALYSIS_COMPLETE")
+                logger.info(f"⚠️ If parent sends CONFIG with old count ({current_used}), it will overwrite this optimistic update")
                 
                 # Also update URL params to reflect new count
                 try:
                     query_params = st.query_params
                     query_params['uploadsUsed'] = str(new_used)
                     query_params['uploadsRemaining'] = str(st.session_state.uploads_remaining)
-                    logger.info(f"✅ Updated URL params with new upload count")
+                    logger.info(f"✅ Updated URL params with new upload count: uploadsUsed={new_used}")
                 except Exception as url_error:
                     logger.warning(f"⚠️ Could not update URL params: {url_error}")
+            else:
+                logger.info(f"📊 No upload limit set (limit={current_limit}), skipping optimistic update")
         except Exception as count_error:
-            logger.warning(f"⚠️ Could not update upload count optimistically: {count_error}")
+            logger.error(f"❌ Could not update upload count optimistically: {count_error}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
         
         # CRITICAL: Use '*' as target origin to ensure message reaches parent
         # Also try specific origin and store in sessionStorage as backup
@@ -2295,6 +2305,36 @@ def send_analysis_complete(analysis_results):
                     console.log('🔄 Last attempt for ANALYSIS_COMPLETE...');
                     sendMessage(message);
                 }}, 1000);
+                
+                // CRITICAL: Request updated CONFIG from parent after sending ANALYSIS_COMPLETE
+                // Wait a bit to ensure parent has time to process ANALYSIS_COMPLETE and update Firestore
+                setTimeout(function() {{
+                    console.log('📤 Requesting updated CONFIG from parent after ANALYSIS_COMPLETE...');
+                    console.log('📤 UserId:', message.userId || '{user_id}');
+                    if (window.parent && window.parent !== window) {{
+                        window.parent.postMessage({{
+                            type: 'REQUEST_CONFIG_UPDATE',
+                            userId: message.userId || '{user_id}',
+                            reason: 'analysis_complete',
+                            timestamp: new Date().toISOString()
+                        }}, '*');
+                        console.log('✅ REQUEST_CONFIG_UPDATE message sent');
+                    }}
+                }}, 2000);  // Wait 2 seconds for parent to process ANALYSIS_COMPLETE
+                
+                // Also request again after 5 seconds as backup
+                setTimeout(function() {{
+                    console.log('📤 Backup request for updated CONFIG...');
+                    if (window.parent && window.parent !== window) {{
+                        window.parent.postMessage({{
+                            type: 'REQUEST_CONFIG_UPDATE',
+                            userId: message.userId || '{user_id}',
+                            reason: 'analysis_complete_backup',
+                            timestamp: new Date().toISOString()
+                        }}, '*');
+                        console.log('✅ Backup REQUEST_CONFIG_UPDATE sent');
+                    }}
+                }}, 5000);
                 
             }} catch (error) {{
                 console.error('❌ Error sending ANALYSIS_COMPLETE:', error);

@@ -88,6 +88,21 @@ def inject_parent_communication():
                 // Log upload count update for debugging
                 console.log(`📊 Upload count updated via CONFIG: ${{userConfig.uploadsUsed}}/${{userConfig.uploadsLimit}} used (${{userConfig.uploadsRemaining}} remaining)`);
                 
+                // CRITICAL: Update session state upload counts from CONFIG message
+                // This ensures Python code has the latest values
+                try {{
+                    // Update URL params which will be read by initialize_integration()
+                    const url = new URL(window.location.href);
+                    url.searchParams.set('uploadsUsed', String(userConfig.uploadsUsed));
+                    url.searchParams.set('uploadsLimit', String(userConfig.uploadsLimit));
+                    url.searchParams.set('uploadsRemaining', String(userConfig.uploadsRemaining));
+                    url.searchParams.set('uploadLimitExceeded', String(userConfig.uploadLimitExceeded));
+                    window.history.replaceState({{}}, '', url);
+                    console.log('✅ Updated URL params with CONFIG upload counts');
+                }} catch (urlError) {{
+                    console.warn('⚠️ Could not update URL params:', urlError);
+                }}
+                
                 // Notify parent that config was received
                 window.parent.postMessage({
                     type: 'CONFIG_RECEIVED',
