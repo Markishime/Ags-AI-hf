@@ -554,7 +554,7 @@ def show_results_page():
             # Process the new analysis with enhanced progress tracking
             try:
                 # Add a note about keeping the page open
-                st.info(f"⏳ **{t('results_important', 'Important')}:** {t('results_keep_page_open', 'Please keep this page open during analysis. The process may take 2-5 minutes.')}")
+                st.info(f"⏳ **{t('results_important', 'Important')}:** {t('results_keep_page_open', 'Please keep this page open during analysis. The process may take 5-8 minutes.')}")
                 
                 logger.info("🔍 DEBUG - Calling process_new_analysis...")
                 results_data = process_new_analysis(st.session_state.analysis_data, progress_bar, status_text, time_estimate, step_indicator, working_indicator)
@@ -6161,6 +6161,92 @@ def display_enhanced_step_result(step_result, step_number):
                     detailed_text = str(detailed_text)
 
             if isinstance(detailed_text, str) and detailed_text.strip():
+                # FIRST: Extract and display HTML tables if present
+                import re
+                html_table_blocks = []
+                
+                # Check for HTML table blocks with div wrappers
+                div_table_pattern = r'(<div[^>]*class=["\'][^"\']*table-responsive[^"\']*["\'][^>]*>.*?</table>\s*</div>)'
+                matches = re.findall(div_table_pattern, detailed_text, re.DOTALL | re.IGNORECASE)
+                html_table_blocks.extend(matches)
+                
+                # Check for HTML tables with table classes
+                table_with_classes_pattern = r'(<table[^>]*class=["\'][^"\']*table[^"\']*["\'][^>]*>.*?</table>)'
+                matches = re.findall(table_with_classes_pattern, detailed_text, re.DOTALL | re.IGNORECASE)
+                for match in matches:
+                    if match not in html_table_blocks:
+                        html_table_blocks.append(match)
+                
+                # Check for well-formed HTML tables
+                well_formed_table_pattern = r'(<table[^>]*>.*?<thead[^>]*>.*?</thead>.*?<tbody[^>]*>.*?</tbody>.*?</table>)'
+                matches = re.findall(well_formed_table_pattern, detailed_text, re.DOTALL | re.IGNORECASE)
+                for match in matches:
+                    if match not in html_table_blocks:
+                        html_table_blocks.append(match)
+                
+                # Display HTML tables if found
+                if html_table_blocks:
+                    # Add CSS styling for HTML tables
+                    st.markdown("""
+                    <style>
+                    .table-responsive {
+                        overflow-x: auto;
+                        margin: 20px 0;
+                    }
+                    .table {
+                        width: 100%;
+                        margin-bottom: 1rem;
+                        color: #212529;
+                        border-collapse: collapse;
+                    }
+                    .table-bordered {
+                        border: 1px solid #dee2e6;
+                    }
+                    .table-bordered th,
+                    .table-bordered td {
+                        border: 1px solid #dee2e6;
+                    }
+                    .table thead th {
+                        vertical-align: bottom;
+                        border-bottom: 2px solid #dee2e6;
+                        background-color: #f8f9fa;
+                        font-weight: 600;
+                    }
+                    .table tbody tr:nth-of-type(odd) {
+                        background-color: rgba(0,0,0,.05);
+                    }
+                    .table th,
+                    .table td {
+                        padding: 0.75rem;
+                        vertical-align: top;
+                        border-top: 1px solid #dee2e6;
+                    }
+                    </style>
+                    """, unsafe_allow_html=True)
+                    
+                    for i, html_block in enumerate(html_table_blocks, 1):
+                        # Extract title if present
+                        block_start = detailed_text.find(html_block)
+                        if block_start > 0:
+                            context_before = detailed_text[max(0, block_start-500):block_start]
+                            title_match = re.search(r'(?:^|\n)\s*(?:#{1,6}\s*)?([^\n<]+?)(?:\s*\n\s*)?(?:<div[^>]*class=["\']table-responsive|<table[^>]*class=["\'][^"\']*table)', context_before, re.IGNORECASE | re.MULTILINE)
+                            if title_match:
+                                title = re.sub(r'[#*_`]', '', title_match.group(1).strip())
+                            else:
+                                title = f"Table {i}"
+                        else:
+                            title = f"Table {i}"
+                        
+                        if title and title != f"Table {i}":
+                            st.markdown(f"#### 📋 {title}")
+                        
+                        st.markdown(html_block, unsafe_allow_html=True)
+                        st.markdown("")
+                    
+                    # Remove displayed tables from detailed_text
+                    for block in html_table_blocks:
+                        detailed_text = detailed_text.replace(block, '')
+                
                 # NUCLEAR FILTER: Remove the exact Economic Analysis block immediately
                 if "Economic Analysis: {'current_yield': 28.0, 'land_size': 31.0, 'investment_scenarios':" in detailed_text:
                     detailed_text = "Economic analysis data has been processed and is displayed in the formatted tables above."
@@ -6204,8 +6290,9 @@ def display_enhanced_step_result(step_result, step_number):
                         detailed_text = "Economic analysis data has been processed and is displayed in the formatted tables below."
                         logger.warning(f"DISPLAY SAFEGUARD: Replaced raw LLM economic data in Step {step_num} display")
 
-                # Parse and display structured content
-                parse_and_display_json_analysis(detailed_text)
+                # Parse and display structured content (only if there's remaining text)
+                if detailed_text.strip():
+                    parse_and_display_json_analysis(detailed_text)
             else:
                 st.info("📋 No detailed analysis available for this step.")
 
@@ -6925,6 +7012,101 @@ def display_formatted_economic_tables(formatted_text):
         formatted_text = re.sub(r'Pending.*?', '', formatted_text, flags=re.IGNORECASE)
         formatted_text = re.sub(r'Please regenerate with table data.*?', '', formatted_text, flags=re.IGNORECASE)
 
+        # PRIORITY 1: Check for complete HTML table blocks with div wrappers and classes
+        # These should be rendered directly as HTML
+        html_table_blocks = []
+        
+        # Pattern 1: Complete HTML table blocks with div.table-responsive wrapper
+        # Matches: <div class='table-responsive'><table>...</table></div>
+        div_table_pattern = r'(<div[^>]*class=["\'][^"\']*table-responsive[^"\']*["\'][^>]*>.*?</table>\s*</div>)'
+        matches = re.findall(div_table_pattern, formatted_text, re.DOTALL | re.IGNORECASE)
+        html_table_blocks.extend(matches)
+        
+        # Pattern 2: HTML tables with table classes (table table-bordered, etc.)
+        # Matches: <table class='table table-bordered'>...</table>
+        table_with_classes_pattern = r'(<table[^>]*class=["\'][^"\']*table[^"\']*["\'][^>]*>.*?</table>)'
+        matches = re.findall(table_with_classes_pattern, formatted_text, re.DOTALL | re.IGNORECASE)
+        # Only add if not already captured by div pattern
+        for match in matches:
+            if match not in html_table_blocks:
+                html_table_blocks.append(match)
+        
+        # Pattern 3: Any HTML table with thead and tbody (well-formed tables)
+        # Matches: <table><thead>...</thead><tbody>...</tbody></table>
+        well_formed_table_pattern = r'(<table[^>]*>.*?<thead[^>]*>.*?</thead>.*?<tbody[^>]*>.*?</tbody>.*?</table>)'
+        matches = re.findall(well_formed_table_pattern, formatted_text, re.DOTALL | re.IGNORECASE)
+        for match in matches:
+            if match not in html_table_blocks:
+                html_table_blocks.append(match)
+
+        # If we found HTML table blocks, render them directly
+        if html_table_blocks:
+            # Add CSS styling for HTML tables
+            st.markdown("""
+            <style>
+            .table-responsive {
+                overflow-x: auto;
+                margin: 20px 0;
+            }
+            .table {
+                width: 100%;
+                margin-bottom: 1rem;
+                color: #212529;
+                border-collapse: collapse;
+            }
+            .table-bordered {
+                border: 1px solid #dee2e6;
+            }
+            .table-bordered th,
+            .table-bordered td {
+                border: 1px solid #dee2e6;
+            }
+            .table thead th {
+                vertical-align: bottom;
+                border-bottom: 2px solid #dee2e6;
+                background-color: #f8f9fa;
+                font-weight: 600;
+            }
+            .table tbody tr:nth-of-type(odd) {
+                background-color: rgba(0,0,0,.05);
+            }
+            .table th,
+            .table td {
+                padding: 0.75rem;
+                vertical-align: top;
+                border-top: 1px solid #dee2e6;
+            }
+            </style>
+            """, unsafe_allow_html=True)
+            
+            for i, html_block in enumerate(html_table_blocks, 1):
+                # Extract title if present (look for heading before table in the original text)
+                # Search backwards from the table position
+                block_start = formatted_text.find(html_block)
+                if block_start > 0:
+                    # Look for heading patterns before the table (up to 500 chars back)
+                    context_before = formatted_text[max(0, block_start-500):block_start]
+                    title_match = re.search(r'(?:^|\n)\s*(?:#{1,6}\s*)?([^\n<]+?)(?:\s*\n\s*)?(?:<div[^>]*class=["\']table-responsive|<table[^>]*class=["\'][^"\']*table)', context_before, re.IGNORECASE | re.MULTILINE)
+                    if title_match:
+                        title = title_match.group(1).strip()
+                        # Clean up title (remove markdown formatting)
+                        title = re.sub(r'[#*_`]', '', title).strip()
+                    else:
+                        title = f"Table {i}"
+                else:
+                    title = f"Table {i}"
+                
+                if title and title != f"Table {i}":
+                    st.markdown(f"#### 📋 {title}")
+                
+                # Render the complete HTML block directly
+                st.markdown(html_block, unsafe_allow_html=True)
+                st.markdown("")
+            
+            # Remove displayed tables from formatted_text to avoid duplicates
+            for block in html_table_blocks:
+                formatted_text = formatted_text.replace(block, '')
+
         # Find all table sections - support multiple patterns:
         # 1. XML-like format with <tables>, <table title="...">, <headers>, <rows>
         # 2. HTML format with <thead>, <tbody>
@@ -6945,12 +7127,14 @@ def display_formatted_economic_tables(formatted_text):
             for title, content in bare_xml_matches:
                 tables.append((title, content, 'xml'))
 
-        # Pattern 3: HTML format as fallback
+        # Pattern 3: HTML format as fallback (but skip if already rendered above)
         if not tables:
             html_tables_pattern = r'<table[^>]*title="([^"]*)"[^>]*>([\s\S]*?)</table>'
             html_matches = re.findall(html_tables_pattern, formatted_text, re.DOTALL | re.IGNORECASE)
             for title, content in html_matches:
-                tables.append((title, content, 'html'))
+                # Skip if this table was already rendered as HTML block
+                if 'table-responsive' not in content and 'table table-bordered' not in content:
+                    tables.append((title, content, 'html'))
 
         # Pattern 4: Untitled tables as final fallback
         if not tables:
@@ -6958,7 +7142,7 @@ def display_formatted_economic_tables(formatted_text):
             tables = [(f"Table {i+1}", t, 'unknown') for i, t in enumerate(untitled)]
 
         # If no tables found after filtering, show a helpful message
-        if not tables:
+        if not tables and not html_table_blocks:
             st.info("📊 **Economic Analysis Summary:** The analysis indicates potential for yield improvements through proper nutrient management. Complete soil and leaf analysis in previous steps to generate detailed economic projections.")
             st.markdown("""
             **Key Economic Considerations:**
