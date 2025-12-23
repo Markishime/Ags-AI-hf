@@ -497,7 +497,7 @@ def show_results_page():
     add_responsive_css()
     
     # Responsive page header with centered title and buttons below
-    st.markdown('<h1 class="main-title" style="text-align: center;">🔍 Analysis Results</h1>', unsafe_allow_html=True)
+    st.markdown(f'<h1 class="main-title" style="text-align: center;">🔍 {t("results_title", "Analysis Results")}</h1>', unsafe_allow_html=True)
     
     # Button row below the title
     button_col1, button_col2, button_col3 = st.columns([1, 1, 1])
@@ -515,8 +515,8 @@ def show_results_page():
         # Check if there's new analysis data to process
         if 'analysis_data' in st.session_state and st.session_state.analysis_data:
             # Enhanced loading interface for non-technical users
-            st.markdown("### 🔬 Analyzing Your Agricultural Reports")
-            st.info("📊 Our AI system is processing your soil and leaf analysis data. This may take a few moments...")
+            st.markdown(f"### 🔬 {t('results_analyzing', 'Analyzing Your Agricultural Reports')}")
+            st.info(f"📊 {t('results_processing', 'Our AI system is processing your soil and leaf analysis data. This may take a few moments...')}")
             
             # Create enhanced progress display with system status
             progress_container = st.container()
@@ -554,7 +554,7 @@ def show_results_page():
             # Process the new analysis with enhanced progress tracking
             try:
                 # Add a note about keeping the page open
-                st.info("⏳ **Important:** Please keep this page open during analysis. The process may take 2-5 minutes.")
+                st.info(f"⏳ **{t('results_important', 'Important')}:** {t('results_keep_page_open', 'Please keep this page open during analysis. The process may take 2-5 minutes.')}")
                 
                 logger.info("🔍 DEBUG - Calling process_new_analysis...")
                 results_data = process_new_analysis(st.session_state.analysis_data, progress_bar, status_text, time_estimate, step_indicator, working_indicator)
@@ -751,7 +751,7 @@ def show_results_page():
         
         # PDF Download section
         st.markdown("---")
-        st.markdown("## 📄 Download Report")
+        st.markdown(f"## 📄 {t('results_download_report', 'Download Report')}")
         
         col1, col2, col3 = st.columns([1, 2, 1])
         with col2:
@@ -1763,20 +1763,20 @@ def get_analysis_results_from_data(results_data):
 
 def display_no_results_message():
     """Display message when no results are found"""
-    st.warning("📁 No analysis results found.")
-    st.info("Upload and analyze your agricultural reports to see results here.")
+    st.warning(f"📁 {t('results_no_results_found', 'No analysis results found.')}")
+    st.info(f"{t('results_upload_to_see', 'Upload and analyze your agricultural reports to see results here.')}")
     
     col1, col2, col3 = st.columns(3)
     with col1:
-        if st.button("📤 Analyze Files", type="primary", use_container_width=True):
+        if st.button(f"📤 {t('results_analyze_files', 'Analyze Files')}", type="primary", use_container_width=True):
             st.session_state.current_page = 'upload'
             st.rerun()
     with col2:
-        if st.button("📊 Dashboard", use_container_width=True):
+        if st.button(f"📊 {t('results_dashboard', 'Dashboard')}", use_container_width=True):
             st.session_state.current_page = 'dashboard'
             st.rerun()
     with col3:
-        if st.button("🏠 Back to Home", use_container_width=True):
+        if st.button(f"🏠 {t('results_back_home', 'Back to Home')}", use_container_width=True):
             st.session_state.current_page = 'home'
             st.rerun()
 
@@ -1794,11 +1794,11 @@ def display_results_header(results_data):
                 formatted_time = timestamp.strftime("%Y-%m-%d %H:%M:%S")
             else:
                 formatted_time = str(timestamp)
-            st.metric("📅 Analysis Date", formatted_time)
+            st.metric(f"📅 {t('results_analysis_date', 'Analysis Date')}", formatted_time)
         
         report_types = results_data.get('report_types', [])
         if report_types:
-            st.metric("📋 Report Types", ", ".join(report_types))
+            st.metric(f"📋 {t('results_report_types', 'Report Types')}", ", ".join(report_types))
         
         status = results_data.get('status', 'Unknown')
         st.metric("✅ Status", status.title())
@@ -1813,32 +1813,32 @@ def display_results_header(results_data):
                     formatted_time = timestamp.strftime("%Y-%m-%d %H:%M:%S")
                 else:
                     formatted_time = str(timestamp)
-                st.metric("📅 Analysis Date", formatted_time)
+                st.metric(f"📅 {t('results_analysis_date', 'Analysis Date')}", formatted_time)
         
         with col2:
             report_types = results_data.get('report_types', [])
             if report_types:
-                st.metric("📋 Report Types", ", ".join(report_types))
+                st.metric(f"📋 {t('results_report_types', 'Report Types')}", ", ".join(report_types))
         
         with col3:
             status = results_data.get('status', 'Unknown')
-            st.metric("✅ Status", status.title())
+            st.metric(f"✅ {t('results_status', 'Status')}", status.title())
 
 def display_raw_data_section(results_data):
     """Display extracted raw soil and leaf data in tabular format with farmer-friendly explanations"""
     st.markdown("---")
-    st.markdown("## 📊 **Raw Extracted Data**")
-    st.markdown("*Your original laboratory test results extracted from uploaded reports*")
+    st.markdown(f"## 📊 **{t('results_raw_data_title', 'Raw Extracted Data')}**")
+    st.markdown(f"*{t('results_raw_data_desc', 'Your original laboratory test results extracted from uploaded reports')}*")
 
     # Add helpful explanation for farmers
-    st.markdown("""
-    **📋 What you'll see here:**
-    - **Soil Parameters**: pH, organic matter, nutrients in your soil
-    - **Leaf Parameters**: Nutrient levels in your oil palm leaves
-    - **Sample Numbers**: Individual test results from different samples
-    - **Units**: Measurements in standard scientific units
+    st.markdown(f"""
+    **📋 {t('results_raw_data_what', "What you'll see here:")}**
+    - **{t('results_soil_parameters', 'Soil Parameters')}**: {t('results_soil_params_desc', 'pH, organic matter, nutrients in your soil')}
+    - **{t('results_leaf_parameters', 'Leaf Parameters')}**: {t('results_leaf_params_desc', 'Nutrient levels in your oil palm leaves')}
+    - **{t('results_sample_numbers', 'Sample Numbers')}**: {t('results_sample_numbers_desc', 'Individual test results from different samples')}
+    - **{t('results_units', 'Units')}**: {t('results_units_desc', 'Measurements in standard scientific units')}
 
-    *These are the raw numbers from your lab reports that our AI extracted automatically.*
+    *{t('results_raw_data_note', 'These are the raw numbers from your lab reports that our AI extracted automatically.')}*
     """)
     
     # Add CSS class for print visibility
@@ -1966,7 +1966,7 @@ def display_raw_data_section(results_data):
     if has_soil_data or has_leaf_data:
         # Display soil data
         if has_soil_data:
-            st.markdown("### 🌱 Soil Analysis Data")
+            st.markdown(f"### 🌱 {t('results_soil_analysis_data', 'Soil Analysis Data')}")
             # Check if we have structured OCR data (Farm/SP Lab format)
             if any(key in soil_data for key in ['Farm_3_Soil_Test_Data', 'SP_Lab_Test_Report', 'Farm_Soil_Test_Data']):
                 display_structured_soil_data(soil_data)
@@ -1979,7 +1979,7 @@ def display_raw_data_section(results_data):
         
         # Display leaf data
         if has_leaf_data:
-            st.markdown("### 🍃 Leaf Analysis Data")
+            st.markdown(f"### 🍃 {t('results_leaf_analysis_data', 'Leaf Analysis Data')}")
             # Check if we have structured OCR data (Farm format)
             if any(key in leaf_data for key in ['Farm_3_Leaf_Test_Data', 'Farm_Leaf_Test_Data']):
                 display_structured_leaf_data(leaf_data)
@@ -2053,7 +2053,7 @@ def display_structured_soil_data(soil_data):
             st.dataframe(df, use_container_width=True)
             
             # Show summary statistics
-            st.markdown("#### 📈 Summary Statistics")
+            st.markdown(f"#### 📈 {t('results_summary_statistics', 'Summary Statistics')}")
             
             # Calculate averages for numeric columns with proper missing value handling
             numeric_cols = df.select_dtypes(include=['number']).columns
@@ -2157,7 +2157,7 @@ def display_structured_leaf_data(leaf_data):
             st.dataframe(df, use_container_width=True)
             
             # Show summary statistics
-            st.markdown("#### 📈 Summary Statistics")
+            st.markdown(f"#### 📈 {t('results_summary_statistics', 'Summary Statistics')}")
             
             # Calculate averages for numeric columns with proper missing value handling
             numeric_cols = df.select_dtypes(include=['number']).columns
@@ -2694,7 +2694,7 @@ def display_raw_soil_data(soil_data):
         
         # Show parameter statistics if available
         if 'parameter_statistics' in soil_data:
-            st.markdown("#### 📈 **Parameter Statistics**")
+            st.markdown(f"#### 📈 **{t('results_parameter_statistics', 'Parameter Statistics')}**")
             stats = soil_data['parameter_statistics']
             if isinstance(stats, dict):
                 stats_data = []
@@ -2768,7 +2768,7 @@ def display_raw_leaf_data(leaf_data):
         
         # Show parameter statistics if available
         if 'parameter_statistics' in leaf_data:
-            st.markdown("#### 📈 **Parameter Statistics**")
+            st.markdown(f"#### 📈 **{t('results_parameter_statistics', 'Parameter Statistics')}**")
             stats = leaf_data['parameter_statistics']
             if isinstance(stats, dict):
                 stats_data = []
@@ -2824,7 +2824,7 @@ def display_soil_data_table(soil_data):
         st.markdown(f"**Total Samples:** {total_samples}")
         st.markdown(f"**Parameters Analyzed:** {len(param_stats)}")
         if param_stats:
-            st.markdown("### 📊 Parameter Statistics")
+            st.markdown(f"### 📊 {t('results_parameter_statistics', 'Parameter Statistics')}")
             
             # Create summary table
             summary_data = []
@@ -2847,7 +2847,7 @@ def display_soil_data_table(soil_data):
             # Display individual sample data
             all_samples = soil_data.get('all_samples', []) if isinstance(soil_data, dict) else []
             if all_samples:
-                st.markdown("### 📋 Individual Sample Data")
+                st.markdown(f"### 📋 {t('results_individual_sample_data', 'Individual Sample Data')}")
                 df_samples = pd.DataFrame(all_samples)
                 apply_table_styling()
                 st.dataframe(df_samples, use_container_width=True)
@@ -2877,7 +2877,7 @@ def display_soil_data_table(soil_data):
             st.markdown(f"**Total Samples:** {sample_count}")
             st.markdown(f"**Parameters Analyzed:** {len(param_data)}")
             
-            st.markdown("### 📊 Parameter Statistics")
+            st.markdown(f"### 📊 {t('results_parameter_statistics', 'Parameter Statistics')}")
             
             # Create summary table
             summary_data = []
@@ -2921,7 +2921,7 @@ def display_soil_data_table(soil_data):
                 # Calculate parameter statistics from samples
                 param_stats = calculate_parameter_statistics(samples)
                 if param_stats:
-                    st.markdown("### 📊 Parameter Statistics")
+                    st.markdown(f"### 📊 {t('results_parameter_statistics', 'Parameter Statistics')}")
                     
                     # Create summary table
                     summary_data = []
@@ -2940,7 +2940,7 @@ def display_soil_data_table(soil_data):
                         st.dataframe(df_stats, use_container_width=True)
                 
                 # Display individual sample data
-                st.markdown("### 📋 Individual Sample Data")
+                st.markdown(f"### 📋 {t('results_individual_sample_data', 'Individual Sample Data')}")
                 df_data = []
                 for sample in samples:
                     df_data.append(sample)
@@ -3010,7 +3010,7 @@ def display_leaf_data_table(leaf_data):
         st.markdown(f"**Total Samples:** {total_samples}")
         st.markdown(f"**Parameters Analyzed:** {len(param_stats)}")
         if param_stats:
-            st.markdown("### 📊 Parameter Statistics")
+            st.markdown(f"### 📊 {t('results_parameter_statistics', 'Parameter Statistics')}")
             
             # Create summary table
             summary_data = []
@@ -3033,7 +3033,7 @@ def display_leaf_data_table(leaf_data):
             # Display individual sample data
             all_samples = leaf_data.get('all_samples', []) if isinstance(leaf_data, dict) else []
             if all_samples:
-                st.markdown("### 📋 Individual Sample Data")
+                st.markdown(f"### 📋 {t('results_individual_sample_data', 'Individual Sample Data')}")
                 df_samples = pd.DataFrame(all_samples)
                 apply_table_styling()
                 st.dataframe(df_samples, use_container_width=True)
@@ -3063,7 +3063,7 @@ def display_leaf_data_table(leaf_data):
             st.markdown(f"**Total Samples:** {sample_count}")
             st.markdown(f"**Parameters Analyzed:** {len(param_data)}")
             
-            st.markdown("### 📊 Parameter Statistics")
+            st.markdown(f"### 📊 {t('results_parameter_statistics', 'Parameter Statistics')}")
             
             # Create summary table
             summary_data = []
@@ -3107,7 +3107,7 @@ def display_leaf_data_table(leaf_data):
                 # Calculate parameter statistics from samples
                 param_stats = calculate_parameter_statistics(samples)
                 if param_stats:
-                    st.markdown("### 📊 Parameter Statistics")
+                    st.markdown(f"### 📊 {t('results_parameter_statistics', 'Parameter Statistics')}")
                     
                     # Create summary table
                     summary_data = []
@@ -3126,7 +3126,7 @@ def display_leaf_data_table(leaf_data):
                         st.dataframe(df_stats, use_container_width=True)
                 
                 # Display individual sample data
-                st.markdown("### 📋 Individual Sample Data")
+                st.markdown(f"### 📋 {t('results_individual_sample_data', 'Individual Sample Data')}")
                 df_data = []
                 for sample in samples:
                     df_data.append(sample)
