@@ -552,10 +552,34 @@ def show_results_page():
                 working_indicator = st.empty()
             
             # Process the new analysis with enhanced progress tracking
-            results_data = process_new_analysis(st.session_state.analysis_data, progress_bar, status_text, time_estimate, step_indicator, working_indicator)
-            
-            # Clear the analysis_data from session state after processing
-            del st.session_state.analysis_data
+            try:
+                # Add a note about keeping the page open
+                st.info("⏳ **Important:** Please keep this page open during analysis. The process may take 2-5 minutes.")
+                
+                logger.info("🔍 DEBUG - Calling process_new_analysis...")
+                results_data = process_new_analysis(st.session_state.analysis_data, progress_bar, status_text, time_estimate, step_indicator, working_indicator)
+                logger.info(f"🔍 DEBUG - process_new_analysis returned: {type(results_data)}, success={results_data.get('success') if results_data else 'None'}")
+            except KeyboardInterrupt:
+                logger.warning("Analysis interrupted by user")
+                results_data = {'success': False, 'message': 'Analysis was interrupted. Please try again.'}
+            except Exception as e:
+                error_msg = str(e).lower()
+                logger.error(f"❌ Error during analysis processing: {str(e)}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                
+                # Handle specific error types
+                if "bodystreambuffer" in error_msg or "aborted" in error_msg:
+                    results_data = {'success': False, 'message': 'Connection was interrupted during analysis. Please refresh the page and try again.'}
+                elif "timeout" in error_msg:
+                    results_data = {'success': False, 'message': 'Analysis timed out. Please try again with smaller files or check your connection.'}
+                else:
+                    results_data = {'success': False, 'message': f'Processing error: {str(e)}'}
+            finally:
+                # Clear the analysis_data from session state after processing (success or failure)
+                if 'analysis_data' in st.session_state:
+                    logger.info("🔍 DEBUG - Clearing analysis_data from session state")
+                    del st.session_state.analysis_data
             
             if results_data and results_data.get('success', False):
                 # Clear progress container
