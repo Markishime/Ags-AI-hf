@@ -683,6 +683,46 @@ def show_results_page():
             display_no_results_message()
             return
         
+        # CRITICAL: Send ANALYSIS_COMPLETE message AFTER results are ready and displayed
+        # This ensures the website receives the message when results are actually available
+        if results_data and results_data.get('success', False):
+            try:
+                logger.info(f"📤 CRITICAL: Sending ANALYSIS_COMPLETE message after results are displayed...")
+                logger.info(f"📤 Result ID: {results_data.get('id')}, User ID: {results_data.get('user_id')}")
+                
+                # Get analysis results for the message
+                analysis_results = get_analysis_results_from_data(results_data)
+                
+                # Prepare analysis_results in the format expected by send_analysis_complete
+                analysis_data_for_message = {
+                    'title': f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
+                    'type': 'soil',
+                    'summary': '',
+                    'recommendations_count': 0,
+                    'file_url': None,
+                    'data': results_data,
+                }
+                
+                # Add analysis results if available
+                if analysis_results:
+                    analysis_data_for_message.update(analysis_results)
+                
+                # Determine analysis type
+                if results_data.get('soil_data') and results_data.get('leaf_data'):
+                    analysis_data_for_message['type'] = 'both'
+                elif results_data.get('leaf_data'):
+                    analysis_data_for_message['type'] = 'leaf'
+                
+                # Call send_analysis_complete with the prepared data
+                send_analysis_complete(analysis_data_for_message)
+                logger.info(f"✅ ANALYSIS_COMPLETE message sent successfully from show_results_page")
+                
+            except Exception as e:
+                logger.error(f"❌ CRITICAL ERROR sending ANALYSIS_COMPLETE in show_results_page: {e}")
+                import traceback
+                logger.error(f"Traceback: {traceback.format_exc()}")
+                # Don't fail the display if message sending fails
+        
         # Display results in organized sections
         st.markdown('<div class="print-show">', unsafe_allow_html=True)
         display_results_header(results_data)
@@ -1932,28 +1972,116 @@ def send_analysis_complete(analysis_results):
                             recommendations_count += len(rec_lines)
         
         # Prepare the message - MUST match exact format expected by parent page
+        # Simplify analysisData to avoid serialization issues with complex nested objects
+        analysis_data_simple = {}
+        if isinstance(analysis_results, dict):
+            data = analysis_results.get('data', {})
+            if isinstance(data, dict):
+                # Only include essential fields that can be serialized
+                analysis_data_simple = {
+                    'resultId': data.get('resultId'),
+                    'timestamp': data.get('timestamp') or datetime.now().isoformat(),
+                    'status': data.get('status', 'completed'),
+                    'userId': data.get('userId') or user_id,
+                    'firestoreSaved': data.get('firestoreSaved', False)
+                }
+            else:
+                # If data is not a dict, try to get resultId from analysis_results directly
+                analysis_data_simple = {
+                    'resultId': analysis_results.get('id') or analysis_results.get('resultId'),
+                    'timestamp': datetime.now().isoformat(),
+                    'status': 'completed',
+                    'userId': user_id,
+                    'firestoreSaved': False
+                }
+        else:
+            # Fallback if analysis_results is not a dict
+            analysis_data_simple = {
+                'resultId': None,
+                'timestamp': datetime.now().isoformat(),
+                'status': 'completed',
+                'userId': user_id,
+                'firestoreSaved': False
+            }
+        
         message = {
             'type': 'ANALYSIS_COMPLETE',  # MUST be exactly this string
-            'userId': user_id,  # From CONFIG message or session state
+            'userId': user_id or '',  # From CONFIG message or session state
             'title': analysis_results.get('title', f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}') if isinstance(analysis_results, dict) else f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
             'analysisType': analysis_type,
             'summary': summary or "Comprehensive soil and leaf analysis completed successfully.",
             'recommendationsCount': recommendations_count,
             'fileUrl': analysis_results.get('file_url') if isinstance(analysis_results, dict) else None,
-            'analysisData': analysis_results.get('data') if isinstance(analysis_results, dict) else analysis_results,
+            'analysisData': analysis_data_simple,  # Simplified to avoid serialization issues
             'timestamp': datetime.now().isoformat(),
         }
         
         logger.info(f"📤 Sending ANALYSIS_COMPLETE message: userId={user_id}, type={analysis_type}")
-        logger.info(f"📤 Message payload: {json.dumps(message, indent=2)}")
+        
+        # Serialize message to JSON string safely
+        try:
+            message_json = json.dumps(message, default=str)  # Use default=str to handle any non-serializable objects
+        except Exception as json_error:
+            logger.error(f"❌ Error serializing message to JSON: {json_error}")
+            # Create a simplified message
+            message = {
+                'type': 'ANALYSIS_COMPLETE',
+                'userId': user_id or '',
+                'title': f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
+                'analysisType': analysis_type,
+                'summary': summary or "Analysis completed successfully.",
+                'recommendationsCount': recommendations_count,
+                'fileUrl': None,
+                'analysisData': {'resultId': analysis_results.get('data', {}).get('resultId') if isinstance(analysis_results, dict) else None},
+                'timestamp': datetime.now().isoformat(),
+            }
+            message_json = json.dumps(message, default=str)
+        
+        logger.info(f"📤 Message payload: {message_json[:500]}...")  # Log first 500 chars
         
         # CRITICAL: Use '*' as target origin to avoid browser errors
         # This matches the exact specification from the user
+        # Use multiple attempts to ensure message is sent
         html(f"""
         <script>
-        console.log('📊 Sending ANALYSIS_COMPLETE message:', {json.dumps(message)});
-        window.parent.postMessage({json.dumps(message)}, '*');
-        console.log('✅ ANALYSIS_COMPLETE message sent successfully');
+        (function() {{
+            try {{
+                const message = {message_json};
+                console.log('📊 Sending ANALYSIS_COMPLETE message:', message);
+                console.log('📊 Message type:', message.type);
+                console.log('📊 Message userId:', message.userId);
+                
+                // Method 1: Direct postMessage
+                if (window.parent && window.parent !== window) {{
+                    window.parent.postMessage(message, '*');
+                    console.log('✅ ANALYSIS_COMPLETE message sent successfully');
+                }} else {{
+                    console.warn('⚠️ window.parent not available, trying delayed retry');
+                    // Retry after a short delay
+                    setTimeout(function() {{
+                        if (window.parent && window.parent !== window) {{
+                            window.parent.postMessage(message, '*');
+                            console.log('✅ ANALYSIS_COMPLETE message sent via retry');
+                        }} else {{
+                            console.error('❌ Failed to send ANALYSIS_COMPLETE: window.parent not available');
+                        }}
+                    }}, 500);
+                }}
+            }} catch (error) {{
+                console.error('❌ Error sending ANALYSIS_COMPLETE:', error);
+                console.error('❌ Error details:', error.message, error.stack);
+                // Try one more time with basic postMessage
+                try {{
+                    const message = {message_json};
+                    if (window.parent && window.parent !== window) {{
+                        window.parent.postMessage(message, '*');
+                        console.log('✅ ANALYSIS_COMPLETE sent via fallback');
+                    }}
+                }} catch (e) {{
+                    console.error('❌ All attempts to send ANALYSIS_COMPLETE failed:', e);
+                }}
+            }}
+        }})();
         </script>
         """, height=0)
         
