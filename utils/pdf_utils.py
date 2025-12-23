@@ -367,23 +367,9 @@ class PDFReportGenerator:
                 story.append(Paragraph(self._t('pdf_step_by_step_analysis', 'Step-by-Step Analysis'), self.styles['Heading2']))
                 story.append(Paragraph("Analysis completed successfully. Please refer to the detailed results above for comprehensive information.", self.styles['Normal']))
             
-            try:
-                # 6. Data Visualizations - ADDED for comprehensive results PDF
-                logger.info(f"📊 Data Visualizations - include_charts: {options.get('include_charts', True)}")
-                if options.get('include_charts', True):
-                    logger.info("📊 Calling _create_comprehensive_visualizations_section")
-                    viz_section = self._create_comprehensive_visualizations_section(analysis_data)
-                    logger.info(f"📊 Visualizations section returned {len(viz_section)} elements")
-                    story.extend(viz_section)
-                else:
-                    logger.info("⏭️ Skipping Data Visualizations section - charts disabled")
-            except Exception as e:
-                logger.error(f"Error creating data visualizations: {str(e)}")
-                import traceback
-                logger.error(f"Full traceback: {traceback.format_exc()}")
-                story.append(Paragraph("Data Visualizations", self.styles['Heading2']))
-                story.append(Paragraph("Charts and visualizations are included in the comprehensive analysis above. Please refer to the detailed tables and analysis sections for complete data visualization.", self.styles['Normal']))
-
+            # 6. Data Visualizations - REMOVED per user request (before detailed conclusion)
+            # Charts are included within step-by-step analysis sections
+            
             # 7. Economic Forecast Tables (always included for step-by-step)
             story.extend(self._create_enhanced_economic_forecast_table(analysis_data))
             
@@ -391,7 +377,7 @@ class PDFReportGenerator:
             if options.get('include_references', True):
                 story.extend(self._create_references_section(analysis_data))
             
-            # 9. Conclusion (always included)
+            # 9. Conclusion (always included) - No "Data Visualizations" section before this
             story.extend(self._create_enhanced_conclusion(analysis_data))
         elif 'summary_metrics' in analysis_data and 'health_indicators' in analysis_data:
             # Comprehensive analysis format - using existing methods
@@ -7212,7 +7198,7 @@ class PDFReportGenerator:
         story = []
         
         # Conclusion header
-        story.append(Paragraph("Detailed Conclusion", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_detailed_conclusion', 'Detailed Conclusion'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Extract key data for personalized conclusion

@@ -3692,8 +3692,13 @@ class PromptAnalyzer:
             raw = analysis_results.get('raw_data', {}) if isinstance(analysis_results, dict) else {}
             land = raw.get('land_yield_data', {}) if isinstance(raw, dict) else {}
 
+            # Get current language for multilingual support
+            current_language = self._get_current_language()
+            language_instruction = self._get_language_instruction(current_language)
+
             prompt = (
-                "Write an Executive Summary for an oil palm agronomic analysis report using neutral, third-person language. "
+                f"Write an Executive Summary for an oil palm agronomic analysis report using neutral, third-person language. "
+                f"{language_instruction}"
                 "Use ONLY the findings provided from this run. 120-220 words. Farmer-friendly. "
                 "Single paragraph. No headings, no bullets, no placeholders. Do not invent numbers.\n\n"
                 "Context from step-by-step results:\n" + "\n\n".join(lines[:10]) + "\n\n"
