@@ -835,7 +835,7 @@ def upload_section():
         with st.container():
             st.markdown(f"#### 🍃 {t('upload_leaf_title')}")
             st.markdown(t('upload_leaf_desc'))
-            st.info("📋 **Expected:** Leaf analysis with N%, P%, K%, Mg%, Ca%, B, Cu, Zn content, etc.")
+            st.info(f"📋 **{t('upload_expected', 'Expected')}:** {t('upload_leaf_expected', 'Leaf analysis with N%, P%, K%, Mg%, Ca%, B, Cu, Zn content, etc.')}")
             
             leaf_file = st.file_uploader(
                 t('upload_leaf_file'),
