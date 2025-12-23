@@ -915,18 +915,18 @@ def upload_section():
     col1, col2, col3 = st.columns(3)
     
     with col1:
-        st.markdown("#### 📏 Land Size")
+        st.markdown(f"#### 📏 {t('upload_land_size', 'Land Size')}")
         land_size = st.number_input(
-            "Land Size",
+            t('upload_land_size', 'Land Size'),
             min_value=0,
             max_value=10000,
             value=st.session_state.land_yield_data['land_size'],
             step=1,
-            help="Enter the total land area for analysis",
+            help=t('upload_land_size_help', 'Enter the total land area for analysis'),
             key="land_size_input"
         )
         land_unit = st.selectbox(
-            "Unit",
+            t('upload_land_unit', 'Unit'),
             options=['hectares', 'acres', 'square_meters'],
             index=['hectares', 'acres', 'square_meters'].index(st.session_state.land_yield_data['land_unit']),
             key="land_unit_input"
@@ -935,18 +935,18 @@ def upload_section():
         st.session_state.land_yield_data['land_unit'] = land_unit
     
     with col2:
-        st.markdown("#### 🌾 Current Yield")
+        st.markdown(f"#### 🌾 {t('upload_current_yield', 'Current Yield')}")
         current_yield = st.number_input(
-            "Current Yield",
+            t('upload_current_yield', 'Current Yield'),
             min_value=0,
             max_value=1000,
             value=st.session_state.land_yield_data['current_yield'],
             step=1,
-            help="Enter the current yield per unit area",
+            help=t('upload_current_yield_help', 'Enter the current yield per unit area'),
             key="current_yield_input"
         )
         yield_unit = st.selectbox(
-            "Yield Unit",
+            t('upload_yield_unit', 'Yield Unit'),
             options=['tonnes/hectare', 'kg/hectare', 'tonnes/acre', 'kg/acre'],
             index=['tonnes/hectare', 'kg/hectare', 'tonnes/acre', 'kg/acre'].index(st.session_state.land_yield_data['yield_unit']),
             key="yield_unit_input"
@@ -955,14 +955,14 @@ def upload_section():
         st.session_state.land_yield_data['yield_unit'] = yield_unit
     
     with col3:
-        st.markdown("#### 🌴 Palm Density")
+        st.markdown(f"#### 🌴 {t('upload_palm_density', 'Palm Density')}")
         palm_density = st.number_input(
-            "Palms per Hectare",
+            t('upload_palms_per_hectare', 'Palms per Hectare'),
             min_value=100,
             max_value=200,
             value=st.session_state.land_yield_data['palm_density'],
             step=1,
-            help="Number of oil palm trees per hectare (typical: 136-148)",
+            help=t('upload_palm_density_help', 'Number of oil palm trees per hectare (typical: 136-148)'),
             key="palm_density_input"
         )
         st.session_state.land_yield_data['palm_density'] = palm_density
