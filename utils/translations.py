@@ -231,6 +231,7 @@ TRANSLATIONS = {
         'analysis_preparing_results': 'Preparing results...',
         'analysis_generating_insights_recs': 'Generating insights and recommendations...',
         'analysis_creating_recommendations': 'Creating actionable recommendations...',
+        'analysis_insights': 'Insights',
         'results_soil_analysis_data': 'Soil Analysis Data',
         'results_leaf_analysis_data': 'Leaf Analysis Data',
         'results_summary_statistics': 'Summary Statistics',
