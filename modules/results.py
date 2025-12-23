@@ -714,8 +714,32 @@ def show_results_page():
                     analysis_data_for_message['type'] = 'leaf'
                 
                 # Call send_analysis_complete with the prepared data
+                # CRITICAL: Send BEFORE displaying results to ensure timing is correct
                 send_analysis_complete(analysis_data_for_message)
                 logger.info(f"✅ ANALYSIS_COMPLETE message sent successfully from show_results_page")
+                
+                # Also send a delayed backup message (in case parent listener wasn't ready)
+                try:
+                    from streamlit.components.v1 import html
+                    backup_message_json = json.dumps(analysis_data_for_message, default=str)
+                    html(f"""
+                    <script>
+                    setTimeout(function() {{
+                        try {{
+                            const backupMessage = {backup_message_json};
+                            console.log('🔄 Sending backup ANALYSIS_COMPLETE message after delay...');
+                            if (window.parent && window.parent !== window) {{
+                                window.parent.postMessage(backupMessage, '*');
+                                console.log('✅ Backup ANALYSIS_COMPLETE sent');
+                            }}
+                        }} catch (e) {{
+                            console.error('❌ Backup send failed:', e);
+                        }}
+                    }}, 200);
+                    </script>
+                    """, height=0)
+                except Exception as backup_error:
+                    logger.warning(f"⚠️ Could not send backup message: {backup_error}")
                 
             except Exception as e:
                 logger.error(f"❌ CRITICAL ERROR sending ANALYSIS_COMPLETE in show_results_page: {e}")
@@ -2116,10 +2140,9 @@ def send_analysis_complete(analysis_results):
         
         logger.info(f"📤 Message payload: {message_json[:500]}...")  # Log first 500 chars
         
-        # CRITICAL: Use '*' as target origin to avoid browser errors
-        # This matches the exact specification from the user
-        # Use multiple attempts to ensure message is sent
-        # Use height=1 instead of 0 to ensure component renders
+        # CRITICAL: Use '*' as target origin to ensure message reaches parent
+        # Also try specific origin and store in sessionStorage as backup
+        # Use multiple attempts with delays to ensure parent listener is ready
         html(f"""
         <script>
         (function() {{
@@ -2136,47 +2159,103 @@ def send_analysis_complete(analysis_results):
                     return;
                 }}
                 
-                // Method 1: Direct postMessage
-                if (window.parent && window.parent !== window) {{
-                    try {{
-                        window.parent.postMessage(message, '*');
-                        console.log('✅ ANALYSIS_COMPLETE message sent successfully');
-                    }} catch (postError) {{
-                        console.error('❌ Error in postMessage:', postError);
-                        throw postError;
-                    }}
-                }} else {{
-                    console.warn('⚠️ window.parent not available, trying delayed retry');
-                    // Retry after a short delay
-                    setTimeout(function() {{
-                        if (window.parent && window.parent !== window) {{
-                            try {{
-                                window.parent.postMessage(message, '*');
-                                console.log('✅ ANALYSIS_COMPLETE message sent via retry');
-                            }} catch (retryError) {{
-                                console.error('❌ Retry failed:', retryError);
-                            }}
-                        }} else {{
-                            console.error('❌ Failed to send ANALYSIS_COMPLETE: window.parent not available');
-                        }}
-                    }}, 500);
+                // CRITICAL: Store in sessionStorage as backup (parent can read this)
+                try {{
+                    sessionStorage.setItem('analysis_results', JSON.stringify(message));
+                    sessionStorage.setItem('analysis_complete_timestamp', new Date().toISOString());
+                    console.log('✅ Stored analysis results in sessionStorage as backup');
+                }} catch (storageError) {{
+                    console.warn('⚠️ Could not store in sessionStorage:', storageError);
                 }}
+                
+                // Function to send message with multiple origin attempts
+                function sendMessage(msg) {{
+                    let sent = false;
+                    
+                    // Try '*' origin first (most reliable)
+                    try {{
+                        if (window.parent && window.parent !== window) {{
+                            window.parent.postMessage(msg, '*');
+                            console.log('✅ ANALYSIS_COMPLETE sent with "*" origin');
+                            sent = true;
+                        }}
+                    }} catch (e1) {{
+                        console.warn('⚠️ Failed with "*" origin:', e1);
+                    }}
+                    
+                    // Try specific origin as fallback
+                    if (!sent) {{
+                        try {{
+                            if (window.parent && window.parent !== window) {{
+                                window.parent.postMessage(msg, 'https://www.cropdrive.ai');
+                                console.log('✅ ANALYSIS_COMPLETE sent with specific origin');
+                                sent = true;
+                            }}
+                        }} catch (e2) {{
+                            console.warn('⚠️ Failed with specific origin:', e2);
+                        }}
+                    }}
+                    
+                    // Try window.top as last resort
+                    if (!sent) {{
+                        try {{
+                            if (window.top && window.top !== window && window.top !== window.parent) {{
+                                window.top.postMessage(msg, '*');
+                                console.log('✅ ANALYSIS_COMPLETE sent via window.top');
+                                sent = true;
+                            }}
+                        }} catch (e3) {{
+                            console.warn('⚠️ Failed with window.top:', e3);
+                        }}
+                    }}
+                    
+                    return sent;
+                }}
+                
+                // Method 1: Send immediately
+                let success = sendMessage(message);
+                
+                // Method 2: Retry after short delay (in case parent listener not ready)
+                if (!success) {{
+                    setTimeout(function() {{
+                        console.log('🔄 Retrying ANALYSIS_COMPLETE send after delay...');
+                        sendMessage(message);
+                    }}, 100);
+                }}
+                
+                // Method 3: Retry after longer delay
+                setTimeout(function() {{
+                    console.log('🔄 Final retry for ANALYSIS_COMPLETE...');
+                    sendMessage(message);
+                }}, 500);
+                
+                // Method 4: One more retry after 1 second
+                setTimeout(function() {{
+                    console.log('🔄 Last attempt for ANALYSIS_COMPLETE...');
+                    sendMessage(message);
+                }}, 1000);
+                
             }} catch (error) {{
                 console.error('❌ Error sending ANALYSIS_COMPLETE:', error);
                 console.error('❌ Error name:', error.name);
                 console.error('❌ Error message:', error.message);
                 console.error('❌ Error stack:', error.stack);
                 
-                // Try one more time with basic postMessage
+                // Last resort: try with minimal message
                 try {{
-                    const message = {message_json};
+                    const minimalMsg = {{
+                        type: 'ANALYSIS_COMPLETE',
+                        userId: message.userId || '',
+                        title: message.title || 'Analysis Report',
+                        analysisType: message.analysisType || 'soil',
+                        timestamp: new Date().toISOString()
+                    }};
                     if (window.parent && window.parent !== window) {{
-                        window.parent.postMessage(message, '*');
-                        console.log('✅ ANALYSIS_COMPLETE sent via fallback');
+                        window.parent.postMessage(minimalMsg, '*');
+                        console.log('✅ Minimal ANALYSIS_COMPLETE sent via fallback');
                     }}
                 }} catch (e) {{
                     console.error('❌ All attempts to send ANALYSIS_COMPLETE failed:', e);
-                    console.error('❌ Final error:', e.message, e.stack);
                 }}
             }}
         }})();
