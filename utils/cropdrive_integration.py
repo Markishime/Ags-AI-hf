@@ -290,6 +290,23 @@ def send_analysis_complete(
     user_id = get_user_id()
     user_email = get_user_email()
     
+    # Log user info for debugging
+    logger.info(f"🔍 DEBUG send_analysis_complete - user_id: {user_id}, user_email: {user_email}")
+    
+    # Warn if user_id is missing (critical for parent page to save analysis)
+    if not user_id:
+        logger.warning("⚠️ WARNING: user_id is empty when sending ANALYSIS_COMPLETE message!")
+        logger.warning(f"⚠️ Session state user_id: {st.session_state.get('user_id', 'NOT SET')}")
+        logger.warning(f"⚠️ Session state user_config: {st.session_state.get('user_config', {})}")
+        # Try to get from URL params as fallback
+        try:
+            query_params = st.query_params
+            user_id = query_params.get('userId', '')
+            if user_id:
+                logger.info(f"✅ Retrieved user_id from URL params: {user_id}")
+        except Exception as e:
+            logger.error(f"❌ Failed to get user_id from URL params: {e}")
+    
     # Ensure analysis_data includes timestamp if not already present
     if analysis_data is None:
         analysis_data = {}
@@ -298,9 +315,13 @@ def send_analysis_complete(
     if 'timestamp' not in analysis_data:
         analysis_data['timestamp'] = datetime.now().isoformat()
     
+    # Ensure userId is in analysis_data as well (for redundancy)
+    if 'userId' not in analysis_data:
+        analysis_data['userId'] = user_id
+    
     message = {
         'type': 'ANALYSIS_COMPLETE',
-        'userId': user_id,
+        'userId': user_id,  # CRITICAL: Must match current authenticated user
         'title': title,
         'analysisType': analysis_type,
         'summary': summary or '',
@@ -310,16 +331,32 @@ def send_analysis_complete(
         'timestamp': datetime.now().isoformat()
     }
     
+    # Log the complete message for debugging
+    logger.info(f"📤 Sending ANALYSIS_COMPLETE message: userId={user_id}, title={title}, type={analysis_type}")
+    
     # IMPORTANT: Use '*' as target origin to avoid origin mismatch errors
     # The parent page will verify the message origin on its side
     send_js = f"""
     <script>
-    window.parent.postMessage({json.dumps(message)}, '*');
-    console.log('📤 Sent analysis complete message:', {json.dumps(message)});
+    (function() {{
+        const message = {json.dumps(message)};
+        console.log('📤 Sending ANALYSIS_COMPLETE message:', message);
+        console.log('📤 Message userId:', message.userId);
+        console.log('📤 Message type:', message.type);
+        
+        // Send message to parent window
+        window.parent.postMessage(message, '*');
+        
+        // Also log after sending
+        console.log('✅ ANALYSIS_COMPLETE message sent successfully');
+    }})();
     </script>
     """
     
     html(send_js, height=0)
+    
+    # Also log in Python
+    logger.info(f"✅ ANALYSIS_COMPLETE message HTML injected for user_id: {user_id}")
 
 # ============================================================================
 # STEP 4: Handle plan-based features

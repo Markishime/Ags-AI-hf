@@ -585,9 +585,18 @@ def show_results_page():
                 # Clear progress container
                 progress_container.empty()
                 
-                # Send analysis completion to CropDrive website (if integrated)
+                # CRITICAL: Send analysis completion to CropDrive website AFTER successful save
+                # This must happen AFTER Firestore save to ensure user_id is available
                 try:
-                    from utils.cropdrive_integration import send_analysis_complete
+                    from utils.cropdrive_integration import send_analysis_complete, get_user_id
+                    
+                    # Get user_id to verify it's available
+                    user_id = get_user_id()
+                    logger.info(f"🔍 DEBUG - Preparing to send ANALYSIS_COMPLETE: user_id={user_id}, result_id={results_data.get('id')}")
+                    
+                    if not user_id:
+                        logger.warning("⚠️ Cannot send ANALYSIS_COMPLETE: user_id is empty")
+                        # Still try to send, parent page might handle it
                     
                     # Extract summary and recommendations from analysis results
                     analysis_results = get_analysis_results_from_data(results_data)
@@ -624,7 +633,6 @@ def show_results_page():
                     elif results_data.get('leaf_data'):
                         analysis_type = 'leaf'
                     
-                    # Send completion message
                     # Get timestamp in ISO format
                     timestamp = results_data.get('timestamp')
                     if timestamp:
@@ -635,6 +643,9 @@ def show_results_page():
                     else:
                         timestamp_str = datetime.now().isoformat()
                     
+                    # Send completion message with all required data
+                    # IMPORTANT: This message triggers the parent page to save to Firestore and update upload counts
+                    logger.info(f"📤 Sending ANALYSIS_COMPLETE message to parent page...")
                     send_analysis_complete(
                         title=f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
                         analysis_type=analysis_type,
@@ -644,16 +655,22 @@ def show_results_page():
                         analysis_data={
                             'resultId': results_data.get('id'),
                             'timestamp': timestamp_str,
-                            'status': 'completed'
+                            'status': 'completed',
+                            'userId': user_id,  # Include userId in analysis_data as well
+                            'firestoreSaved': results_data.get('firestore_saved', False)  # Indicate if already saved
                         }
                     )
+                    logger.info(f"✅ ANALYSIS_COMPLETE message sent successfully")
+                    
                 except ImportError:
                     # CropDrive integration not available, skip
+                    logger.warning("⚠️ CropDrive integration not available - ANALYSIS_COMPLETE not sent")
                     pass
                 except Exception as e:
                     # Log error but don't break the app
-                    # Use the global logger defined at module level
-                    logger.warning(f"CropDrive integration error: {e}")
+                    logger.error(f"❌ CropDrive integration error when sending ANALYSIS_COMPLETE: {e}")
+                    import traceback
+                    logger.error(f"Traceback: {traceback.format_exc()}")
             else:
                 st.error(f"❌ Analysis failed: {results_data.get('message', 'Unknown error')}")
                 st.info("💡 **Tip:** Make sure your uploaded files are clear images of soil and leaf analysis reports.")
@@ -1688,15 +1705,7 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
 
         logger.info(f"🔍 DEBUG - Analysis stored successfully in session state")
         
-        # Store in Firestore for future access
-        try:
-            store_analysis_to_firestore(analysis_results, result_id)
-            logger.info(f"✅ Successfully stored analysis {result_id} to Firestore")
-        except Exception as e:
-            logger.error(f"❌ Failed to store analysis to Firestore: {e}")
-            # Continue with session state storage as fallback
-        
-        # Get user info for display data
+        # Get user info BEFORE saving to Firestore (to ensure we have it)
         if CROPDRIVE_INTEGRATION_AVAILABLE:
             display_user_id = get_user_id()
             display_user_email = get_user_email()
@@ -1705,6 +1714,22 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
             display_user_id = st.session_state.get('user_id', '')
             display_user_email = st.session_state.get('user_email', '')
             display_user_name = st.session_state.get('user_name', '')
+        
+        logger.info(f"🔍 DEBUG - User info before Firestore save: user_id={display_user_id}, user_email={display_user_email}")
+        
+        # Store in Firestore for future access
+        firestore_saved = False
+        try:
+            firestore_saved = store_analysis_to_firestore(analysis_results, result_id)
+            if firestore_saved:
+                logger.info(f"✅ Successfully stored analysis {result_id} to Firestore")
+            else:
+                logger.warning(f"⚠️ Firestore storage skipped (no user_id or other reason)")
+        except Exception as e:
+            logger.error(f"❌ Failed to store analysis to Firestore: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+            # Continue with session state storage as fallback
         
         # Return data structure with analysis results included
         display_data = {
@@ -1720,7 +1745,8 @@ def process_new_analysis(analysis_data, progress_bar, status_text, time_estimate
             'soil_data': soil_data,
             'leaf_data': leaf_data,
             'created_at': datetime.now(),
-            'analysis_results': analysis_results  # Include analysis results for raw data display
+            'analysis_results': analysis_results,  # Include analysis results for raw data display
+            'firestore_saved': firestore_saved  # Track if saved to Firestore
         }
         
         return display_data
