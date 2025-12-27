@@ -746,46 +746,111 @@ def get_upload_limit_info():
         'uploads_remaining': uploads_remaining
     }
 
+def send_script_run_state_changed(script_run_state: str, progress: int = None, message: str = None) -> None:
+    """
+    Send analysis progress/status update to parent window
+    This is useful for showing progress bars and status messages during long-running analyses
+
+    Args:
+        script_run_state: 'running' or 'notRunning'
+        progress: Optional progress percentage (0-100)
+        message: Optional status message
+    """
+    message_data = {
+        'type': 'SCRIPT_RUN_STATE_CHANGED',
+        'scriptRunState': script_run_state
+    }
+
+    if progress is not None:
+        message_data['progress'] = progress
+    if message is not None:
+        message_data['message'] = message
+
+    # IMPORTANT: Use '*' as target origin to avoid origin mismatch errors
+    # The parent page will verify the message origin on its side
+    send_js = f"""
+    <script>
+    window.parent.postMessage({json.dumps(message_data)}, '*');
+    console.log('📤 Sent script run state changed:', {json.dumps(message_data)});
+    </script>
+    """
+
+    html(send_js, height=0)
+
 def send_language_change(new_language: str):
     """Send language change notification to parent window when language changes within Streamlit"""
     # Validate language
     if new_language not in ['en', 'ms']:
         new_language = 'en'
-    
+
     # Update session state
     st.session_state.language = new_language
-    
+
     # Update URL parameter
     query_params = st.query_params
     query_params['lang'] = new_language
-    
+
     # Send message to parent window
     message = {
         'type': 'LANGUAGE_CHANGE_REQUEST',
         'language': new_language
     }
-    
+
     # IMPORTANT: Use '*' as target origin to avoid origin mismatch errors
     # The parent page will verify the message origin on its side
     send_js = f"""
     <script>
     window.parent.postMessage({json.dumps(message)}, '*');
     console.log('📤 Sent language change request:', {json.dumps(message)});
-    
+
     // Also update URL
     const url = new URL(window.location.href);
     url.searchParams.set('lang', '{new_language}');
     window.history.replaceState({{}}, '', url);
     </script>
     """
-    
+
     html(send_js, height=0)
-    
+
     # Trigger rerun to apply language change
     st.rerun()
 
 # ============================================================================
-# STEP 5: Safe postMessage utility
+# STEP 5: Additional Message Types
+# ============================================================================
+
+def send_error_message(error_message: str) -> None:
+    """
+    Send error status message to parent window
+
+    Args:
+        error_message: Error message to display
+    """
+    send_script_run_state_changed(
+        script_run_state='error',
+        message=f"Error: {error_message}"
+    )
+
+def send_progress_update(current_step: int, total_steps: int, status_message: str = None) -> None:
+    """
+    Send progress update during analysis
+
+    Args:
+        current_step: Current step number
+        total_steps: Total number of steps
+        status_message: Optional status message
+    """
+    progress = int((current_step / total_steps) * 100)
+    message = status_message or f"Processing step {current_step} of {total_steps}"
+
+    send_script_run_state_changed(
+        script_run_state='running',
+        progress=progress,
+        message=message
+    )
+
+# ============================================================================
+# STEP 6: Safe postMessage utility
 # ============================================================================
 
 def safe_post_message(message, target_origin='*'):
