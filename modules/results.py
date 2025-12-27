@@ -39,6 +39,37 @@ except ImportError:
         return st.session_state.get('user_name', '')
 
 
+def translate_column_headers(df):
+    """Translate DataFrame column headers based on current language"""
+    if df is None or df.empty:
+        return df
+
+    # Column header translation mapping
+    column_translations = {
+        'Parameter': t('col_parameter', 'Parameter'),
+        'Type': t('col_type', 'Type'),
+        'Average': t('col_average', 'Average'),
+        'Min': t('col_min', 'Min'),
+        'Max': t('col_max', 'Max'),
+        'Std Dev': t('col_std_dev', 'Std Dev'),
+        'Unit': t('col_unit', 'Unit'),
+        'Samples': t('col_samples', 'Samples'),
+        'Sample': t('col_sample', 'Sample'),
+        'Sample No.': t('col_sample_no', 'Sample No.'),
+        'Lab No.': t('col_lab_no', 'Lab No.'),
+        'Minimum': t('col_minimum', 'Minimum'),
+        'Maximum': t('col_maximum', 'Maximum'),
+        'Standard Deviation': t('col_standard_deviation', 'Standard Deviation'),
+        'Sample Count': t('col_sample_count', 'Sample Count'),
+    }
+
+    # Create a copy of the dataframe with translated columns
+    translated_df = df.copy()
+    translated_df.columns = [column_translations.get(col, col) for col in df.columns]
+
+    return translated_df
+
+
 def normalize_markdown_block_for_step3(text):
     """Normalize inline dense markdown into readable headings and lists for Step 3.
 
@@ -2764,22 +2795,22 @@ def display_raw_data_section(results_data):
                 display_leaf_data_table(leaf_data)
     else:
         st.info("📋 No raw data available for this analysis.")
-        st.write(f"Results data keys: {list(results_data.keys())}")
+        st.write(f"{t('results_data_keys', 'Results data keys')}: {list(results_data.keys())}")
         if analysis_results:
-            st.write(f"Analysis results keys: {list(analysis_results.keys())}")
+            st.write(f"{t('analysis_results_keys', 'Analysis results keys')}: {list(analysis_results.keys())}")
             if 'raw_data' in analysis_results:
-                st.write(f"Analysis results raw_data keys: {list(analysis_results['raw_data'].keys())}")
+                st.write(f"{t('raw_data_keys', 'Raw data keys')}: {list(analysis_results['raw_data'].keys())}")
             # Check for direct soil/leaf parameters
             if 'soil_parameters' in analysis_results:
-                st.write(f"Soil parameters found directly in analysis_results: {type(analysis_results['soil_parameters'])}")
+                st.write(f"{t('soil_parameters_found', 'Soil parameters found')}: {type(analysis_results['soil_parameters'])}")
             if 'leaf_parameters' in analysis_results:
-                st.write(f"Leaf parameters found directly in analysis_results: {type(analysis_results['leaf_parameters'])}")
+                st.write(f"{t('leaf_parameters_found', 'Leaf parameters found')}: {type(analysis_results['leaf_parameters'])}")
         # Debug comprehensive analysis if available
         if 'comprehensive_analysis' in analysis_results:
             comprehensive_analysis = analysis_results['comprehensive_analysis']
-            st.write(f"Comprehensive analysis keys: {list(comprehensive_analysis.keys())}")
+            st.write(f"{t('comprehensive_analysis_keys', 'Comprehensive analysis keys')}: {list(comprehensive_analysis.keys())}")
             if 'raw_data' in comprehensive_analysis:
-                st.write(f"Comprehensive analysis raw_data keys: {list(comprehensive_analysis['raw_data'].keys())}")
+                st.write(f"{t('raw_data_keys', 'Raw data keys')}: {list(comprehensive_analysis['raw_data'].keys())}")
 
 def display_structured_soil_data(soil_data):
     """Display structured soil data from OCR (Farm/SP Lab format)"""
@@ -2824,7 +2855,7 @@ def display_structured_soil_data(soil_data):
             cols = ['Sample ID'] + [col for col in df.columns if col != 'Sample ID']
             df = df[cols]
 
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(translate_column_headers(df), use_container_width=True)
             
             # Show summary statistics
             st.markdown(f"#### 📈 {t('results_summary_statistics', 'Summary Statistics')}")
@@ -2928,7 +2959,7 @@ def display_structured_leaf_data(leaf_data):
             cols = ['Sample ID'] + [col for col in df.columns if col != 'Sample ID']
             df = df[cols]
             
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(translate_column_headers(df), use_container_width=True)
             
             # Show summary statistics
             st.markdown(f"#### 📈 {t('results_summary_statistics', 'Summary Statistics')}")
@@ -3571,15 +3602,15 @@ def display_soil_data_table(soil_data):
     # Handle new data structure from analysis engine
     if 'parameter_statistics' in soil_data:
         # New structure from analysis engine
-        st.markdown("**Data Source:** Soil Analysis Report")
-        st.markdown(f"**Total Samples:** {soil_data.get('total_samples', 0) if isinstance(soil_data, dict) else 0}")
-        st.markdown(f"**Parameters Analyzed:** {soil_data.get('extracted_parameters', 0) if isinstance(soil_data, dict) else 0}")
+        st.markdown(f"**{t('data_source', 'Data Source')}:** {t('soil_analysis_report', 'Soil Analysis Report')}")
+        st.markdown(f"**{t('total_samples', 'Total Samples')}:** {soil_data.get('total_samples', 0) if isinstance(soil_data, dict) else 0}")
+        st.markdown(f"**{t('parameters_analyzed', 'Parameters Analyzed')}:** {soil_data.get('extracted_parameters', 0) if isinstance(soil_data, dict) else 0}")
         
         # Display parameter statistics
         param_stats = soil_data.get('parameter_statistics', {}) if isinstance(soil_data, dict) else {}
     elif 'tables' in soil_data and soil_data['tables']:
         # Handle structured OCR data format
-        st.markdown("**Data Source:** Structured OCR Data")
+        st.markdown(f"**{t('data_source', 'Data Source')}:** {t('structured_ocr_data', 'Structured OCR Data')}")
         
         # Extract parameter statistics from tables structure
         param_stats = {}
@@ -3595,8 +3626,8 @@ def display_soil_data_table(soil_data):
                         total_samples = param_stats[first_param]['count']
                 break
         
-        st.markdown(f"**Total Samples:** {total_samples}")
-        st.markdown(f"**Parameters Analyzed:** {len(param_stats)}")
+        st.markdown(f"**{t('total_samples', 'Total Samples')}:** {total_samples}")
+        st.markdown(f"**{t('parameters_analyzed', 'Parameters Analyzed')}:** {len(param_stats)}")
         if param_stats:
             st.markdown(f"### 📊 {t('results_parameter_statistics', 'Parameter Statistics')}")
             
@@ -3616,7 +3647,7 @@ def display_soil_data_table(soil_data):
             if summary_data:
                 df = pd.DataFrame(summary_data)
                 apply_table_styling()
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(translate_column_headers(df), use_container_width=True)
             
             # Display individual sample data
             all_samples = soil_data.get('all_samples', []) if isinstance(soil_data, dict) else []
@@ -3667,7 +3698,7 @@ def display_soil_data_table(soil_data):
             if summary_data:
                 df = pd.DataFrame(summary_data)
                 apply_table_styling()
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(translate_column_headers(df), use_container_width=True)
         else:
             st.info("📋 No parameter statistics available.")
     
@@ -3681,16 +3712,16 @@ def display_soil_data_table(soil_data):
         # Get extracted data
         extracted_data = soil_data.get('data', {}) if isinstance(soil_data, dict) else {}
         report_type = soil_data.get('report_type', 'unknown') if isinstance(soil_data, dict) else 'unknown'
-        
-        st.markdown(f"**Report Type:** {report_type.title()}")
-        st.markdown(f"**Extraction Status:** ✅ Success")
-        st.markdown(f"**Message:** {soil_data.get('message', 'Data extracted successfully') if isinstance(soil_data, dict) else 'Data extracted successfully'}")
+
+        st.markdown(f"**{t('report_type', 'Report Type')}:** {report_type.title()}")
+        st.markdown(f"**{t('extraction_status', 'Extraction Status')}:** ✅ {t('success', 'Success')}")
+        st.markdown(f"**{t('message', 'Message')}:** {soil_data.get('message', t('data_extracted_successfully', 'Data extracted successfully')) if isinstance(soil_data, dict) else t('data_extracted_successfully', 'Data extracted successfully')}")
         
         if isinstance(extracted_data, dict) and 'samples' in extracted_data:
             # Handle structured data with samples
             samples = extracted_data['samples']
             if samples:
-                st.markdown(f"**Number of Samples:** {len(samples)}")
+                st.markdown(f"**{t('number_of_samples', 'Number of Samples')}:** {len(samples)}")
                 
                 # Calculate parameter statistics from samples
                 param_stats = calculate_parameter_statistics(samples)
@@ -3722,7 +3753,7 @@ def display_soil_data_table(soil_data):
                 if df_data:
                     df = pd.DataFrame(df_data)
                     apply_table_styling()
-                    st.dataframe(df, use_container_width=True)
+                    st.dataframe(translate_column_headers(df), use_container_width=True)
                 else:
                     st.info("📋 No sample data found in soil analysis.")
             else:
@@ -3738,7 +3769,7 @@ def display_soil_data_table(soil_data):
                     st.error("Unable to display soil extracted data table")
                     return
                 apply_table_styling()
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(translate_column_headers(df), use_container_width=True)
             else:
                 st.info("📋 No soil parameters extracted.")
         else:
@@ -3757,7 +3788,7 @@ def display_leaf_data_table(leaf_data):
     # Handle new data structure from analysis engine
     if 'parameter_statistics' in leaf_data:
         # New structure from analysis engine
-        st.markdown("**Data Source:** Leaf Analysis Report")
+        st.markdown(f"**{t('data_source', 'Data Source')}:** {t('leaf_analysis_report', 'Leaf Analysis Report')}")
         st.markdown(f"**Total Samples:** {leaf_data.get('total_samples', 0) if isinstance(leaf_data, dict) else 0}")
         st.markdown(f"**Parameters Analyzed:** {leaf_data.get('extracted_parameters', 0) if isinstance(leaf_data, dict) else 0}")
         
@@ -3765,7 +3796,7 @@ def display_leaf_data_table(leaf_data):
         param_stats = leaf_data.get('parameter_statistics', {}) if isinstance(leaf_data, dict) else {}
     elif 'tables' in leaf_data and leaf_data['tables']:
         # Handle structured OCR data format
-        st.markdown("**Data Source:** Structured OCR Data")
+        st.markdown(f"**{t('data_source', 'Data Source')}:** {t('structured_ocr_data', 'Structured OCR Data')}")
         
         # Extract parameter statistics from tables structure
         param_stats = {}
@@ -3781,8 +3812,8 @@ def display_leaf_data_table(leaf_data):
                         total_samples = param_stats[first_param]['count']
                 break
         
-        st.markdown(f"**Total Samples:** {total_samples}")
-        st.markdown(f"**Parameters Analyzed:** {len(param_stats)}")
+        st.markdown(f"**{t('total_samples', 'Total Samples')}:** {total_samples}")
+        st.markdown(f"**{t('parameters_analyzed', 'Parameters Analyzed')}:** {len(param_stats)}")
         if param_stats:
             st.markdown(f"### 📊 {t('results_parameter_statistics', 'Parameter Statistics')}")
             
@@ -3802,7 +3833,7 @@ def display_leaf_data_table(leaf_data):
             if summary_data:
                 df = pd.DataFrame(summary_data)
                 apply_table_styling()
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(translate_column_headers(df), use_container_width=True)
             
             # Display individual sample data
             all_samples = leaf_data.get('all_samples', []) if isinstance(leaf_data, dict) else []
@@ -3817,7 +3848,7 @@ def display_leaf_data_table(leaf_data):
     # Handle alternative data structure - check if it's a dict with parameter data
     elif isinstance(leaf_data, dict) and any(key for key in leaf_data.keys() if 'parameter' in key.lower() or 'ph' in key.lower() or 'nitrogen' in key.lower()):
         # Try to create parameter statistics from raw parameter data
-        st.markdown("**Data Source:** Leaf Analysis Report")
+        st.markdown(f"**{t('data_source', 'Data Source')}:** {t('leaf_analysis_report', 'Leaf Analysis Report')}")
         
         # Extract parameter data and create statistics
         param_data = {}
@@ -3853,7 +3884,7 @@ def display_leaf_data_table(leaf_data):
             if summary_data:
                 df = pd.DataFrame(summary_data)
                 apply_table_styling()
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(translate_column_headers(df), use_container_width=True)
         else:
             st.info("📋 No parameter statistics available.")
     
@@ -3867,16 +3898,16 @@ def display_leaf_data_table(leaf_data):
         # Get extracted data
         extracted_data = leaf_data.get('data', {}) if isinstance(leaf_data, dict) else {}
         report_type = leaf_data.get('report_type', 'unknown') if isinstance(leaf_data, dict) else 'unknown'
-        
-        st.markdown(f"**Report Type:** {report_type.title()}")
-        st.markdown(f"**Extraction Status:** ✅ Success")
-        st.markdown(f"**Message:** {leaf_data.get('message', 'Data extracted successfully') if isinstance(leaf_data, dict) else 'Data extracted successfully'}")
+
+        st.markdown(f"**{t('report_type', 'Report Type')}:** {report_type.title()}")
+        st.markdown(f"**{t('extraction_status', 'Extraction Status')}:** ✅ {t('success', 'Success')}")
+        st.markdown(f"**{t('message', 'Message')}:** {leaf_data.get('message', t('data_extracted_successfully', 'Data extracted successfully')) if isinstance(leaf_data, dict) else t('data_extracted_successfully', 'Data extracted successfully')}")
         
         if isinstance(extracted_data, dict) and 'samples' in extracted_data:
             # Handle structured data with samples
             samples = extracted_data['samples']
             if samples:
-                st.markdown(f"**Number of Samples:** {len(samples)}")
+                st.markdown(f"**{t('number_of_samples', 'Number of Samples')}:** {len(samples)}")
                 
                 # Calculate parameter statistics from samples
                 param_stats = calculate_parameter_statistics(samples)
@@ -3908,7 +3939,7 @@ def display_leaf_data_table(leaf_data):
                 if df_data:
                     df = pd.DataFrame(df_data)
                     apply_table_styling()
-                    st.dataframe(df, use_container_width=True)
+                    st.dataframe(translate_column_headers(df), use_container_width=True)
                 else:
                     st.info("📋 No sample data found in leaf analysis.")
             else:
@@ -3924,7 +3955,7 @@ def display_leaf_data_table(leaf_data):
                     st.error("Unable to display leaf extracted data table")
                     return
                 apply_table_styling()
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(translate_column_headers(df), use_container_width=True)
             else:
                 st.info("📋 No leaf parameters extracted.")
         else:
@@ -7284,7 +7315,7 @@ def display_table(table_data, title):
                 return
             logger.info(f"✅ Created table DataFrame for '{title}' with shape: {df.shape}")
             st.markdown(f"### {title}")
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(translate_column_headers(df), use_container_width=True)
             
             if 'note' in table_data:
                 st.markdown(f"*Note: {table_data['note']}*")
@@ -7971,7 +8002,7 @@ def _parse_xml_table_format(table_content):
         if headers and rows:
             df = pd.DataFrame(rows, columns=headers)
             apply_table_styling()
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(translate_column_headers(df), use_container_width=True)
             return True
 
         return False
@@ -8011,7 +8042,7 @@ def _parse_html_table_format(table_content):
             if headers and rows:
                 df = pd.DataFrame(rows, columns=headers)
                 apply_table_styling()
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(translate_column_headers(df), use_container_width=True)
                 return True
 
         # Try naive row parsing without explicit thead/tbody
@@ -8029,7 +8060,7 @@ def _parse_html_table_format(table_content):
             body = rows[1:] if len(rows) > 1 else []
             df = pd.DataFrame(body, columns=headers if body else None)
             apply_table_styling()
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(translate_column_headers(df), use_container_width=True)
             return True
 
         return False
@@ -8170,7 +8201,7 @@ def _extract_and_render_markdown_tables(raw_text: str) -> str:
                 df = pd.DataFrame(rows, columns=headers)
                 apply_table_styling()
                 st.markdown(f"#### 📋 {title}")
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(translate_column_headers(df), use_container_width=True)
                 st.markdown("")  # Add spacing
             except Exception as e:
                 logger.error(f"Error rendering table '{title}': {e}")
@@ -9465,7 +9496,7 @@ def display_enhanced_step_result(step_result, step_number):
                         df = pd.DataFrame(parsed_rows, columns=table['headers'])
                         logger.info(f"✅ Created table DataFrame for '{table['title']}' with shape: {df.shape}")
                         apply_table_styling()
-                        st.dataframe(df, use_container_width=True)
+                        st.dataframe(translate_column_headers(df), use_container_width=True)
                     else:
                         st.warning(f"No valid data found for table '{table['title']}'")
                         
@@ -13853,7 +13884,7 @@ def display_data_echo_table(analysis_data):
             logger.info(f"🔍 DEBUG - Echo data length: {len(echo_data)}")
             
             # Ensure all dictionaries have the same keys
-            expected_keys = ['Parameter', 'Type', 'Average', 'Min', 'Max', 'Std Dev', 'Unit', 'Samples']
+            expected_keys = [t('col_parameter', 'Parameter'), t('col_type', 'Type'), t('col_average', 'Average'), t('col_min', 'Min'), t('col_max', 'Max'), t('col_std_dev', 'Std Dev'), t('col_unit', 'Unit'), t('col_samples', 'Samples')]
             cleaned_echo_data = []
             
             for item in echo_data:
@@ -14236,7 +14267,7 @@ def display_overall_results_summary_table(analysis_data):
         if rows:
             df = pd.DataFrame(rows)
             apply_table_styling()
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(translate_column_headers(df), use_container_width=True)
         else:
             st.info("No summary data available to display.")
     except Exception as e:
@@ -14462,7 +14493,7 @@ def display_nutrient_gap_analysis_table(analysis_data):
             existing_cols = [c for c in desired_cols if c in df.columns]
             df = df[existing_cols]
             apply_table_styling()
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(translate_column_headers(df), use_container_width=True)
     except Exception as e:
         logger.error(f"Error in display_nutrient_gap_analysis_table: {e}")
 
@@ -14497,7 +14528,7 @@ def display_soil_ratio_table(analysis_data):
             rows = [{'Ratio': 'K:Mg', 'Value': f"{r:.2f}" if isinstance(r, (int,float)) else 'N.D.'}]
             df = pd.DataFrame(rows)
             apply_table_styling()
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(translate_column_headers(df), use_container_width=True)
     except Exception as e:
         logger.error(f"Error in display_soil_ratio_table: {e}")
 
@@ -14531,7 +14562,7 @@ def display_leaf_ratio_table(analysis_data):
             rows = [{'Ratio': 'K:Mg', 'Value': f"{r:.2f}" if isinstance(r, (int,float)) else 'N.D.'}]
             df = pd.DataFrame(rows)
             apply_table_styling()
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(translate_column_headers(df), use_container_width=True)
     except Exception as e:
         logger.error(f"Error in display_leaf_ratio_table: {e}")
 
@@ -14572,7 +14603,7 @@ def display_ratio_analysis_tables(analysis_data):
             st.markdown("#### Soil and Leaf Nutrient Ratio Analysis")
             df = pd.DataFrame(rows)
             apply_table_styling()
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(translate_column_headers(df), use_container_width=True)
     except Exception as e:
         logger.error(f"Error in display_ratio_analysis_tables: {e}")
 
@@ -14645,7 +14676,7 @@ def display_deficient_nutrient_quick_guide(analysis_data):
             st.markdown("#### Deficient Nutrient Parameter Quick Guide")
             df = pd.DataFrame(rows)
             apply_table_styling()
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(translate_column_headers(df), use_container_width=True)
     except Exception as e:
         logger.error(f"Error in display_deficient_nutrient_quick_guide: {e}")
 
@@ -15345,7 +15376,7 @@ def display_analysis_tables(tables_data, step_title="Data Tables"):
 
                     # Apply consistent styling
                     apply_table_styling()
-                    st.dataframe(df, use_container_width=True)
+                    st.dataframe(translate_column_headers(df), use_container_width=True)
 
                     st.markdown('</div>', unsafe_allow_html=True)
 
@@ -15588,7 +15619,7 @@ def display_step3_solution_recommendations(analysis_data):
                 import pandas as pd
                 df = pd.DataFrame(table['rows'], columns=table['headers'])
                 apply_table_styling()
-                st.dataframe(df, use_container_width=True)
+                st.dataframe(translate_column_headers(df), use_container_width=True)
                 st.markdown('</div>', unsafe_allow_html=True)
 
     # 3b. SPECIFIC RECOMMENDATIONS - render as cards with dynamic month/weather adjustments
@@ -15725,7 +15756,7 @@ def display_step3_solution_recommendations(analysis_data):
                             # Create a DataFrame for better display
                             import pandas as pd
                             df = pd.DataFrame(item['rows'], columns=item['headers'])
-                            st.dataframe(df, use_container_width=True)
+                            st.dataframe(translate_column_headers(df), use_container_width=True)
                             st.markdown("")
                         else:
                             st.markdown(f"- **Item {idx}:**")
@@ -16613,7 +16644,7 @@ def display_economic_forecast(economic_forecast):
         if scenarios_data:
             df = pd.DataFrame(scenarios_data)
             apply_table_styling()
-            st.dataframe(df, use_container_width=True)
+            st.dataframe(translate_column_headers(df), use_container_width=True)
 
 def display_recommendations_details(analysis_data):
     """Display detailed recommendations"""
