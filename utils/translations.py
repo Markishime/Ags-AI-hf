@@ -927,6 +927,34 @@ TRANSLATIONS = {
         'key_findings': 'Penemuan Utama',
         'specific_recommendations': 'Cadangan Khusus',
         'steps': 'Langkah',
+
+        # Additional step and section headers
+        'step_1_title_header': 'LANGKAH 1',
+        'summary': 'Ringkasan',
+        'detailed_analysis': 'Analisis Terperinci',
+        'detailed_interpretations': 'Tafsiran Terperinci',
+        'data_tables': 'Jadual Data',
+        'step_title_prefix': 'Langkah',
+        'step_data_analysis': 'Analisis Data',
+        'step_issue_diagnosis': 'Diagnosis Isu',
+        'step_solution_recommendations': 'Cadangan Penyelesaian',
+        'step_regenerative_agriculture': 'Pertanian Regeneratif',
+        'step_economic_forecast': 'Ramalan Ekonomi',
+        'step_yield_forecast': 'Ramalan Hasil',
+
+        # Additional step and section headers (Malaysian)
+        'step_1_title_header': 'LANGKAH 1',
+        'summary': 'Ringkasan',
+        'detailed_analysis': 'Analisis Terperinci',
+        'detailed_interpretations': 'Tafsiran Terperinci',
+        'data_tables': 'Jadual Data',
+        'step_title_prefix': 'Langkah',
+        'step_data_analysis': 'Analisis Data',
+        'step_issue_diagnosis': 'Diagnosis Isu',
+        'step_solution_recommendations': 'Cadangan Penyelesaian',
+        'step_regenerative_agriculture': 'Pertanian Regeneratif',
+        'step_economic_forecast': 'Ramalan Ekonomi',
+        'step_yield_forecast': 'Ramalan Hasil',
     }
 }
 
