@@ -887,16 +887,6 @@ TRANSLATIONS = {
         'col_standard_deviation': 'Sisihan Piawai',
         'col_sample_count': 'Bilangan Sampel',
 
-        # Formatted table headers
-        'table_source': 'Sumber',
-        'mpob_standard': 'Piawaian MPOB',
-        'table_gap': 'Jurang',
-        'soil_source': 'Tanah',
-        'leaf_source': 'Daun',
-        'soil_leaf_test_results_vs_mpob': 'Ringkasan Ujian Tanah dan Daun vs. Piawaian Malaysia',
-        'no_summary_data': 'Tiada data ringkasan tersedia untuk dipaparkan.',
-        'error_displaying_table': 'Ralat memaparkan jadual keputusan.',
-
         # Results page section headers (Malaysian)
         'comprehensive_data_analysis_tables': 'Jadual Analisis Data Komprehensif',
         'soil_parameter_averages': 'Purata Parameter Tanah',
@@ -937,6 +927,18 @@ TRANSLATIONS = {
         'key_findings': 'Penemuan Utama',
         'specific_recommendations': 'Cadangan Khusus',
         'steps': 'Langkah',
+
+        # LLM content labels that need translation (Malaysian)
+        'analysis_label': 'Analisis:',
+        'summary_label': 'Ringkasan:',
+        'detailed_analysis_label': 'Analisis Terperinci:',
+        'formatted_analysis_label': 'Analisis Terformat:',
+
+        # LLM content labels that need translation
+        'analysis_label': 'Analisis:',
+        'summary_label': 'Ringkasan:',
+        'detailed_analysis_label': 'Analisis Terperinci:',
+        'formatted_analysis_label': 'Analisis Terformat:',
 
         # Economic analysis section headers
         'economic_analysis_tables': 'Jadual Analisis Ekonomi',
@@ -991,17 +993,6 @@ TRANSLATIONS = {
         'step_regenerative_agriculture': 'Pertanian Regeneratif',
         'step_economic_forecast': 'Ramalan Ekonomi',
         'step_yield_forecast': 'Ramalan Hasil',
-
-        # Formatted table headers (Malaysian)
-        'table_source': 'Sumber',
-        'mpob_standard': 'Piawaian MPOB',
-        'table_gap': 'Jurang',
-        'soil_source': 'Tanah',
-        'leaf_source': 'Daun',
-        'soil_leaf_test_results_vs_mpob': 'Ringkasan Ujian Tanah dan Daun vs. Piawaian Malaysia',
-        'no_summary_data': 'Tiada data ringkasan tersedia untuk dipaparkan.',
-        'error_displaying_table': 'Ralat memaparkan jadual keputusan.',
-        'no_data_available': 'Tiada data tersedia untuk dipaparkan.',
     }
 }
 
