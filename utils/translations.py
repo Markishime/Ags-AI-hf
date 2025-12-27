@@ -928,6 +928,14 @@ TRANSLATIONS = {
         'specific_recommendations': 'Cadangan Khusus',
         'steps': 'Langkah',
 
+        # Economic analysis section headers
+        'economic_analysis_tables': 'Jadual Analisis Ekonomi',
+        'economic_forecast_tables': 'Jadual Ramalan Ekonomi',
+        'economic_analysis_tables_formatted': 'Jadual Analisis Ekonomi (Terformat)',
+        'economic_impact_analysis': 'Analisis Kesan Ekonomi',
+        'complete_analysis_tables': 'Jadual Analisis Lengkap',
+        'database_references': 'Rujukan Pangkalan Data',
+
         # Additional step and section headers
         'step_1_title_header': 'LANGKAH 1',
         'summary': 'Ringkasan',
@@ -946,6 +954,24 @@ TRANSLATIONS = {
         'step_1_title_header': 'LANGKAH 1',
         'summary': 'Ringkasan',
         'detailed_analysis': 'Analisis Terperinci',
+
+        # Economic analysis section headers (Malaysian)
+        'economic_analysis_tables': 'Jadual Analisis Ekonomi',
+        'economic_forecast_tables': 'Jadual Ramalan Ekonomi',
+        'economic_analysis_tables_formatted': 'Jadual Analisis Ekonomi (Terformat)',
+        'economic_impact_analysis': 'Analisis Kesan Ekonomi',
+        'complete_analysis_tables': 'Jadual Analisis Lengkap',
+        'database_references': 'Rujukan Pangkalan Data',
+
+        # Additional step section headers
+        'nutrient_level_comparisons': 'Perbandingan Tahap Nutrien',
+        'visualizations': 'Visualisasi',
+        'recommendations': 'Cadangan',
+        'identified_issues': 'Isu yang Dikenal Pasti',
+        'economic_forecast': 'Ramalan Ekonomi',
+        'investment_scenarios': 'Senario Pelaburan',
+        'key_assumptions': 'Andaian Utama',
+        'raw_soil_sample_data': 'Data Sampel Tanah Mentah',
         'detailed_interpretations': 'Tafsiran Terperinci',
         'data_tables': 'Jadual Data',
         'step_title_prefix': 'Langkah',

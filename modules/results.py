@@ -6190,7 +6190,7 @@ def display_references_section(results_data):
         st.markdown("")
         
         if all_references['database']:
-            st.markdown("### 📖 Database References")
+            st.markdown(f"### 📖 {t('database_references', 'Database References')}")
             for i, ref in enumerate(all_references['database'], 1):
                 st.markdown(f"**{i}.** {ref}")
             st.markdown("")
@@ -6943,7 +6943,7 @@ def display_enhanced_step_result(step_result, step_number):
     # and rely only on the formatted economic forecast tables
     if step_num != 5:
         if 'detailed_analysis' in analysis_data and analysis_data['detailed_analysis']:
-            st.markdown("### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
+            st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
             detailed_text = analysis_data['detailed_analysis']
 
             # Ensure detailed_text is a string
@@ -7332,7 +7332,7 @@ def display_step1_data_analysis(analysis_data):
     
     # Display nutrient comparisons
     if 'nutrient_comparisons' in analysis_data:
-        st.markdown("#### Nutrient Level Comparisons")
+        st.markdown(f"#### {t('nutrient_level_comparisons', 'Nutrient Level Comparisons')}")
         for comparison in analysis_data['nutrient_comparisons']:
             st.markdown(f"**{comparison.get('parameter', 'Unknown')}:**")
             st.markdown(f"- Current: {comparison.get('current', 'N/A')}")
@@ -7342,7 +7342,7 @@ def display_step1_data_analysis(analysis_data):
     
     # Display visualizations
     if 'visualizations' in analysis_data and analysis_data['visualizations']:
-        st.markdown("#### Visualizations")
+        st.markdown(f"#### {t('visualizations', 'Visualizations')}")
         try:
             visualizations = analysis_data['visualizations']
             if isinstance(visualizations, list):
@@ -7383,7 +7383,7 @@ def display_step3_solution_recommendations(analysis_data):
 
     # Display recommendations
     if 'recommendations' in analysis_data and analysis_data['recommendations']:
-        st.markdown("#### Recommendations")
+        st.markdown(f"#### {t('recommendations', 'Recommendations')}")
         recommendations = analysis_data['recommendations']
         if isinstance(recommendations, list):
             for i, rec in enumerate(recommendations, 1):
@@ -7459,7 +7459,7 @@ def display_step2_issue_diagnosis(analysis_data):
 
     # Display identified issues
     if 'identified_issues' in analysis_data and analysis_data['identified_issues']:
-        st.markdown("#### 🚨 Identified Issues")
+        st.markdown(f"#### 🚨 {t('identified_issues', 'Identified Issues')}")
         issues = analysis_data['identified_issues']
         if isinstance(issues, list):
             for i, issue in enumerate(issues, 1):
@@ -7543,7 +7543,7 @@ def display_step5_economic_forecast(analysis_data):
         # ALWAYS display ALL available tables first (guaranteed display)
         all_tables_displayed = 0
         if 'tables' in analysis_data and analysis_data['tables']:
-            st.markdown("### 📊 **Economic Analysis Tables**")
+            st.markdown(f"### 📊 **{t('economic_analysis_tables', 'Economic Analysis Tables')}**")
             tables = analysis_data['tables']
             if isinstance(tables, list) and tables:
                 for i, table_data in enumerate(tables, 1):
@@ -7555,7 +7555,7 @@ def display_step5_economic_forecast(analysis_data):
         if 'result' in analysis_data and isinstance(analysis_data['result'], dict):
             if 'tables' in analysis_data['result'] and analysis_data['result']['tables']:
                 if all_tables_displayed == 0:
-                    st.markdown("### 📊 **Economic Analysis Tables**")
+                    st.markdown(f"### 📊 **{t('economic_analysis_tables', 'Economic Analysis Tables')}**")
                 result_tables = analysis_data['result']['tables']
                 if isinstance(result_tables, list) and result_tables:
                     for i, table_data in enumerate(result_tables, all_tables_displayed + 1):
@@ -7565,7 +7565,7 @@ def display_step5_economic_forecast(analysis_data):
 
         # If no tables found yet, try economic forecast scenarios as main tables
         if all_tables_displayed == 0 and economic_forecast and economic_forecast.get('scenarios'):
-            st.markdown("### 📊 **Economic Analysis Tables**")
+            st.markdown(f"### 📊 **{t('economic_analysis_tables', 'Economic Analysis Tables')}**")
             scenarios = economic_forecast['scenarios']
             for scenario_name, scenario_data in scenarios.items():
                 if isinstance(scenario_data, dict) and 'yearly_data' in scenario_data:
@@ -7577,7 +7577,7 @@ def display_step5_economic_forecast(analysis_data):
 
         # As final fallback, ensure we display economic forecast tables
         if all_tables_displayed == 0 and economic_forecast and economic_forecast.get('scenarios'):
-            st.markdown("### 📊 **Economic Forecast Tables**")
+            st.markdown(f"### 📊 **{t('economic_forecast_tables', 'Economic Forecast Tables')}**")
             scenarios = economic_forecast['scenarios']
             forecast_tables_shown = 0
 
@@ -7597,12 +7597,12 @@ def display_step5_economic_forecast(analysis_data):
         # As a last resort, try formatted analysis
         if all_tables_displayed == 0:
             if 'formatted_analysis' in analysis_data and analysis_data['formatted_analysis']:
-                st.markdown("### 📊 **Economic Analysis Tables (Formatted)**")
+                st.markdown(f"### 📊 **{t('economic_analysis_tables_formatted', 'Economic Analysis Tables (Formatted)')}**")
                 st.info("📋 Displaying formatted economic analysis from analysis text.")
                 display_formatted_economic_tables(analysis_data['formatted_analysis'])
             else:
                 # Generate a basic economic summary if no data is available
-                st.markdown("### 📊 **Economic Impact Analysis**")
+                st.markdown(f"### 📊 **{t('economic_impact_analysis', 'Economic Impact Analysis')}**")
                 st.info("💡 **Economic Analysis Summary:** The analysis indicates potential for yield improvements through proper nutrient management. Complete soil and leaf analysis in previous steps to generate detailed economic projections.")
 
                 # Show basic economic insights
@@ -7622,7 +7622,7 @@ def display_step5_economic_forecast(analysis_data):
         # CRITICAL: Ensure ALL tables are displayed (including non-economic ones)
         # This prevents tables from being missed in Step 5 display
         if all_tables_displayed > 0:
-            st.markdown("### 📋 **Complete Analysis Tables**")
+            st.markdown(f"### 📋 **{t('complete_analysis_tables', 'Complete Analysis Tables')}**")
             # Force display of any additional tables that might exist
             if 'tables' in analysis_data and isinstance(analysis_data['tables'], list):
                 for i, table_data in enumerate(analysis_data['tables'], 1):
@@ -8675,9 +8675,9 @@ def parse_and_display_json_analysis(json_text):
                     return
                 except json.JSONDecodeError:
                     pass
-        
+
         # Fallback to regular text display
-        st.markdown("### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
+        st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
         # Filter out known sections from raw text display
         filtered_text = filter_known_sections_from_text(json_text)
 
@@ -8693,7 +8693,7 @@ def parse_and_display_json_analysis(json_text):
     except Exception as e:
         logger.error(f"Error parsing JSON analysis: {e}")
         # Fallback to regular text display
-        st.markdown("### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
+        st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
         # Filter out known sections from raw text display
         filtered_text = filter_known_sections_from_text(json_text)
 
@@ -8709,7 +8709,7 @@ def parse_and_display_json_analysis(json_text):
 def display_structured_analysis(data):
     """Display structured analysis data"""
     if not isinstance(data, dict):
-        st.markdown("### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
+        st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
         # Filter out known sections from raw text display
         text_data = str(data)
 
@@ -8744,7 +8744,7 @@ def display_structured_analysis(data):
     
     # Display recommendations if available
     if 'recommendations' in data:
-        st.markdown("### 💡 Recommendations")
+        st.markdown(f"### 💡 {t('recommendations', 'Recommendations')}")
         recommendations = data['recommendations']
         if isinstance(recommendations, list) and recommendations:
             for i, rec in enumerate(recommendations, 1):
@@ -8782,7 +8782,7 @@ def display_economic_forecast(economic_forecast):
     if not economic_forecast:
         return
     
-    st.markdown("### 💰 Economic Forecast")
+    st.markdown(f"### 💰 {t('economic_forecast', 'Economic Forecast')}")
     
     if isinstance(economic_forecast, dict):
         # Hard-remove scenarios/assumptions even if passed in here
@@ -9077,7 +9077,7 @@ def display_references_section(results_data):
     
     # Display database references
     if all_references['database_references']:
-        st.markdown("### 🗄️ Database References")
+        st.markdown(f"### 🗄️ {t('database_references', 'Database References')}")
         st.markdown("References from our internal research database:")
         
         for i, ref in enumerate(all_references['database_references'], 1):
@@ -9313,7 +9313,7 @@ def display_enhanced_step_result(step_result, step_number):
         
     # 3. DETAILED ANALYSIS SECTION - Show if available (with filtering for all steps)
     if 'detailed_analysis' in analysis_data and analysis_data['detailed_analysis']:
-        st.markdown("### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
+        st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
         detailed_text = analysis_data['detailed_analysis']
         
         # Ensure detailed_text is a string
@@ -9378,7 +9378,7 @@ def display_enhanced_step_result(step_result, step_number):
     if 'scenarios' in analysis_data and analysis_data['scenarios']:
         scenarios = analysis_data['scenarios']
 
-        st.markdown("### 📈 Investment Scenarios")
+        st.markdown(f"### 📈 {t('investment_scenarios', 'Investment Scenarios')}")
 
         # Handle different formats of scenarios data
         if isinstance(scenarios, dict):
@@ -9414,7 +9414,7 @@ def display_enhanced_step_result(step_result, step_number):
     if 'assumptions' in analysis_data and analysis_data['assumptions']:
         assumptions = analysis_data['assumptions']
 
-        st.markdown("### 📋 Key Assumptions")
+        st.markdown(f"### 📋 {t('key_assumptions', 'Key Assumptions')}")
 
         # Handle different formats of assumptions data
         if isinstance(assumptions, dict):
@@ -11969,7 +11969,7 @@ def display_step1_data_analysis(analysis_data):
     
     # 3. DETAILED ANALYSIS SECTION
     if 'detailed_analysis' in analysis_data and analysis_data['detailed_analysis']:
-        st.markdown("#### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
+        st.markdown(f"#### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
         detailed_text = analysis_data['detailed_analysis']
         
         if isinstance(detailed_text, dict):
@@ -13262,7 +13262,7 @@ def display_raw_sample_data_tables(analysis_data):
         # Display soil sample data table
         if soil_params and 'all_samples' in soil_params and soil_params['all_samples']:
             st.markdown("---")
-            st.markdown("### 🌱 Raw Soil Sample Data")
+            st.markdown(f"### 🌱 {t('raw_soil_sample_data', 'Raw Soil Sample Data')}")
 
             soil_samples = soil_params['all_samples']
             if soil_samples:
@@ -14720,7 +14720,7 @@ def display_structured_solutions(detailed_text):
     except Exception as e:
         logger.error(f"Error parsing structured solutions: {e}")
         # Fallback to regular text display with better formatting
-        st.markdown("### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
+        st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
         # Filter out known sections from raw text display
         filtered_text = filter_known_sections_from_text(detailed_text)
         st.markdown(
@@ -14818,7 +14818,7 @@ def parse_and_display_json_analysis(json_text):
     except Exception as e:
         logger.error(f"Error parsing JSON analysis: {e}")
         # Fallback to regular text display
-        st.markdown("### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
+        st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
         st.markdown(
             f'<div style="margin-bottom: 18px; padding: 15px; background: linear-gradient(135deg, #ffffff, #f8f9fa); border: 1px solid #e9ecef; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">'
             f'<p style="margin: 0; line-height: 1.8; font-size: 16px; color: #2c3e50;">Analysis content available but formatting needs improvement.</p>'
@@ -15509,7 +15509,7 @@ def display_step3_solution_recommendations(analysis_data):
                     clean_content = sanitize_persona_and_enforce_article(formatted_content)
                     # Normalize markdown formatting
                     normalized_content = normalize_markdown_block_for_step3(clean_content)
-                    st.markdown("### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
+                    st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
                     st.markdown(normalized_content)
                     st.markdown("")
                     return  # Exit early to avoid showing duplicate content
@@ -15529,7 +15529,7 @@ def display_step3_solution_recommendations(analysis_data):
             else:
                 # Improve formatting: promote headings, lists, and bold items to readable markdown
                 detailed_text = normalize_markdown_block_for_step3(detailed_text)
-                st.markdown("### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
+                st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
                 paragraphs = detailed_text.split('\n\n') if '\n\n' in detailed_text else [detailed_text]
                 for paragraph in paragraphs:
                     if paragraph.strip():
@@ -15933,7 +15933,7 @@ def display_regenerative_agriculture_content(analysis_data):
 
                     # Only display if content remains after filtering
                     if detailed_text.strip():
-                        st.markdown("#### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
+                        st.markdown(f"#### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
                         st.markdown(
                             f'<div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #ffffff, #f8f9fa); border: 1px solid #e9ecef; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">'
                             f'<div style="color: #2c3e50; line-height: 1.7;">{detailed_text}</div>'
@@ -15987,7 +15987,7 @@ def display_regenerative_agriculture_content(analysis_data):
         # Use markdown normalization for better formatting
         normalized_content = normalize_markdown_block_for_step3(processed_text)
 
-        st.markdown("#### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
+        st.markdown(f"#### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
         
         # Check if content contains processed HTML tables
         if '<table' in normalized_content and '</table>' in normalized_content:
