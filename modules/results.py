@@ -6238,7 +6238,7 @@ def display_step_by_step_results(results_data):
     # Remove quota exceeded banner to allow seamless analysis up to daily limit
     
     # Display header with enhanced step information
-    st.markdown(f"## 🔬 **Step-by-Step Analysis** ({total_steps} Steps)")
+    st.markdown(f"## 🔬 **{t('step_by_step_analysis', 'Step-by-Step Analysis')}** ({total_steps} {t('steps', 'Steps')})")
     st.markdown("---")
     
     if total_steps > 0:
@@ -8731,7 +8731,7 @@ def display_structured_analysis(data):
     
     # Display key findings if available
     if 'key_findings' in data:
-        st.markdown("### 🎯 Key Findings")
+        st.markdown(f"### 🎯 {t('key_findings', 'Key Findings')}")
         findings = data['key_findings']
         if isinstance(findings, list) and findings:
             for i, finding in enumerate(findings, 1):
@@ -9513,7 +9513,7 @@ def display_enhanced_step_result(step_result, step_number):
             analysis_data['specific_recommendations'] = _normalize_recommendations_section(analysis_data['specific_recommendations'])
         except Exception:
             pass
-        st.markdown("### ✅ Specific Recommendations")
+        st.markdown(f"### ✅ {t('specific_recommendations', 'Specific Recommendations')}")
         ctx = st.session_state.get("runtime_context", {})
         mon = ctx.get('month')
         for idx, rec in enumerate(analysis_data['specific_recommendations'], 1):
@@ -9627,7 +9627,7 @@ def display_enhanced_step_result(step_result, step_number):
     
     has_key_findings = bool(analysis_data.get('key_findings'))
     if has_key_findings or other_fields:
-        st.markdown("### 📊 Additional Analysis Results")
+        st.markdown(f"### 📊 {t('additional_analysis_results', 'Additional Analysis Results')}")
 
     # KEY FINDINGS - render nicely under Analysis Results (for all steps except 3)
     if has_key_findings and step_number != 3:
@@ -9656,9 +9656,9 @@ def display_enhanced_step_result(step_result, step_number):
 
         if normalized_kf:
             st.markdown(
-                """
+                f"""
 <div style=\"background:#ffffff;border:1px solid #e9ecef;border-radius:10px;padding:14px;margin-bottom:12px;\">
-  <div style=\"font-weight:700;margin-bottom:8px;\">🚩 Key Findings</div>
+  <div style=\"font-weight:700;margin-bottom:8px;\">🚩 {t('key_findings', 'Key Findings')}</div>
   <ol style=\"margin:0 0 0 18px;padding:0;color:#2c3e50;line-height:1.6;\">
                 """,
                 unsafe_allow_html=True
@@ -12598,7 +12598,7 @@ def create_soil_vs_mpob_visualization_with_robust_mapping(analysis_data):
         return {
             'type': 'actual_vs_optimal_bar',
             'title': f"🌱 {t('soil_nutrient_status_title', 'Soil Nutrient Status (Average vs. MPOB Standard)')}",
-            'subtitle': 'REAL values from your current data - Observed (Average) vs Recommended (MPOB)',
+            'subtitle': t('real_values_observed_vs_recommended', 'REAL values from your current data - Observed (Average) vs Recommended (MPOB)'),
             'data': {
                 'categories': categories,
                 'series': [
@@ -12731,7 +12731,7 @@ def create_leaf_vs_mpob_visualization_with_robust_mapping(analysis_data):
         return {
             'type': 'actual_vs_optimal_bar',
             'title': f"🍃 {t('leaf_nutrient_status_title', 'Leaf Nutrient Status (Average vs. MPOB Standard)')}",
-            'subtitle': 'REAL values from your current data - Observed (Average) vs Recommended (MPOB)',
+            'subtitle': t('real_values_observed_vs_recommended', 'REAL values from your current data - Observed (Average) vs Recommended (MPOB)'),
             'data': {
                 'categories': categories,
                 'series': [
@@ -13367,12 +13367,12 @@ def display_comprehensive_data_tables(soil_params, leaf_params):
     """Display comprehensive data tables with averages and statistics - BULLETPROOF VERSION"""
     try:
         st.markdown("---")
-        st.markdown("## 📊 Comprehensive Data Analysis Tables")
+        st.markdown(f"## 📊 {t('comprehensive_data_analysis_tables', 'Comprehensive Data Analysis Tables')}")
         
         # Display soil data table - BULLETPROOF VERSION
         if soil_params and 'parameter_statistics' in soil_params:
             # Display averages prominently - extract from parameter_statistics
-            st.markdown("### 🌱 Soil Parameter Averages")
+            st.markdown(f"### 🌱 {t('soil_parameter_averages', 'Soil Parameter Averages')}")
             avg_data = []
             try:
                 # Extract averages from parameter_statistics structure
@@ -13416,7 +13416,7 @@ def display_comprehensive_data_tables(soil_params, leaf_params):
         # Display all individual soil sample values - BULLETPROOF VERSION
         soil_samples_key = 'all_samples' if 'all_samples' in soil_params else 'samples'
         if soil_samples_key in soil_params and soil_params[soil_samples_key]:
-            st.markdown("#### 🌱 All Soil Sample Values")
+            st.markdown(f"#### 🌱 {t('all_soil_sample_values', 'All Soil Sample Values')}")
             soil_samples_data = []
             try:
                 for sample in soil_params[soil_samples_key]:
@@ -13462,7 +13462,7 @@ def display_comprehensive_data_tables(soil_params, leaf_params):
         
         # Display leaf data table - BULLETPROOF VERSION
         if leaf_params and 'parameter_statistics' in leaf_params:
-            st.markdown("### 🍃 Leaf Analysis Summary")
+            st.markdown(f"### 🍃 {t('leaf_analysis_summary', 'Leaf Analysis Summary')}")
             
             # Create leaf summary table with enhanced details
             leaf_data = []
@@ -13566,7 +13566,7 @@ def display_comprehensive_data_tables(soil_params, leaf_params):
             # Display all individual leaf sample values - BULLETPROOF VERSION
             leaf_samples_key = 'all_samples' if 'all_samples' in leaf_params else 'samples'
             if leaf_samples_key in leaf_params and leaf_params[leaf_samples_key]:
-                st.markdown("#### 🍃 All Leaf Sample Values")
+                st.markdown(f"#### 🍃 {t('all_leaf_sample_values', 'All Leaf Sample Values')}")
                 leaf_samples_data = []
                 try:
                     for sample in leaf_params[leaf_samples_key]:
@@ -13612,7 +13612,7 @@ def display_comprehensive_data_tables(soil_params, leaf_params):
         
         # Display combined summary - BULLETPROOF VERSION
         if soil_params and leaf_params:
-            st.markdown("### 📈 Combined Analysis Summary")
+            st.markdown(f"### 📈 {t('combined_analysis_summary', 'Combined Analysis Summary')}")
             
             try:
                 # Get summary information
@@ -14263,7 +14263,7 @@ def display_overall_results_summary_table(analysis_data):
             rows.append({'Category': 'Leaf', 'Parameter': 'K (%)', 'Average': f"{find_avg(l, ['K (%)','Leaf K (%)','K']):.2f}" if find_avg(l, ['K (%)','Leaf K (%)','K']) is not None else 'N.D.'})
             rows.append({'Category': 'Leaf', 'Parameter': 'Cu (mg/kg)', 'Average': f"{find_avg(l, ['Cu (mg/kg)','Leaf Cu (mg/kg)','Cu']):.2f}" if find_avg(l, ['Cu (mg/kg)','Leaf Cu (mg/kg)','Cu']) is not None else 'N.D.'})
 
-        st.markdown("#### Your Soil and Leaf Test Results Summary")
+        st.markdown(f"#### {t('your_soil_leaf_test_results', 'Your Soil and Leaf Test Results')} {t('summary_label', 'Summary')}")
         if rows:
             df = pd.DataFrame(rows)
             apply_table_styling()
@@ -14759,7 +14759,7 @@ def parse_and_display_json_analysis(json_text):
                 
                 # Display key findings
                 if findings and len(findings) > 0:
-                    st.markdown("### 🎯 Key Findings")
+                    st.markdown(f"### 🎯 {t('key_findings', 'Key Findings')}")
                     for i, finding in enumerate(findings, 1):
                         if finding and len(str(finding)) > 10:  # Only show meaningful findings
                             st.markdown(
@@ -15624,7 +15624,7 @@ def display_step3_solution_recommendations(analysis_data):
 
     # 3b. SPECIFIC RECOMMENDATIONS - render as cards with dynamic month/weather adjustments
     if analysis_data.get('specific_recommendations'):
-        st.markdown("### ✅ Specific Recommendations")
+        st.markdown(f"### ✅ {t('specific_recommendations', 'Specific Recommendations')}")
         ctx = st.session_state.get("runtime_context", {})
         mon = ctx.get('month')
         season = ctx.get('season','')
@@ -15686,7 +15686,7 @@ def display_step3_solution_recommendations(analysis_data):
     
     has_key_findings = bool(analysis_data.get('key_findings'))
     if has_key_findings or other_fields:
-        st.markdown("### 📊 Analysis Results")
+        st.markdown(f"### 📊 {t('analysis_results', 'Analysis Results')}")
 
     # 4a. KEY FINDINGS - render nicely under Analysis Results
     if has_key_findings:
@@ -15708,9 +15708,9 @@ def display_step3_solution_recommendations(analysis_data):
 
         if normalized_kf:
             st.markdown(
-                """
+                f"""
 <div style=\"background:#ffffff;border:1px solid #e9ecef;border-radius:10px;padding:14px;margin-bottom:12px;\">
-  <div style=\"font-weight:700;margin-bottom:8px;\">🚩 Key Findings</div>
+  <div style=\"font-weight:700;margin-bottom:8px;\">🚩 {t('key_findings', 'Key Findings')}</div>
   <ol style=\"margin:0 0 0 18px;padding:0;color:#2c3e50;line-height:1.6;\">
                 """,
                 unsafe_allow_html=True
