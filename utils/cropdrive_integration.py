@@ -1,6 +1,15 @@
 """
 CropDrive Website Integration Module
 Handles communication with parent window when embedded in CropDrive website
+
+This module implements the AI Assistant Integration Guide specification for
+sending ANALYSIS_COMPLETE messages to the parent window. The message format
+matches the exact specification in the integration guide.
+
+Key Functions:
+- send_analysis_complete(): Sends analysis completion message (matches guide format)
+- send_error_message(): Sends error message when analysis fails
+- initialize_integration(): Initializes integration and gets user config
 """
 
 import streamlit as st
@@ -204,19 +213,18 @@ def inject_parent_communication():
         }
 
         // Helper function to send ANALYSIS_COMPLETE message
+        // Matches the exact format specified in the AI Assistant Integration Guide
         function sendAnalysisComplete(analysisResults) {
             console.log('📊 Sending ANALYSIS_COMPLETE message:', analysisResults);
 
             const message = {
-                type: 'ANALYSIS_COMPLETE',
-                userId: window.userConfig?.userId, // Must be included
-                title: `Analysis Report - ${new Date().toLocaleDateString()}`,
-                analysisType: analysisResults.analysisType || 'soil', // 'soil', 'leaf', or 'both'
-                summary: analysisResults.summary || '',
-                recommendationsCount: analysisResults.recommendationsCount || 0,
-                fileUrl: analysisResults.fileUrl || null,
-                analysisData: analysisResults.analysisData || null,
-                timestamp: new Date().toISOString()
+                type: 'ANALYSIS_COMPLETE',  // MUST be exactly this string
+                title: analysisResults.title || `Analysis Report - ${new Date().toISOString().split('T')[0]}`,
+                analysisType: analysisResults.analysisType || 'soil',  // 'soil' or 'leaf'
+                summary: analysisResults.summary || '',  // Required: Brief summary of the analysis
+                recommendationsCount: analysisResults.recommendationsCount || 0,  // Required: Number of recommendations
+                fileUrl: analysisResults.fileUrl || null,  // Optional: URL to the uploaded file
+                analysisData: analysisResults.analysisData || null  // Optional: Full analysis data object
             };
 
             // CRITICAL: Use '*' as target origin
@@ -458,37 +466,26 @@ def send_analysis_complete(
     CRITICAL: Send analysis completion message to parent window (CropDrive website)
     This message MUST be sent after every analysis completes to save results to Firestore.
     
+    This function implements the exact message format specified in the AI Assistant Integration Guide.
+    The website automatically uses the authenticated user's ID, so userId is NOT included in the message.
+    
     Args:
-        title: Report title (required)
+        title: Report title (required) - e.g., "Analysis Report - 2024-01-15"
         analysis_type: 'soil' or 'leaf' (required)
-        summary: Analysis summary text (optional)
-        recommendations_count: Number of recommendations (optional)
-        file_url: URL to analysis file/image (optional)
-        analysis_data: Additional analysis data dict (optional)
+        summary: Analysis summary text (required) - Brief summary of the analysis
+        recommendations_count: Number of recommendations (required) - Number of recommendations generated
+        file_url: URL to the uploaded file (optional)
+        analysis_data: Full analysis data object (optional) - Can contain any structure
     """
     from datetime import datetime
     
     try:
-        # Include user ID in the analysis complete message
+        # Get user ID for logging purposes only (not sent in message per guide specification)
         user_id = get_user_id()
         user_email = get_user_email()
         
         # Log user info for debugging
         logger.info(f"🔍 DEBUG send_analysis_complete - user_id: {user_id}, user_email: {user_email}")
-        
-        # Warn if user_id is missing (critical for parent page to save analysis)
-        if not user_id:
-            logger.warning("⚠️ WARNING: user_id is empty when sending ANALYSIS_COMPLETE message!")
-            logger.warning(f"⚠️ Session state user_id: {st.session_state.get('user_id', 'NOT SET')}")
-            logger.warning(f"⚠️ Session state user_config: {st.session_state.get('user_config', {})}")
-            # Try to get from URL params as fallback
-            try:
-                query_params = st.query_params
-                user_id = query_params.get('userId', '')
-                if user_id:
-                    logger.info(f"✅ Retrieved user_id from URL params: {user_id}")
-            except Exception as e:
-                logger.error(f"❌ Failed to get user_id from URL params: {e}")
         
         # Ensure analysis_data includes timestamp if not already present
         if analysis_data is None:
@@ -498,32 +495,21 @@ def send_analysis_complete(
         if 'timestamp' not in analysis_data:
             analysis_data['timestamp'] = datetime.now().isoformat()
         
-        # Ensure userId is in analysis_data as well (for redundancy)
-        if 'userId' not in analysis_data:
-            analysis_data['userId'] = user_id
-        
-        # CRITICAL: Build message with exact format expected by parent page
+        # CRITICAL: Build message with exact format specified in the integration guide
+        # NOTE: userId is NOT included per guide specification - website uses authenticated user's ID
         message = {
             'type': 'ANALYSIS_COMPLETE',  # MUST be exactly this string
-            'userId': user_id or '',  # CRITICAL: Must match current authenticated user
             'title': title or f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
-            'analysisType': analysis_type or 'soil',  # 'soil', 'leaf', or 'both'
-            'summary': summary or '',
-            'recommendationsCount': int(recommendations_count) if recommendations_count else 0,
-            'fileUrl': file_url or None,
-            'analysisData': analysis_data or {},
-            'timestamp': datetime.now().isoformat()
+            'analysisType': analysis_type or 'soil',  # 'soil' or 'leaf'
+            'summary': summary or '',  # Required: Brief summary of the analysis
+            'recommendationsCount': int(recommendations_count) if recommendations_count else 0,  # Required: Number of recommendations
+            'fileUrl': file_url or None,  # Optional: URL to the uploaded file
+            'analysisData': analysis_data or {}  # Optional: Full analysis data object
         }
 
-        # Store as backup in case message fails
-        try:
-            sessionStorage.setItem('analysis_results', json.dumps(message))
-            logger.info('💾 Stored analysis results in sessionStorage')
-        except Exception as e:
-            logger.warning(f'⚠️ Could not store in sessionStorage: {e}')
-        
         # Log the complete message for debugging
-        logger.info(f"📤 Sending ANALYSIS_COMPLETE message: userId={user_id}, title={title}, type={analysis_type}")
+        # Note: sessionStorage is handled in JavaScript code below
+        logger.info(f"📤 Sending ANALYSIS_COMPLETE message: title={title}, type={analysis_type}")
         logger.info(f"📤 Message payload: {json.dumps(message, indent=2)}")
         
         # CRITICAL: Use '*' as target origin to avoid origin mismatch errors
@@ -569,7 +555,7 @@ def send_analysis_complete(
         html(send_js, height=0)
         
         # Also log in Python
-        logger.info(f"✅ ANALYSIS_COMPLETE message HTML injected for user_id: {user_id}")
+        logger.info(f"✅ ANALYSIS_COMPLETE message HTML injected")
         
         # Show success message to user
         st.success("✅ Analysis completed! Results are being saved...")
@@ -584,14 +570,12 @@ def send_analysis_complete(
         try:
             minimal_message = {
                 'type': 'ANALYSIS_COMPLETE',
-                'userId': get_user_id() or '',
-                'title': title or 'Analysis Report',
+                'title': title or f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
                 'analysisType': analysis_type or 'soil',
-                'summary': summary or '',
+                'summary': summary or 'Analysis completed successfully.',
                 'recommendationsCount': 0,
                 'fileUrl': None,
-                'analysisData': {},
-                'timestamp': datetime.now().isoformat()
+                'analysisData': {}
             }
             
             fallback_js = f"""
@@ -819,17 +803,47 @@ def send_language_change(new_language: str):
 # STEP 5: Additional Message Types
 # ============================================================================
 
-def send_error_message(error_message: str) -> None:
+def send_error_message(error_message: str, details: str = None) -> None:
     """
-    Send error status message to parent window
+    Send error message to parent window when analysis fails.
+    Matches the format specified in the AI Assistant Integration Guide.
 
     Args:
-        error_message: Error message to display
+        error_message: Error message to display (required)
+        details: Additional error details (optional)
     """
-    send_script_run_state_changed(
-        script_run_state='error',
-        message=f"Error: {error_message}"
-    )
+    from streamlit.components.v1 import html
+    import json
+    
+    error_data = {
+        'type': 'ANALYSIS_ERROR',
+        'error': error_message,
+    }
+    
+    if details:
+        error_data['details'] = details
+    
+    send_js = f"""
+    <script>
+    (function() {{
+        try {{
+            const message = {json.dumps(error_data)};
+            console.error('❌ Sending ANALYSIS_ERROR message:', message);
+            
+            if (window.parent && window.parent !== window) {{
+                window.parent.postMessage(message, '*');
+                console.log('✅ ANALYSIS_ERROR message sent successfully');
+            }} else {{
+                console.error('❌ Cannot send message: not in iframe');
+            }}
+        }} catch (error) {{
+            console.error('❌ Error sending ANALYSIS_ERROR:', error);
+        }}
+    }})();
+    </script>
+    """
+    
+    html(send_js, height=0)
 
 def send_progress_update(current_step: int, total_steps: int, status_message: str = None) -> None:
     """
