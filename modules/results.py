@@ -1987,10 +1987,43 @@ def send_analysis_complete(analysis_results):
     and upload counts are updated.
     
     This function matches the exact specification required by the website.
+    It extracts parameters from the analysis_results dict and calls the 
+    integration function with the proper format.
     
     Args:
         analysis_results: The analysis results dict with all analysis data
     """
+    # Try to use the integration function first (preferred method)
+    try:
+        from utils.cropdrive_integration import send_analysis_complete as send_integration_complete
+        from datetime import datetime
+        
+        # Extract parameters from analysis_results dict
+        title = analysis_results.get('title', f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}') if isinstance(analysis_results, dict) else f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}'
+        analysis_type = analysis_results.get('type', 'soil') if isinstance(analysis_results, dict) else 'soil'
+        summary = analysis_results.get('summary', '') if isinstance(analysis_results, dict) else ''
+        recommendations_count = analysis_results.get('recommendations_count', 0) if isinstance(analysis_results, dict) else 0
+        file_url = analysis_results.get('file_url') if isinstance(analysis_results, dict) else None
+        analysis_data = analysis_results.get('data', {}) if isinstance(analysis_results, dict) else {}
+        
+        # Call the integration function with proper parameters
+        send_integration_complete(
+            title=title,
+            analysis_type=analysis_type,
+            summary=summary,
+            recommendations_count=recommendations_count,
+            file_url=file_url,
+            analysis_data=analysis_data
+        )
+        logger.info(f"✅ ANALYSIS_COMPLETE sent via integration function")
+        return
+    except ImportError:
+        logger.warning("⚠️ Integration function not available, using local implementation")
+    except Exception as e:
+        logger.error(f"❌ Error calling integration function: {e}")
+        logger.info("🔄 Falling back to local implementation")
+    
+    # Fallback to local implementation
     from streamlit.components.v1 import html
     import json
     
@@ -2126,19 +2159,19 @@ def send_analysis_complete(analysis_results):
                 'firestoreSaved': bool(analysis_data_simple.get('firestoreSaved', False))
             }
         
+        # CRITICAL: Build message with exact format specified in the integration guide
+        # NOTE: userId is NOT included per guide specification - website uses authenticated user's ID
         message = {
             'type': 'ANALYSIS_COMPLETE',  # MUST be exactly this string
-            'userId': user_id,  # Already converted to string above
             'title': title,
             'analysisType': str(analysis_type),
             'summary': summary_text,
             'recommendationsCount': int(recommendations_count) if recommendations_count else 0,
             'fileUrl': file_url,
-            'analysisData': analysis_data_simple,  # Simplified to avoid serialization issues
-            'timestamp': datetime.now().isoformat(),
+            'analysisData': analysis_data_simple  # Simplified to avoid serialization issues
         }
         
-        logger.info(f"📤 Sending ANALYSIS_COMPLETE message: userId={user_id}, type={analysis_type}")
+        logger.info(f"📤 Sending ANALYSIS_COMPLETE message: type={analysis_type}, title={title}")
         logger.info(f"📤 Message keys: {list(message.keys())}")
         
         # Ensure all message values are JSON-serializable
@@ -2171,7 +2204,6 @@ def send_analysis_complete(analysis_results):
             # Create a simplified message with only essential fields
             simplified_message = {
                 'type': 'ANALYSIS_COMPLETE',
-                'userId': str(user_id) if user_id else '',
                 'title': str(message.get('title', f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}')),
                 'analysisType': str(analysis_type),
                 'summary': str(summary or "Analysis completed successfully.")[:500],  # Limit length
@@ -2179,8 +2211,7 @@ def send_analysis_complete(analysis_results):
                 'fileUrl': None,
                 'analysisData': {
                     'resultId': str(analysis_results.get('data', {}).get('resultId')) if isinstance(analysis_results, dict) and isinstance(analysis_results.get('data'), dict) else None
-                },
-                'timestamp': datetime.now().isoformat(),
+                }
             }
             try:
                 message_json = json.dumps(simplified_message, default=str, ensure_ascii=False)
@@ -2190,12 +2221,12 @@ def send_analysis_complete(analysis_results):
                 # Last resort: absolute minimal message
                 minimal_json = json.dumps({
                     'type': 'ANALYSIS_COMPLETE',
-                    'userId': str(user_id) if user_id else '',
                     'title': f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
                     'analysisType': 'soil',
                     'summary': 'Analysis completed.',
                     'recommendationsCount': 0,
-                    'timestamp': datetime.now().isoformat()
+                    'fileUrl': None,
+                    'analysisData': {}
                 }, default=str)
                 message_json = minimal_json
         
@@ -2243,14 +2274,33 @@ def send_analysis_complete(analysis_results):
                 const message = {message_json};
                 console.log('📊 Sending ANALYSIS_COMPLETE message:', message);
                 console.log('📊 Message type:', message.type);
-                console.log('📊 Message userId:', message.userId);
                 console.log('📊 Message title:', message.title);
+                console.log('📊 Message analysisType:', message.analysisType);
+                console.log('📊 Message summary:', message.summary);
+                console.log('📊 Message recommendationsCount:', message.recommendationsCount);
                 
-                // Validate message has required fields
+                // Validate message has required fields per integration guide
                 if (!message.type || message.type !== 'ANALYSIS_COMPLETE') {{
                     console.error('❌ Invalid message type:', message.type);
                     return;
                 }}
+                if (!message.title) {{
+                    console.error('❌ Missing required field: title');
+                    return;
+                }}
+                if (!message.analysisType) {{
+                    console.error('❌ Missing required field: analysisType');
+                    return;
+                }}
+                if (message.summary === undefined) {{
+                    console.error('❌ Missing required field: summary');
+                    return;
+                }}
+                if (message.recommendationsCount === undefined) {{
+                    console.error('❌ Missing required field: recommendationsCount');
+                    return;
+                }}
+                console.log('✅ All required fields validated');
                 
                 // CRITICAL: Store in sessionStorage as backup (parent can read this)
                 try {{
@@ -2407,10 +2457,12 @@ def send_analysis_complete(analysis_results):
                 try {{
                     const minimalMsg = {{
                         type: 'ANALYSIS_COMPLETE',
-                        userId: message.userId || '',
                         title: message.title || 'Analysis Report',
                         analysisType: message.analysisType || 'soil',
-                        timestamp: new Date().toISOString()
+                        summary: message.summary || 'Analysis completed.',
+                        recommendationsCount: message.recommendationsCount || 0,
+                        fileUrl: message.fileUrl || null,
+                        analysisData: message.analysisData || {{}}
                     }};
                     if (window.parent && window.parent !== window) {{
                         window.parent.postMessage(minimalMsg, '*');
@@ -2424,7 +2476,7 @@ def send_analysis_complete(analysis_results):
         </script>
         """, height=1)
         
-        logger.info(f"✅ ANALYSIS_COMPLETE message sent: userId={user_id}, type={analysis_type}")
+        logger.info(f"✅ ANALYSIS_COMPLETE message sent: type={analysis_type}, title={title}")
         
     except Exception as e:
         logger.error(f"❌ CRITICAL ERROR in send_analysis_complete: {e}")
@@ -2451,14 +2503,12 @@ def send_analysis_complete(analysis_results):
             
             minimal_message = {
                 'type': 'ANALYSIS_COMPLETE',
-                'userId': str(fallback_user_id) if fallback_user_id else '',
                 'title': f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
                 'analysisType': 'soil',
                 'summary': 'Analysis completed successfully.',
                 'recommendationsCount': 0,
                 'fileUrl': None,
-                'analysisData': {},
-                'timestamp': datetime.now().isoformat(),
+                'analysisData': {}
             }
             
             # Ensure all values are JSON-serializable
@@ -14047,6 +14097,13 @@ def display_nutrient_status_tables(analysis_data):
         # Display Soil Nutrient Status table - BULLETPROOF VERSION
         if soil_params and 'parameter_statistics' in soil_params:
             st.markdown(f"### 🌱 {t('soil_nutrient_status_title', 'Soil Nutrient Status (Average vs. MPOB Standard)')}")
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #e3f2fd, #ffffff); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2196f3;">
+                <p style="margin: 0; color: #0d47a1; font-size: 14px;">
+                    <strong>Status Guide:</strong> Optimal = within MPOB range | Low/High = slightly outside range | Critical = significantly outside range | N.D. = Not Detected
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
             
             # Create soil data list with BULLETPROOF validation
             soil_data = []
@@ -14153,6 +14210,13 @@ def display_nutrient_status_tables(analysis_data):
         # Display Leaf Nutrient Status table - BULLETPROOF VERSION
         if leaf_params and 'parameter_statistics' in leaf_params:
             st.markdown(f"### 🍃 {t('leaf_nutrient_status_title', 'Leaf Nutrient Status (Average vs. MPOB Standard)')}")
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #f3e5f5, #ffffff); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #9c27b0;">
+                <p style="margin: 0; color: #4a148c; font-size: 14px;">
+                    <strong>Status Guide:</strong> Optimal = within MPOB range | Low/High = slightly outside range | Critical = significantly outside range | N.D. = Not Detected
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
             
             # Create leaf data list with BULLETPROOF validation
             leaf_data = []
@@ -14295,7 +14359,14 @@ def display_overall_results_summary_table(analysis_data):
             rows.append({'Category': 'Leaf', 'Parameter': 'K (%)', 'Average': f"{find_avg(l, ['K (%)','Leaf K (%)','K']):.2f}" if find_avg(l, ['K (%)','Leaf K (%)','K']) is not None else 'N.D.'})
             rows.append({'Category': 'Leaf', 'Parameter': 'Cu (mg/kg)', 'Average': f"{find_avg(l, ['Cu (mg/kg)','Leaf Cu (mg/kg)','Cu']):.2f}" if find_avg(l, ['Cu (mg/kg)','Leaf Cu (mg/kg)','Cu']) is not None else 'N.D.'})
 
-        st.markdown(f"#### {t('your_soil_leaf_test_results', 'Your Soil and Leaf Test Results')} {t('summary_label', 'Summary')}")
+        st.markdown(f"#### 📋 {t('your_soil_leaf_test_results', 'Your Soil and Leaf Test Results')} {t('summary_label', 'Summary')}")
+        st.markdown("""
+        <div style="background: linear-gradient(135deg, #e8f5e8, #ffffff); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #28a745;">
+            <p style="margin: 0; color: #155724; font-size: 14px;">
+                <strong>Summary:</strong> This table shows the average values from all samples collected for key soil and leaf parameters.
+            </p>
+        </div>
+        """, unsafe_allow_html=True)
         if rows:
             df = pd.DataFrame(rows)
             apply_table_styling()
@@ -14458,8 +14529,8 @@ def display_nutrient_gap_analysis_table(analysis_data):
                         'Parameter': name,
                         'Average Value': f"{avg:.2f}",
                         'MPOB Minimum': f"{minimum:.2f}",
-                        'Gap (%)': f"{gap:+.1f}%",
-                        'Magnitude (%)': f"{gap_magnitude:.1f}%",
+                        'Gap (%)': f"{gap:+.1f}",
+                        'Magnitude (%)': f"{gap_magnitude:.1f}",
                         'Severity': severity
                     })
 
@@ -14477,6 +14548,8 @@ def display_nutrient_gap_analysis_table(analysis_data):
                 def get_gap_magnitude(row):
                     try:
                         mag_str = row.get('Magnitude (%)', '0.0')
+                        # Remove % if present and convert to float
+                        mag_str = mag_str.replace('%', '').strip()
                         return float(mag_str)
                     except Exception as e:
                         logger.warning(f"Error parsing gap magnitude for {row.get('Parameter', 'Unknown')}: {row.get('Magnitude (%)')}, error: {e}")
@@ -14485,6 +14558,8 @@ def display_nutrient_gap_analysis_table(analysis_data):
                 def is_deficiency(row):
                     try:
                         gap_str = row.get('Gap (%)', '0.0')
+                        # Remove % if present and convert to float
+                        gap_str = gap_str.replace('%', '').strip()
                         val = float(gap_str)
                         return val < 0
                     except Exception:
@@ -14512,7 +14587,15 @@ def display_nutrient_gap_analysis_table(analysis_data):
             except Exception as e:
                 logger.error(f"Nutrient gap analysis sorting failed: {e}")
                 pass
-            st.markdown("#### Table 3: Nutrient Gap Analysis: Plantation Average vs. MPOB Standards")
+            st.markdown("#### 📊 Nutrient Gap Analysis: Plantation Average vs. MPOB Standards")
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #fff3cd, #ffffff); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ffc107;">
+                <p style="margin: 0; color: #856404; font-size: 14px;">
+                    <strong>Note:</strong> This table prioritizes nutrient deficiencies by the magnitude of their gap relative to MPOB standards, highlighting the most critical areas for intervention. 
+                    Gaps are sorted by severity (Critical → Low → Balanced) and then by magnitude (largest gaps first).
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
             df = pd.DataFrame(rows)
             # Rename columns to match user expectations
             df = df.rename(columns={
@@ -14556,8 +14639,16 @@ def display_soil_ratio_table(analysis_data):
                 rmg = (s.get(mg_alias, {}) or {}).get('average') if rmg is None else rmg
             r = ratio(rk, rmg)
 
-            st.markdown("#### Soil Nutrient Ratios")
-            rows = [{'Ratio': 'K:Mg', 'Value': f"{r:.2f}" if isinstance(r, (int,float)) else 'N.D.'}]
+            st.markdown("#### ⚖️ Soil Nutrient Ratios")
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #fff9e6, #ffffff); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ff9800;">
+                <p style="margin: 0; color: #e65100; font-size: 14px;">
+                    <strong>About Ratios:</strong> Nutrient ratios are crucial as they indicate balance and potential competition between nutrients for uptake by the palm. 
+                    Optimal K:Mg ratio for oil palm is typically 0.5-1.5.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            rows = [{'Ratio': 'K:Mg', 'Value': f"{r:.2f}" if isinstance(r, (int,float)) else 'N.D.', 'Optimal Range': '0.5-1.5', 'Status': 'Optimal' if isinstance(r, (int,float)) and 0.5 <= r <= 1.5 else ('Low' if isinstance(r, (int,float)) and r < 0.5 else ('High' if isinstance(r, (int,float)) and r > 1.5 else 'N.D.'))}]
             df = pd.DataFrame(rows)
             apply_table_styling()
             st.dataframe(translate_column_headers(df), use_container_width=True)
@@ -14590,8 +14681,16 @@ def display_leaf_ratio_table(analysis_data):
                 rmg = (l.get(mg_alias, {}) or {}).get('average') if rmg is None else rmg
             r = ratio(rk, rmg)
 
-            st.markdown("#### Leaf Nutrient Ratios")
-            rows = [{'Ratio': 'K:Mg', 'Value': f"{r:.2f}" if isinstance(r, (int,float)) else 'N.D.'}]
+            st.markdown("#### ⚖️ Leaf Nutrient Ratios")
+            st.markdown("""
+            <div style="background: linear-gradient(135deg, #f3e5f5, #ffffff); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #9c27b0;">
+                <p style="margin: 0; color: #4a148c; font-size: 14px;">
+                    <strong>About Ratios:</strong> Nutrient ratios are crucial as they indicate balance and potential competition between nutrients for uptake by the palm. 
+                    Optimal K:Mg ratio for oil palm is typically 0.5-1.5.
+                </p>
+            </div>
+            """, unsafe_allow_html=True)
+            rows = [{'Ratio': 'K:Mg', 'Value': f"{r:.2f}" if isinstance(r, (int,float)) else 'N.D.', 'Optimal Range': '0.5-1.5', 'Status': 'Optimal' if isinstance(r, (int,float)) and 0.5 <= r <= 1.5 else ('Low' if isinstance(r, (int,float)) and r < 0.5 else ('High' if isinstance(r, (int,float)) and r > 1.5 else 'N.D.'))}]
             df = pd.DataFrame(rows)
             apply_table_styling()
             st.dataframe(translate_column_headers(df), use_container_width=True)
