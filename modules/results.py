@@ -1054,6 +1054,34 @@ def validate_firestore_data(data):
         logger.warning(f"Data validation warning: {e}")
         return False
 
+def clear_dashboard_cache():
+    """
+    Clear the dashboard cache so new analysis appears immediately.
+    This function clears the cached data for recent analyses and user stats.
+    """
+    try:
+        # Import dashboard module to clear its cached functions
+        from modules import dashboard
+        
+        # Use the dashboard's own cache clearing function
+        if hasattr(dashboard, 'clear_analysis_cache'):
+            dashboard.clear_analysis_cache()
+            logger.info("✅ Dashboard cache cleared via clear_analysis_cache()")
+        else:
+            # Fallback: try to clear the cached functions directly
+            if hasattr(dashboard, '_cached_recent_analyses'):
+                dashboard._cached_recent_analyses.clear()
+                logger.info("✅ Cleared _cached_recent_analyses cache")
+            
+            if hasattr(dashboard, '_cached_user_stats'):
+                dashboard._cached_user_stats.clear()
+                logger.info("✅ Cleared _cached_user_stats cache")
+        
+        logger.info("✅ Dashboard cache cleared successfully")
+    except Exception as e:
+        logger.warning(f"⚠️ Could not clear dashboard cache: {e}")
+        # Don't raise - cache clearing failure shouldn't break the analysis save
+
 def store_analysis_to_firestore(analysis_results, result_id):
     """
     CRITICAL: Store analysis results to Firestore with user ID.
@@ -1128,15 +1156,18 @@ def store_analysis_to_firestore(analysis_results, result_id):
         # CRITICAL: Create the document data structure for Firestore
         # The website queries by 'user_id' field, so this MUST be included
         current_time = datetime.now()
+        
+        # CRITICAL: Use proper Firestore timestamp for ordering queries
+        # Firestore needs datetime objects for proper timestamp ordering in queries
         firestore_data = {
             'id': result_id,
             'user_id': user_id,  # CRITICAL: Website queries by this field
             'user_email': user_email if user_email else None,
             'user_name': user_name if user_name else None,
-            'timestamp': current_time.isoformat(),  # Convert to ISO string
+            'timestamp': current_time,  # Store as datetime object for proper Firestore timestamp
             'status': 'completed',
             'report_types': ['soil', 'leaf'],
-            'created_at': current_time.isoformat(),  # Convert to ISO string
+            'created_at': current_time,  # Store as datetime object for proper ordering in queries
             'analysis_results': analysis_results
         }
         
@@ -1162,6 +1193,18 @@ def store_analysis_to_firestore(analysis_results, result_id):
         logger.info(f"✅ Analysis {result_id} stored to Firestore successfully")
         logger.info(f"✅ Document ID: {result_id}, User ID: {user_id}")
         logger.info(f"✅ Website can now fetch this analysis with: where('user_id', '==', '{user_id}')")
+        
+        # CRITICAL: Clear dashboard cache so new analysis appears immediately
+        # This ensures the website shows the latest analysis without waiting for cache expiry
+        try:
+            clear_dashboard_cache()
+            logger.info(f"✅ Dashboard cache cleared - new analysis will appear immediately")
+        except Exception as cache_error:
+            logger.warning(f"⚠️ Could not clear dashboard cache: {cache_error}")
+        
+        # Set flag for dashboard to know a new analysis was just completed
+        st.session_state.analysis_just_completed = True
+        
         return True
         
     except Exception as e:
@@ -1987,43 +2030,10 @@ def send_analysis_complete(analysis_results):
     and upload counts are updated.
     
     This function matches the exact specification required by the website.
-    It extracts parameters from the analysis_results dict and calls the 
-    integration function with the proper format.
     
     Args:
         analysis_results: The analysis results dict with all analysis data
     """
-    # Try to use the integration function first (preferred method)
-    try:
-        from utils.cropdrive_integration import send_analysis_complete as send_integration_complete
-        from datetime import datetime
-        
-        # Extract parameters from analysis_results dict
-        title = analysis_results.get('title', f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}') if isinstance(analysis_results, dict) else f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}'
-        analysis_type = analysis_results.get('type', 'soil') if isinstance(analysis_results, dict) else 'soil'
-        summary = analysis_results.get('summary', '') if isinstance(analysis_results, dict) else ''
-        recommendations_count = analysis_results.get('recommendations_count', 0) if isinstance(analysis_results, dict) else 0
-        file_url = analysis_results.get('file_url') if isinstance(analysis_results, dict) else None
-        analysis_data = analysis_results.get('data', {}) if isinstance(analysis_results, dict) else {}
-        
-        # Call the integration function with proper parameters
-        send_integration_complete(
-            title=title,
-            analysis_type=analysis_type,
-            summary=summary,
-            recommendations_count=recommendations_count,
-            file_url=file_url,
-            analysis_data=analysis_data
-        )
-        logger.info(f"✅ ANALYSIS_COMPLETE sent via integration function")
-        return
-    except ImportError:
-        logger.warning("⚠️ Integration function not available, using local implementation")
-    except Exception as e:
-        logger.error(f"❌ Error calling integration function: {e}")
-        logger.info("🔄 Falling back to local implementation")
-    
-    # Fallback to local implementation
     from streamlit.components.v1 import html
     import json
     
@@ -2159,19 +2169,19 @@ def send_analysis_complete(analysis_results):
                 'firestoreSaved': bool(analysis_data_simple.get('firestoreSaved', False))
             }
         
-        # CRITICAL: Build message with exact format specified in the integration guide
-        # NOTE: userId is NOT included per guide specification - website uses authenticated user's ID
         message = {
             'type': 'ANALYSIS_COMPLETE',  # MUST be exactly this string
+            'userId': user_id,  # Already converted to string above
             'title': title,
             'analysisType': str(analysis_type),
             'summary': summary_text,
             'recommendationsCount': int(recommendations_count) if recommendations_count else 0,
             'fileUrl': file_url,
-            'analysisData': analysis_data_simple  # Simplified to avoid serialization issues
+            'analysisData': analysis_data_simple,  # Simplified to avoid serialization issues
+            'timestamp': datetime.now().isoformat(),
         }
         
-        logger.info(f"📤 Sending ANALYSIS_COMPLETE message: type={analysis_type}, title={title}")
+        logger.info(f"📤 Sending ANALYSIS_COMPLETE message: userId={user_id}, type={analysis_type}")
         logger.info(f"📤 Message keys: {list(message.keys())}")
         
         # Ensure all message values are JSON-serializable
@@ -2204,6 +2214,7 @@ def send_analysis_complete(analysis_results):
             # Create a simplified message with only essential fields
             simplified_message = {
                 'type': 'ANALYSIS_COMPLETE',
+                'userId': str(user_id) if user_id else '',
                 'title': str(message.get('title', f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}')),
                 'analysisType': str(analysis_type),
                 'summary': str(summary or "Analysis completed successfully.")[:500],  # Limit length
@@ -2211,7 +2222,8 @@ def send_analysis_complete(analysis_results):
                 'fileUrl': None,
                 'analysisData': {
                     'resultId': str(analysis_results.get('data', {}).get('resultId')) if isinstance(analysis_results, dict) and isinstance(analysis_results.get('data'), dict) else None
-                }
+                },
+                'timestamp': datetime.now().isoformat(),
             }
             try:
                 message_json = json.dumps(simplified_message, default=str, ensure_ascii=False)
@@ -2221,12 +2233,12 @@ def send_analysis_complete(analysis_results):
                 # Last resort: absolute minimal message
                 minimal_json = json.dumps({
                     'type': 'ANALYSIS_COMPLETE',
+                    'userId': str(user_id) if user_id else '',
                     'title': f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
                     'analysisType': 'soil',
                     'summary': 'Analysis completed.',
                     'recommendationsCount': 0,
-                    'fileUrl': None,
-                    'analysisData': {}
+                    'timestamp': datetime.now().isoformat()
                 }, default=str)
                 message_json = minimal_json
         
@@ -2274,33 +2286,14 @@ def send_analysis_complete(analysis_results):
                 const message = {message_json};
                 console.log('📊 Sending ANALYSIS_COMPLETE message:', message);
                 console.log('📊 Message type:', message.type);
+                console.log('📊 Message userId:', message.userId);
                 console.log('📊 Message title:', message.title);
-                console.log('📊 Message analysisType:', message.analysisType);
-                console.log('📊 Message summary:', message.summary);
-                console.log('📊 Message recommendationsCount:', message.recommendationsCount);
                 
-                // Validate message has required fields per integration guide
+                // Validate message has required fields
                 if (!message.type || message.type !== 'ANALYSIS_COMPLETE') {{
                     console.error('❌ Invalid message type:', message.type);
                     return;
                 }}
-                if (!message.title) {{
-                    console.error('❌ Missing required field: title');
-                    return;
-                }}
-                if (!message.analysisType) {{
-                    console.error('❌ Missing required field: analysisType');
-                    return;
-                }}
-                if (message.summary === undefined) {{
-                    console.error('❌ Missing required field: summary');
-                    return;
-                }}
-                if (message.recommendationsCount === undefined) {{
-                    console.error('❌ Missing required field: recommendationsCount');
-                    return;
-                }}
-                console.log('✅ All required fields validated');
                 
                 // CRITICAL: Store in sessionStorage as backup (parent can read this)
                 try {{
@@ -2457,12 +2450,10 @@ def send_analysis_complete(analysis_results):
                 try {{
                     const minimalMsg = {{
                         type: 'ANALYSIS_COMPLETE',
+                        userId: message.userId || '',
                         title: message.title || 'Analysis Report',
                         analysisType: message.analysisType || 'soil',
-                        summary: message.summary || 'Analysis completed.',
-                        recommendationsCount: message.recommendationsCount || 0,
-                        fileUrl: message.fileUrl || null,
-                        analysisData: message.analysisData || {{}}
+                        timestamp: new Date().toISOString()
                     }};
                     if (window.parent && window.parent !== window) {{
                         window.parent.postMessage(minimalMsg, '*');
@@ -2476,7 +2467,7 @@ def send_analysis_complete(analysis_results):
         </script>
         """, height=1)
         
-        logger.info(f"✅ ANALYSIS_COMPLETE message sent: type={analysis_type}, title={title}")
+        logger.info(f"✅ ANALYSIS_COMPLETE message sent: userId={user_id}, type={analysis_type}")
         
     except Exception as e:
         logger.error(f"❌ CRITICAL ERROR in send_analysis_complete: {e}")
@@ -2503,12 +2494,14 @@ def send_analysis_complete(analysis_results):
             
             minimal_message = {
                 'type': 'ANALYSIS_COMPLETE',
+                'userId': str(fallback_user_id) if fallback_user_id else '',
                 'title': f'Analysis Report - {datetime.now().strftime("%Y-%m-%d")}',
                 'analysisType': 'soil',
                 'summary': 'Analysis completed successfully.',
                 'recommendationsCount': 0,
                 'fileUrl': None,
-                'analysisData': {}
+                'analysisData': {},
+                'timestamp': datetime.now().isoformat(),
             }
             
             # Ensure all values are JSON-serializable
@@ -13782,6 +13775,7 @@ def apply_table_styling():
     """Apply consistent table styling across all tables"""
     st.markdown("""
     <style>
+    /* General dataframe styling */
     .dataframe {
         border-collapse: collapse;
         border: 2px solid #ddd;
@@ -13805,8 +13799,101 @@ def apply_table_styling():
     .dataframe tr:hover {
         background-color: #e9ecef;
     }
+    
+    /* Streamlit dataframe styling overrides */
+    [data-testid="stDataFrame"] {
+        border: 2px solid #2E8B57 !important;
+        border-radius: 8px !important;
+        overflow: hidden !important;
+    }
+    
+    [data-testid="stDataFrame"] table {
+        width: 100% !important;
+        border-collapse: collapse !important;
+    }
+    
+    [data-testid="stDataFrame"] th {
+        background-color: #2E8B57 !important;
+        color: white !important;
+        font-weight: 600 !important;
+        padding: 12px 8px !important;
+        text-align: left !important;
+        font-size: 14px !important;
+    }
+    
+    [data-testid="stDataFrame"] td {
+        padding: 10px 8px !important;
+        font-size: 14px !important;
+        border-bottom: 1px solid #e9ecef !important;
+    }
+    
+    [data-testid="stDataFrame"] tr:nth-child(even) {
+        background-color: #f8f9fa !important;
+    }
+    
+    [data-testid="stDataFrame"] tr:hover {
+        background-color: #e6f3e6 !important;
+    }
     </style>
     """, unsafe_allow_html=True)
+
+def display_styled_html_table(df, title=None, status_column=None):
+    """Display a DataFrame as a styled HTML table with proper formatting for Step 1"""
+    try:
+        if df is None or df.empty:
+            st.info("No data available to display.")
+            return
+        
+        # Build HTML table
+        html = '<div style="margin: 15px 0; overflow-x: auto;">'
+        
+        if title:
+            html += f'<h4 style="color: #2E8B57; margin-bottom: 10px;">{title}</h4>'
+        
+        html += '''
+        <table style="width: 100%; border-collapse: collapse; border: 2px solid #2E8B57; border-radius: 8px; overflow: hidden; font-family: Arial, sans-serif;">
+        <thead>
+        <tr style="background: linear-gradient(135deg, #2E8B57, #3CB371);">
+        '''
+        
+        # Header row
+        for col in df.columns:
+            html += f'<th style="padding: 12px 10px; color: white; text-align: left; font-weight: 600; font-size: 14px; border-bottom: 2px solid #1a5d38;">{col}</th>'
+        html += '</tr></thead><tbody>'
+        
+        # Data rows
+        for idx, row in df.iterrows():
+            row_bg = '#f8f9fa' if idx % 2 == 0 else '#ffffff'
+            html += f'<tr style="background-color: {row_bg};">'
+            
+            for col in df.columns:
+                cell_value = row[col]
+                cell_style = 'padding: 10px; border-bottom: 1px solid #e9ecef; font-size: 14px;'
+                
+                # Color-code status column if specified
+                if status_column and col == status_column:
+                    if cell_value == 'Optimal' or cell_value == 'Balanced':
+                        cell_style += ' color: #28a745; font-weight: 600;'
+                    elif cell_value in ['Critical Low', 'Critical High', 'Critical']:
+                        cell_style += ' color: #dc3545; font-weight: 600;'
+                    elif cell_value in ['Low', 'High']:
+                        cell_style += ' color: #ffc107; font-weight: 600;'
+                    elif cell_value == 'N.D.':
+                        cell_style += ' color: #6c757d; font-style: italic;'
+                
+                html += f'<td style="{cell_style}">{cell_value}</td>'
+            
+            html += '</tr>'
+        
+        html += '</tbody></table></div>'
+        
+        st.markdown(html, unsafe_allow_html=True)
+        
+    except Exception as e:
+        logger.error(f"Error displaying styled HTML table: {e}")
+        # Fallback to regular dataframe display
+        if df is not None:
+            st.dataframe(df, use_container_width=True)
 
 def display_data_echo_table(analysis_data):
     """Display Data Echo Table - Complete Parameter Analysis"""
@@ -14097,13 +14184,6 @@ def display_nutrient_status_tables(analysis_data):
         # Display Soil Nutrient Status table - BULLETPROOF VERSION
         if soil_params and 'parameter_statistics' in soil_params:
             st.markdown(f"### 🌱 {t('soil_nutrient_status_title', 'Soil Nutrient Status (Average vs. MPOB Standard)')}")
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, #e3f2fd, #ffffff); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #2196f3;">
-                <p style="margin: 0; color: #0d47a1; font-size: 14px;">
-                    <strong>Status Guide:</strong> Optimal = within MPOB range | Low/High = slightly outside range | Critical = significantly outside range | N.D. = Not Detected
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
             
             # Create soil data list with BULLETPROOF validation
             soil_data = []
@@ -14192,8 +14272,9 @@ def display_nutrient_status_tables(analysis_data):
                         try:
                             df_soil = pd.DataFrame(valid_soil_data)
                             logger.info(f"✅ Created soil DataFrame with shape: {df_soil.shape}")
-                            apply_table_styling()
-                            st.dataframe(df_soil, use_container_width=True)
+                            
+                            # Use styled HTML table for better formatting
+                            display_styled_html_table(df_soil, status_column='Status')
                         except Exception as df_error:
                             logger.error(f"❌ DataFrame creation failed: {str(df_error)}")
                             logger.error(f"🔍 Data: {valid_soil_data}")
@@ -14210,13 +14291,6 @@ def display_nutrient_status_tables(analysis_data):
         # Display Leaf Nutrient Status table - BULLETPROOF VERSION
         if leaf_params and 'parameter_statistics' in leaf_params:
             st.markdown(f"### 🍃 {t('leaf_nutrient_status_title', 'Leaf Nutrient Status (Average vs. MPOB Standard)')}")
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, #f3e5f5, #ffffff); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #9c27b0;">
-                <p style="margin: 0; color: #4a148c; font-size: 14px;">
-                    <strong>Status Guide:</strong> Optimal = within MPOB range | Low/High = slightly outside range | Critical = significantly outside range | N.D. = Not Detected
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
             
             # Create leaf data list with BULLETPROOF validation
             leaf_data = []
@@ -14305,8 +14379,9 @@ def display_nutrient_status_tables(analysis_data):
                         try:
                             df_leaf = pd.DataFrame(valid_leaf_data)
                             logger.info(f"✅ Created leaf DataFrame with shape: {df_leaf.shape}")
-                            apply_table_styling()
-                            st.dataframe(df_leaf, use_container_width=True)
+                            
+                            # Use styled HTML table for better formatting
+                            display_styled_html_table(df_leaf, status_column='Status')
                         except Exception as df_error:
                             logger.error(f"❌ DataFrame creation failed: {str(df_error)}")
                             logger.error(f"🔍 Data: {valid_leaf_data}")
@@ -14359,18 +14434,12 @@ def display_overall_results_summary_table(analysis_data):
             rows.append({'Category': 'Leaf', 'Parameter': 'K (%)', 'Average': f"{find_avg(l, ['K (%)','Leaf K (%)','K']):.2f}" if find_avg(l, ['K (%)','Leaf K (%)','K']) is not None else 'N.D.'})
             rows.append({'Category': 'Leaf', 'Parameter': 'Cu (mg/kg)', 'Average': f"{find_avg(l, ['Cu (mg/kg)','Leaf Cu (mg/kg)','Cu']):.2f}" if find_avg(l, ['Cu (mg/kg)','Leaf Cu (mg/kg)','Cu']) is not None else 'N.D.'})
 
-        st.markdown(f"#### 📋 {t('your_soil_leaf_test_results', 'Your Soil and Leaf Test Results')} {t('summary_label', 'Summary')}")
-        st.markdown("""
-        <div style="background: linear-gradient(135deg, #e8f5e8, #ffffff); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #28a745;">
-            <p style="margin: 0; color: #155724; font-size: 14px;">
-                <strong>Summary:</strong> This table shows the average values from all samples collected for key soil and leaf parameters.
-            </p>
-        </div>
-        """, unsafe_allow_html=True)
+        st.markdown(f"#### {t('your_soil_leaf_test_results', 'Your Soil and Leaf Test Results')} {t('summary_label', 'Summary')}")
         if rows:
             df = pd.DataFrame(rows)
-            apply_table_styling()
-            st.dataframe(translate_column_headers(df), use_container_width=True)
+            df = translate_column_headers(df)
+            # Use styled HTML table for better formatting
+            display_styled_html_table(df)
         else:
             st.info("No summary data available to display.")
     except Exception as e:
@@ -14529,8 +14598,8 @@ def display_nutrient_gap_analysis_table(analysis_data):
                         'Parameter': name,
                         'Average Value': f"{avg:.2f}",
                         'MPOB Minimum': f"{minimum:.2f}",
-                        'Gap (%)': f"{gap:+.1f}",
-                        'Magnitude (%)': f"{gap_magnitude:.1f}",
+                        'Gap (%)': f"{gap:+.1f}%",
+                        'Magnitude (%)': f"{gap_magnitude:.1f}%",
                         'Severity': severity
                     })
 
@@ -14548,8 +14617,6 @@ def display_nutrient_gap_analysis_table(analysis_data):
                 def get_gap_magnitude(row):
                     try:
                         mag_str = row.get('Magnitude (%)', '0.0')
-                        # Remove % if present and convert to float
-                        mag_str = mag_str.replace('%', '').strip()
                         return float(mag_str)
                     except Exception as e:
                         logger.warning(f"Error parsing gap magnitude for {row.get('Parameter', 'Unknown')}: {row.get('Magnitude (%)')}, error: {e}")
@@ -14558,8 +14625,6 @@ def display_nutrient_gap_analysis_table(analysis_data):
                 def is_deficiency(row):
                     try:
                         gap_str = row.get('Gap (%)', '0.0')
-                        # Remove % if present and convert to float
-                        gap_str = gap_str.replace('%', '').strip()
                         val = float(gap_str)
                         return val < 0
                     except Exception:
@@ -14587,15 +14652,7 @@ def display_nutrient_gap_analysis_table(analysis_data):
             except Exception as e:
                 logger.error(f"Nutrient gap analysis sorting failed: {e}")
                 pass
-            st.markdown("#### 📊 Nutrient Gap Analysis: Plantation Average vs. MPOB Standards")
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, #fff3cd, #ffffff); padding: 15px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ffc107;">
-                <p style="margin: 0; color: #856404; font-size: 14px;">
-                    <strong>Note:</strong> This table prioritizes nutrient deficiencies by the magnitude of their gap relative to MPOB standards, highlighting the most critical areas for intervention. 
-                    Gaps are sorted by severity (Critical → Low → Balanced) and then by magnitude (largest gaps first).
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
+            st.markdown("#### Table 3: Nutrient Gap Analysis: Plantation Average vs. MPOB Standards")
             df = pd.DataFrame(rows)
             # Rename columns to match user expectations
             df = df.rename(columns={
@@ -14607,8 +14664,9 @@ def display_nutrient_gap_analysis_table(analysis_data):
             desired_cols = ['Parameter', 'Source', 'Average', 'MPOB Minimum', 'Percent Gap (%)', 'Gap Magnitude (%)', 'Severity']
             existing_cols = [c for c in desired_cols if c in df.columns]
             df = df[existing_cols]
-            apply_table_styling()
-            st.dataframe(translate_column_headers(df), use_container_width=True)
+            df = translate_column_headers(df)
+            # Use styled HTML table for better formatting with severity color coding
+            display_styled_html_table(df, status_column='Severity')
     except Exception as e:
         logger.error(f"Error in display_nutrient_gap_analysis_table: {e}")
 
@@ -14639,19 +14697,12 @@ def display_soil_ratio_table(analysis_data):
                 rmg = (s.get(mg_alias, {}) or {}).get('average') if rmg is None else rmg
             r = ratio(rk, rmg)
 
-            st.markdown("#### ⚖️ Soil Nutrient Ratios")
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, #fff9e6, #ffffff); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #ff9800;">
-                <p style="margin: 0; color: #e65100; font-size: 14px;">
-                    <strong>About Ratios:</strong> Nutrient ratios are crucial as they indicate balance and potential competition between nutrients for uptake by the palm. 
-                    Optimal K:Mg ratio for oil palm is typically 0.5-1.5.
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-            rows = [{'Ratio': 'K:Mg', 'Value': f"{r:.2f}" if isinstance(r, (int,float)) else 'N.D.', 'Optimal Range': '0.5-1.5', 'Status': 'Optimal' if isinstance(r, (int,float)) and 0.5 <= r <= 1.5 else ('Low' if isinstance(r, (int,float)) and r < 0.5 else ('High' if isinstance(r, (int,float)) and r > 1.5 else 'N.D.'))}]
+            st.markdown("#### Soil Nutrient Ratios")
+            rows = [{'Ratio': 'K:Mg', 'Value': f"{r:.2f}" if isinstance(r, (int,float)) else 'N.D.'}]
             df = pd.DataFrame(rows)
-            apply_table_styling()
-            st.dataframe(translate_column_headers(df), use_container_width=True)
+            df = translate_column_headers(df)
+            # Use styled HTML table for better formatting
+            display_styled_html_table(df)
     except Exception as e:
         logger.error(f"Error in display_soil_ratio_table: {e}")
 
@@ -14681,19 +14732,12 @@ def display_leaf_ratio_table(analysis_data):
                 rmg = (l.get(mg_alias, {}) or {}).get('average') if rmg is None else rmg
             r = ratio(rk, rmg)
 
-            st.markdown("#### ⚖️ Leaf Nutrient Ratios")
-            st.markdown("""
-            <div style="background: linear-gradient(135deg, #f3e5f5, #ffffff); padding: 12px; border-radius: 8px; margin-bottom: 15px; border-left: 4px solid #9c27b0;">
-                <p style="margin: 0; color: #4a148c; font-size: 14px;">
-                    <strong>About Ratios:</strong> Nutrient ratios are crucial as they indicate balance and potential competition between nutrients for uptake by the palm. 
-                    Optimal K:Mg ratio for oil palm is typically 0.5-1.5.
-                </p>
-            </div>
-            """, unsafe_allow_html=True)
-            rows = [{'Ratio': 'K:Mg', 'Value': f"{r:.2f}" if isinstance(r, (int,float)) else 'N.D.', 'Optimal Range': '0.5-1.5', 'Status': 'Optimal' if isinstance(r, (int,float)) and 0.5 <= r <= 1.5 else ('Low' if isinstance(r, (int,float)) and r < 0.5 else ('High' if isinstance(r, (int,float)) and r > 1.5 else 'N.D.'))}]
+            st.markdown("#### Leaf Nutrient Ratios")
+            rows = [{'Ratio': 'K:Mg', 'Value': f"{r:.2f}" if isinstance(r, (int,float)) else 'N.D.'}]
             df = pd.DataFrame(rows)
-            apply_table_styling()
-            st.dataframe(translate_column_headers(df), use_container_width=True)
+            df = translate_column_headers(df)
+            # Use styled HTML table for better formatting
+            display_styled_html_table(df)
     except Exception as e:
         logger.error(f"Error in display_leaf_ratio_table: {e}")
 
@@ -14733,8 +14777,9 @@ def display_ratio_analysis_tables(analysis_data):
         if rows:
             st.markdown("#### Soil and Leaf Nutrient Ratio Analysis")
             df = pd.DataFrame(rows)
-            apply_table_styling()
-            st.dataframe(translate_column_headers(df), use_container_width=True)
+            df = translate_column_headers(df)
+            # Use styled HTML table for better formatting
+            display_styled_html_table(df)
     except Exception as e:
         logger.error(f"Error in display_ratio_analysis_tables: {e}")
 
