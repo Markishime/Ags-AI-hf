@@ -1054,34 +1054,6 @@ def validate_firestore_data(data):
         logger.warning(f"Data validation warning: {e}")
         return False
 
-def clear_dashboard_cache():
-    """
-    Clear the dashboard cache so new analysis appears immediately.
-    This function clears the cached data for recent analyses and user stats.
-    """
-    try:
-        # Import dashboard module to clear its cached functions
-        from modules import dashboard
-        
-        # Use the dashboard's own cache clearing function
-        if hasattr(dashboard, 'clear_analysis_cache'):
-            dashboard.clear_analysis_cache()
-            logger.info("✅ Dashboard cache cleared via clear_analysis_cache()")
-        else:
-            # Fallback: try to clear the cached functions directly
-            if hasattr(dashboard, '_cached_recent_analyses'):
-                dashboard._cached_recent_analyses.clear()
-                logger.info("✅ Cleared _cached_recent_analyses cache")
-            
-            if hasattr(dashboard, '_cached_user_stats'):
-                dashboard._cached_user_stats.clear()
-                logger.info("✅ Cleared _cached_user_stats cache")
-        
-        logger.info("✅ Dashboard cache cleared successfully")
-    except Exception as e:
-        logger.warning(f"⚠️ Could not clear dashboard cache: {e}")
-        # Don't raise - cache clearing failure shouldn't break the analysis save
-
 def store_analysis_to_firestore(analysis_results, result_id):
     """
     CRITICAL: Store analysis results to Firestore with user ID.
@@ -1156,18 +1128,15 @@ def store_analysis_to_firestore(analysis_results, result_id):
         # CRITICAL: Create the document data structure for Firestore
         # The website queries by 'user_id' field, so this MUST be included
         current_time = datetime.now()
-        
-        # CRITICAL: Use proper Firestore timestamp for ordering queries
-        # Firestore needs datetime objects for proper timestamp ordering in queries
         firestore_data = {
             'id': result_id,
             'user_id': user_id,  # CRITICAL: Website queries by this field
             'user_email': user_email if user_email else None,
             'user_name': user_name if user_name else None,
-            'timestamp': current_time,  # Store as datetime object for proper Firestore timestamp
+            'timestamp': current_time.isoformat(),  # Convert to ISO string
             'status': 'completed',
             'report_types': ['soil', 'leaf'],
-            'created_at': current_time,  # Store as datetime object for proper ordering in queries
+            'created_at': current_time.isoformat(),  # Convert to ISO string
             'analysis_results': analysis_results
         }
         
@@ -1193,18 +1162,6 @@ def store_analysis_to_firestore(analysis_results, result_id):
         logger.info(f"✅ Analysis {result_id} stored to Firestore successfully")
         logger.info(f"✅ Document ID: {result_id}, User ID: {user_id}")
         logger.info(f"✅ Website can now fetch this analysis with: where('user_id', '==', '{user_id}')")
-        
-        # CRITICAL: Clear dashboard cache so new analysis appears immediately
-        # This ensures the website shows the latest analysis without waiting for cache expiry
-        try:
-            clear_dashboard_cache()
-            logger.info(f"✅ Dashboard cache cleared - new analysis will appear immediately")
-        except Exception as cache_error:
-            logger.warning(f"⚠️ Could not clear dashboard cache: {cache_error}")
-        
-        # Set flag for dashboard to know a new analysis was just completed
-        st.session_state.analysis_just_completed = True
-        
         return True
         
     except Exception as e:
@@ -13775,7 +13732,6 @@ def apply_table_styling():
     """Apply consistent table styling across all tables"""
     st.markdown("""
     <style>
-    /* General dataframe styling */
     .dataframe {
         border-collapse: collapse;
         border: 2px solid #ddd;
@@ -13799,101 +13755,8 @@ def apply_table_styling():
     .dataframe tr:hover {
         background-color: #e9ecef;
     }
-    
-    /* Streamlit dataframe styling overrides */
-    [data-testid="stDataFrame"] {
-        border: 2px solid #2E8B57 !important;
-        border-radius: 8px !important;
-        overflow: hidden !important;
-    }
-    
-    [data-testid="stDataFrame"] table {
-        width: 100% !important;
-        border-collapse: collapse !important;
-    }
-    
-    [data-testid="stDataFrame"] th {
-        background-color: #2E8B57 !important;
-        color: white !important;
-        font-weight: 600 !important;
-        padding: 12px 8px !important;
-        text-align: left !important;
-        font-size: 14px !important;
-    }
-    
-    [data-testid="stDataFrame"] td {
-        padding: 10px 8px !important;
-        font-size: 14px !important;
-        border-bottom: 1px solid #e9ecef !important;
-    }
-    
-    [data-testid="stDataFrame"] tr:nth-child(even) {
-        background-color: #f8f9fa !important;
-    }
-    
-    [data-testid="stDataFrame"] tr:hover {
-        background-color: #e6f3e6 !important;
-    }
     </style>
     """, unsafe_allow_html=True)
-
-def display_styled_html_table(df, title=None, status_column=None):
-    """Display a DataFrame as a styled HTML table with proper formatting for Step 1"""
-    try:
-        if df is None or df.empty:
-            st.info("No data available to display.")
-            return
-        
-        # Build HTML table
-        html = '<div style="margin: 15px 0; overflow-x: auto;">'
-        
-        if title:
-            html += f'<h4 style="color: #2E8B57; margin-bottom: 10px;">{title}</h4>'
-        
-        html += '''
-        <table style="width: 100%; border-collapse: collapse; border: 2px solid #2E8B57; border-radius: 8px; overflow: hidden; font-family: Arial, sans-serif;">
-        <thead>
-        <tr style="background: linear-gradient(135deg, #2E8B57, #3CB371);">
-        '''
-        
-        # Header row
-        for col in df.columns:
-            html += f'<th style="padding: 12px 10px; color: white; text-align: left; font-weight: 600; font-size: 14px; border-bottom: 2px solid #1a5d38;">{col}</th>'
-        html += '</tr></thead><tbody>'
-        
-        # Data rows
-        for idx, row in df.iterrows():
-            row_bg = '#f8f9fa' if idx % 2 == 0 else '#ffffff'
-            html += f'<tr style="background-color: {row_bg};">'
-            
-            for col in df.columns:
-                cell_value = row[col]
-                cell_style = 'padding: 10px; border-bottom: 1px solid #e9ecef; font-size: 14px;'
-                
-                # Color-code status column if specified
-                if status_column and col == status_column:
-                    if cell_value == 'Optimal' or cell_value == 'Balanced':
-                        cell_style += ' color: #28a745; font-weight: 600;'
-                    elif cell_value in ['Critical Low', 'Critical High', 'Critical']:
-                        cell_style += ' color: #dc3545; font-weight: 600;'
-                    elif cell_value in ['Low', 'High']:
-                        cell_style += ' color: #ffc107; font-weight: 600;'
-                    elif cell_value == 'N.D.':
-                        cell_style += ' color: #6c757d; font-style: italic;'
-                
-                html += f'<td style="{cell_style}">{cell_value}</td>'
-            
-            html += '</tr>'
-        
-        html += '</tbody></table></div>'
-        
-        st.markdown(html, unsafe_allow_html=True)
-        
-    except Exception as e:
-        logger.error(f"Error displaying styled HTML table: {e}")
-        # Fallback to regular dataframe display
-        if df is not None:
-            st.dataframe(df, use_container_width=True)
 
 def display_data_echo_table(analysis_data):
     """Display Data Echo Table - Complete Parameter Analysis"""
@@ -14272,9 +14135,8 @@ def display_nutrient_status_tables(analysis_data):
                         try:
                             df_soil = pd.DataFrame(valid_soil_data)
                             logger.info(f"✅ Created soil DataFrame with shape: {df_soil.shape}")
-                            
-                            # Use styled HTML table for better formatting
-                            display_styled_html_table(df_soil, status_column='Status')
+                            apply_table_styling()
+                            st.dataframe(df_soil, use_container_width=True)
                         except Exception as df_error:
                             logger.error(f"❌ DataFrame creation failed: {str(df_error)}")
                             logger.error(f"🔍 Data: {valid_soil_data}")
@@ -14379,9 +14241,8 @@ def display_nutrient_status_tables(analysis_data):
                         try:
                             df_leaf = pd.DataFrame(valid_leaf_data)
                             logger.info(f"✅ Created leaf DataFrame with shape: {df_leaf.shape}")
-                            
-                            # Use styled HTML table for better formatting
-                            display_styled_html_table(df_leaf, status_column='Status')
+                            apply_table_styling()
+                            st.dataframe(df_leaf, use_container_width=True)
                         except Exception as df_error:
                             logger.error(f"❌ DataFrame creation failed: {str(df_error)}")
                             logger.error(f"🔍 Data: {valid_leaf_data}")
@@ -14437,9 +14298,8 @@ def display_overall_results_summary_table(analysis_data):
         st.markdown(f"#### {t('your_soil_leaf_test_results', 'Your Soil and Leaf Test Results')} {t('summary_label', 'Summary')}")
         if rows:
             df = pd.DataFrame(rows)
-            df = translate_column_headers(df)
-            # Use styled HTML table for better formatting
-            display_styled_html_table(df)
+            apply_table_styling()
+            st.dataframe(translate_column_headers(df), use_container_width=True)
         else:
             st.info("No summary data available to display.")
     except Exception as e:
@@ -14664,9 +14524,8 @@ def display_nutrient_gap_analysis_table(analysis_data):
             desired_cols = ['Parameter', 'Source', 'Average', 'MPOB Minimum', 'Percent Gap (%)', 'Gap Magnitude (%)', 'Severity']
             existing_cols = [c for c in desired_cols if c in df.columns]
             df = df[existing_cols]
-            df = translate_column_headers(df)
-            # Use styled HTML table for better formatting with severity color coding
-            display_styled_html_table(df, status_column='Severity')
+            apply_table_styling()
+            st.dataframe(translate_column_headers(df), use_container_width=True)
     except Exception as e:
         logger.error(f"Error in display_nutrient_gap_analysis_table: {e}")
 
@@ -14700,9 +14559,8 @@ def display_soil_ratio_table(analysis_data):
             st.markdown("#### Soil Nutrient Ratios")
             rows = [{'Ratio': 'K:Mg', 'Value': f"{r:.2f}" if isinstance(r, (int,float)) else 'N.D.'}]
             df = pd.DataFrame(rows)
-            df = translate_column_headers(df)
-            # Use styled HTML table for better formatting
-            display_styled_html_table(df)
+            apply_table_styling()
+            st.dataframe(translate_column_headers(df), use_container_width=True)
     except Exception as e:
         logger.error(f"Error in display_soil_ratio_table: {e}")
 
@@ -14735,9 +14593,8 @@ def display_leaf_ratio_table(analysis_data):
             st.markdown("#### Leaf Nutrient Ratios")
             rows = [{'Ratio': 'K:Mg', 'Value': f"{r:.2f}" if isinstance(r, (int,float)) else 'N.D.'}]
             df = pd.DataFrame(rows)
-            df = translate_column_headers(df)
-            # Use styled HTML table for better formatting
-            display_styled_html_table(df)
+            apply_table_styling()
+            st.dataframe(translate_column_headers(df), use_container_width=True)
     except Exception as e:
         logger.error(f"Error in display_leaf_ratio_table: {e}")
 
@@ -14777,9 +14634,8 @@ def display_ratio_analysis_tables(analysis_data):
         if rows:
             st.markdown("#### Soil and Leaf Nutrient Ratio Analysis")
             df = pd.DataFrame(rows)
-            df = translate_column_headers(df)
-            # Use styled HTML table for better formatting
-            display_styled_html_table(df)
+            apply_table_styling()
+            st.dataframe(translate_column_headers(df), use_container_width=True)
     except Exception as e:
         logger.error(f"Error in display_ratio_analysis_tables: {e}")
 
