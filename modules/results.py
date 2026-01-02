@@ -13364,182 +13364,54 @@ def display_raw_sample_data_tables(analysis_data):
         st.error("Error displaying raw sample data tables")
 
 def display_comprehensive_data_tables(soil_params, leaf_params):
-    """Display comprehensive formatted table comparing soil and leaf results vs MPOB standards."""
+    """Display comprehensive data tables with averages and statistics - BULLETPROOF VERSION"""
     try:
-        import pandas as pd
         st.markdown("---")
         st.markdown(f"## 📊 {t('comprehensive_data_analysis_tables', 'Comprehensive Data Analysis Tables')}")
-
-        # MPOB Standards for soil and leaf parameters
-        mpob_standards = {
-            'soil': {
-                'pH': '4.5 - 6.0',
-                'Nitrogen (%)': '> 0.15',
-                'Organic Carbon (%)': '> 1.0',
-                'Available P (mg/kg)': '> 15',
-                'Exchangeable K (meq/100g)': '> 0.20',
-                'Exchangeable Ca (meq/100g)': '> 0.50',
-                'Exchangeable Mg (meq/100g)': '> 0.25',
-                'CEC (meq/100g)': '> 5.0'
-            },
-            'leaf': {
-                'Nitrogen (%)': '2.4 - 2.8',
-                'Phosphorus (%)': '0.15 - 0.19',
-                'Potassium (%)': '1.0 - 1.3',
-                'Magnesium (%)': '0.25 - 0.40',
-                'Calcium (%)': '0.50 - 0.75',
-                'Boron (mg/kg)': '15 - 25',
-                'Copper (mg/kg)': '5 - 8',
-                'Zinc (mg/kg)': '12 - 18'
-            }
-        }
-
-        rows = []
-
-        def find_avg(param_stats: dict, aliases: list):
-            for alias in aliases:
-                try:
-                    v = (param_stats.get(alias, {}) or {})
-                    if isinstance(v, dict) and 'average' in v and v['average'] is not None:
-                        return v['average']
-                except Exception:
-                    pass
-            return None
-
-        def calculate_gap(avg_value, standard_str):
-            """Calculate gap between average value and MPOB standard"""
-            if avg_value is None or not isinstance(avg_value, (int, float)):
-                return 'N.D.'
-
+        
+        # Display soil data table - BULLETPROOF VERSION
+        if soil_params and 'parameter_statistics' in soil_params:
+            # Display averages prominently - extract from parameter_statistics
+            st.markdown(f"### 🌱 {t('soil_parameter_averages', 'Soil Parameter Averages')}")
+            avg_data = []
             try:
-                # Parse MPOB standard (handle ranges like "4.5 - 6.0" or "> 15")
-                if ' - ' in standard_str:
-                    # Range format: "4.5 - 6.0"
-                    parts = standard_str.split(' - ')
-                    if len(parts) == 2:
-                        min_val = float(parts[0])
-                        max_val = float(parts[1])
-                        # Use midpoint for gap calculation
-                        standard_avg = (min_val + max_val) / 2
-                        return f"{avg_value - standard_avg:.2f}"
-                elif standard_str.startswith('> '):
-                    # Minimum threshold format: "> 15"
-                    min_val = float(standard_str[2:])
-                    return f"{avg_value - min_val:.2f}"
-                elif standard_str.startswith('< '):
-                    # Maximum threshold format: "< 6.0"
-                    max_val = float(standard_str[2:])
-                    return f"{avg_value - max_val:.2f}"
+                # Extract averages from parameter_statistics structure
+                for param, stats in soil_params['parameter_statistics'].items():
+                    if isinstance(stats, dict) and 'average' in stats:
+                        avg_val = stats['average']
+                        # Only include parameters with valid positive values
+                        if isinstance(avg_val, (int, float)) and avg_val > 0:
+                            avg_data.append({
+                                'Parameter': str(param),
+                                'Average Value': f"{avg_val:.3f}"
+                            })
+
+                # BULLETPROOF DataFrame creation
+                if avg_data:
+                    # Final validation: ensure all items are valid dictionaries
+                    valid_avg_data = []
+                    for item in avg_data:
+                        if isinstance(item, dict) and len(item) == 2:
+                            valid_avg_data.append(item)
+                        else:
+                            logger.warning(f"Invalid soil average item: {item}")
+
+                    if valid_avg_data:
+                        try:
+                            df_avg = pd.DataFrame(valid_avg_data)
+                            logger.info(f"✅ Created soil averages DataFrame with shape: {df_avg.shape}")
+                            st.dataframe(df_avg, use_container_width=True)
+                        except Exception as df_error:
+                            logger.error(f"❌ Soil averages DataFrame creation failed: {str(df_error)}")
+                            st.error("Unable to display soil parameter averages table")
+                    else:
+                        st.warning("No valid soil average data available")
                 else:
-                    # Try to parse as single number
-                    try:
-                        standard_val = float(standard_str)
-                        return f"{avg_value - standard_val:.2f}"
-                    except:
-                        return 'N.D.'
-            except Exception:
-                return 'N.D.'
+                    st.warning("No soil average data available")
 
-        # Add soil parameters
-        if soil_params and isinstance(soil_params, dict) and 'parameter_statistics' in soil_params:
-            s = soil_params['parameter_statistics']
-
-            soil_mappings = [
-                ('pH', ['pH'], 'pH'),
-                ('Nitrogen (%)', ['N (%)', 'Nitrogen (%)', 'Total N (%)'], 'Nitrogen (%)'),
-                ('Organic Carbon (%)', ['Org. C (%)', 'Organic Carbon (%)', 'OC (%)'], 'Organic Carbon (%)'),
-                ('Available P (mg/kg)', ['Avail P (mg/kg)', 'Available P (mg/kg)', 'P (mg/kg)'], 'Available P (mg/kg)'),
-                ('Exchangeable K (meq/100g)', ['Exch. K (meq/100g)', 'Exchangeable K (meq/100g)'], 'Exchangeable K (meq/100g)'),
-                ('Exchangeable Ca (meq/100g)', ['Exch. Ca (meq/100g)', 'Exchangeable Ca (meq/100g)'], 'Exchangeable Ca (meq/100g)'),
-                ('Exchangeable Mg (meq/100g)', ['Exch. Mg (meq/100g)', 'Exchangeable Mg (meq/100g)'], 'Exchangeable Mg (meq/100g)'),
-                ('CEC (meq/100g)', ['CEC (meq/100g)', 'CEC'], 'CEC (meq/100g)')
-            ]
-
-            for param_name, aliases, standard_key in soil_mappings:
-                avg_val = find_avg(s, aliases)
-                if avg_val is not None and avg_val > 0:  # Only include valid positive values
-                    standard = mpob_standards['soil'].get(standard_key, 'N.D.')
-                    gap = calculate_gap(avg_val, standard)
-
-                    rows.append({
-                        'Parameter': param_name,
-                        'Sumber': t('soil_source', 'Tanah'),
-                        'Purata': f"{avg_val:.3f}",
-                        'Piawaian MPOB': standard,
-                        'Jurang': gap
-                    })
-
-        # Add leaf parameters
-        if leaf_params and isinstance(leaf_params, dict) and 'parameter_statistics' in leaf_params:
-            l = leaf_params['parameter_statistics']
-
-            leaf_mappings = [
-                ('Nitrogen (%)', ['N (%)', 'Nitrogen (%)'], 'Nitrogen (%)'),
-                ('Phosphorus (%)', ['P (%)', 'Phosphorus (%)'], 'Phosphorus (%)'),
-                ('Potassium (%)', ['K (%)', 'Potassium (%)'], 'Potassium (%)'),
-                ('Magnesium (%)', ['Mg (%)', 'Magnesium (%)'], 'Magnesium (%)'),
-                ('Calcium (%)', ['Ca (%)', 'Calcium (%)'], 'Calcium (%)'),
-                ('Boron (mg/kg)', ['B (mg/kg)', 'Boron (mg/kg)'], 'Boron (mg/kg)'),
-                ('Copper (mg/kg)', ['Cu (mg/kg)', 'Copper (mg/kg)'], 'Copper (mg/kg)'),
-                ('Zinc (mg/kg)', ['Zn (mg/kg)', 'Zinc (mg/kg)'], 'Zinc (mg/kg)')
-            ]
-
-            for param_name, aliases, standard_key in leaf_mappings:
-                avg_val = find_avg(l, aliases)
-                if avg_val is not None and avg_val > 0:  # Only include valid positive values
-                    standard = mpob_standards['leaf'].get(standard_key, 'N.D.')
-                    gap = calculate_gap(avg_val, standard)
-
-                    rows.append({
-                        'Parameter': param_name,
-                        'Sumber': t('leaf_source', 'Daun'),
-                        'Purata': f"{avg_val:.3f}",
-                        'Piawaian MPOB': standard,
-                        'Jurang': gap
-                    })
-
-        # Display the table
-        table_title = t('soil_leaf_test_results_vs_mpob', 'Ringkasan Ujian Tanah dan Daun vs. Piawaian Malaysia')
-        st.markdown(f"### {table_title}")
-
-        if rows:
-            # Create HTML table for better formatting
-            html_table = f"""
-            <div style="margin: 20px 0; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                <table style="width: 100%; border-collapse: collapse; background: white;">
-                    <thead style="background: linear-gradient(135deg, #2E8B57, #228B22); color: white;">
-                        <tr>
-                            <th style="padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #ddd;">{t('table_parameter', 'Parameter')}</th>
-                            <th style="padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #ddd;">{t('table_source', 'Sumber')}</th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; border-bottom: 2px solid #ddd;">{t('table_average', 'Purata')}</th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; border-bottom: 2px solid #ddd;">{t('mpob_standard', 'Piawaian MPOB')}</th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; border-bottom: 2px solid #ddd;">{t('table_gap', 'Jurang')}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            """
-
-            for i, row in enumerate(rows):
-                bg_color = "#f8f9fa" if i % 2 == 0 else "white"
-                html_table += f"""
-                        <tr style="background: {bg_color};">
-                            <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: 500;">{row['Parameter']}</td>
-                            <td style="padding: 10px; border-bottom: 1px solid #eee;">{row['Sumber']}</td>
-                            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">{row['Purata']}</td>
-                            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">{row['Piawaian MPOB']}</td>
-                            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">{row['Jurang']}</td>
-                        </tr>
-                """
-
-            html_table += """
-                    </tbody>
-                </table>
-            </div>
-            """
-
-            st.markdown(html_table, unsafe_allow_html=True)
-        else:
-            st.info(t('no_data_available', 'No data available to display.'))
+            except Exception as e:
+                logger.error(f"❌ Error processing soil averages: {str(e)}")
+                st.error("Error processing soil parameter averages")
 
         # Display all individual soil sample values - BULLETPROOF VERSION
         soil_samples_key = 'all_samples' if 'all_samples' in soil_params else 'samples'
@@ -14357,40 +14229,14 @@ def display_nutrient_status_tables(analysis_data):
         st.error("Critical error in nutrient status tables display")
 
 def display_overall_results_summary_table(analysis_data):
-    """Display a comprehensive formatted table comparing soil and leaf results vs MPOB standards."""
+    """Display a concise summary table of key soil and leaf averages for Step 1."""
     try:
         import pandas as pd
-
-        # MPOB Standards for soil and leaf parameters
-        mpob_standards = {
-            'soil': {
-                'pH': '4.5 - 6.0',
-                'Nitrogen (%)': '> 0.15',
-                'Organic Carbon (%)': '> 1.0',
-                'Available P (mg/kg)': '> 15',
-                'Exchangeable K (meq/100g)': '> 0.20',
-                'Exchangeable Ca (meq/100g)': '> 0.50',
-                'Exchangeable Mg (meq/100g)': '> 0.25',
-                'CEC (meq/100g)': '> 5.0'
-            },
-            'leaf': {
-                'Nitrogen (%)': '2.4 - 2.8',
-                'Phosphorus (%)': '0.15 - 0.19',
-                'Potassium (%)': '1.0 - 1.3',
-                'Magnesium (%)': '0.25 - 0.40',
-                'Calcium (%)': '0.50 - 0.75',
-                'Boron (mg/kg)': '15 - 25',
-                'Copper (mg/kg)': '5 - 8',
-                'Zinc (mg/kg)': '12 - 18'
-            }
-        }
-
         soil_params = None
         leaf_params = None
         if isinstance(analysis_data, dict):
             soil_params = (analysis_data.get('raw_data', {}) or {}).get('soil_parameters') or analysis_data.get('soil_parameters')
             leaf_params = (analysis_data.get('raw_data', {}) or {}).get('leaf_parameters') or analysis_data.get('leaf_parameters')
-
         rows = []
 
         def find_avg(param_stats: dict, aliases: list):
@@ -14403,144 +14249,29 @@ def display_overall_results_summary_table(analysis_data):
                     pass
             return None
 
-        def calculate_gap(avg_value, standard_str):
-            """Calculate gap between average value and MPOB standard"""
-            if avg_value is None or not isinstance(avg_value, (int, float)):
-                return 'N.D.'
-
-            try:
-                # Parse MPOB standard (handle ranges like "4.5 - 6.0" or "> 15")
-                if ' - ' in standard_str:
-                    # Range format: "4.5 - 6.0"
-                    parts = standard_str.split(' - ')
-                    if len(parts) == 2:
-                        min_val = float(parts[0])
-                        max_val = float(parts[1])
-                        # Use midpoint for gap calculation
-                        standard_avg = (min_val + max_val) / 2
-                        return f"{avg_value - standard_avg:.2f}"
-                elif standard_str.startswith('> '):
-                    # Minimum threshold format: "> 15"
-                    min_val = float(standard_str[2:])
-                    return f"{avg_value - min_val:.2f}"
-                elif standard_str.startswith('< '):
-                    # Maximum threshold format: "< 6.0"
-                    max_val = float(standard_str[2:])
-                    return f"{avg_value - max_val:.2f}"
-                else:
-                    # Try to parse as single number
-                    try:
-                        standard_val = float(standard_str)
-                        return f"{avg_value - standard_val:.2f}"
-                    except:
-                        return 'N.D.'
-            except Exception:
-                return 'N.D.'
-
-        # Add soil parameters
         if soil_params and isinstance(soil_params, dict) and 'parameter_statistics' in soil_params:
             s = soil_params['parameter_statistics']
+            rows.append({'Category': 'Soil', 'Parameter': 'pH', 'Average': f"{find_avg(s, ['pH']):.2f}" if find_avg(s, ['pH']) is not None else 'N.D.'})
+            rows.append({'Category': 'Soil', 'Parameter': 'Avail P (mg/kg)', 'Average': f"{find_avg(s, ['Avail P (mg/kg)','Available P (mg/kg)','Avail P','Available P']):.2f}" if find_avg(s, ['Avail P (mg/kg)','Available P (mg/kg)','Avail P','Available P']) is not None else 'N.D.'})
+            rows.append({'Category': 'Soil', 'Parameter': 'Exch. K (meq/100 g)', 'Average': f"{find_avg(s, ['Exch. K (meq/100 g)','Exchangeable K (meq/100 g)','Exch K (meq/100 g)']):.2f}" if find_avg(s, ['Exch. K (meq/100 g)','Exchangeable K (meq/100 g)','Exch K (meq/100 g)']) is not None else 'N.D.'})
+            rows.append({'Category': 'Soil', 'Parameter': 'CEC (meq/100 g)', 'Average': f"{find_avg(s, ['CEC (meq/100 g)','CEC']):.2f}" if find_avg(s, ['CEC (meq/100 g)','CEC']) is not None else 'N.D.'})
 
-            soil_mappings = [
-                ('pH', ['pH'], 'pH'),
-                ('Nitrogen (%)', ['N (%)', 'Nitrogen (%)', 'Total N (%)'], 'Nitrogen (%)'),
-                ('Organic Carbon (%)', ['Org. C (%)', 'Organic Carbon (%)', 'OC (%)'], 'Organic Carbon (%)'),
-                ('Available P (mg/kg)', ['Avail P (mg/kg)', 'Available P (mg/kg)', 'P (mg/kg)'], 'Available P (mg/kg)'),
-                ('Exchangeable K (meq/100g)', ['Exch. K (meq/100g)', 'Exchangeable K (meq/100g)'], 'Exchangeable K (meq/100g)'),
-                ('Exchangeable Ca (meq/100g)', ['Exch. Ca (meq/100g)', 'Exchangeable Ca (meq/100g)'], 'Exchangeable Ca (meq/100g)'),
-                ('Exchangeable Mg (meq/100g)', ['Exch. Mg (meq/100g)', 'Exchangeable Mg (meq/100g)'], 'Exchangeable Mg (meq/100g)'),
-                ('CEC (meq/100g)', ['CEC (meq/100g)', 'CEC'], 'CEC (meq/100g)')
-            ]
-
-            for param_name, aliases, standard_key in soil_mappings:
-                avg_val = find_avg(s, aliases)
-                standard = mpob_standards['soil'].get(standard_key, 'N.D.')
-                gap = calculate_gap(avg_val, standard)
-
-                rows.append({
-                    'Parameter': param_name,
-                    'Sumber': t('soil_source', 'Tanah'),
-                    'Purata': f"{avg_val:.2f}" if avg_val is not None else 'N.D.',
-                    'Piawaian MPOB': standard,
-                    'Jurang': gap
-                })
-
-        # Add leaf parameters
         if leaf_params and isinstance(leaf_params, dict) and 'parameter_statistics' in leaf_params:
             l = leaf_params['parameter_statistics']
+            rows.append({'Category': 'Leaf', 'Parameter': 'N (%)', 'Average': f"{find_avg(l, ['N (%)','Leaf N (%)','N']):.2f}" if find_avg(l, ['N (%)','Leaf N (%)','N']) is not None else 'N.D.'})
+            rows.append({'Category': 'Leaf', 'Parameter': 'P (%)', 'Average': f"{find_avg(l, ['P (%)','Leaf P (%)','P']):.3f}" if find_avg(l, ['P (%)','Leaf P (%)','P']) is not None else 'N.D.'})
+            rows.append({'Category': 'Leaf', 'Parameter': 'K (%)', 'Average': f"{find_avg(l, ['K (%)','Leaf K (%)','K']):.2f}" if find_avg(l, ['K (%)','Leaf K (%)','K']) is not None else 'N.D.'})
+            rows.append({'Category': 'Leaf', 'Parameter': 'Cu (mg/kg)', 'Average': f"{find_avg(l, ['Cu (mg/kg)','Leaf Cu (mg/kg)','Cu']):.2f}" if find_avg(l, ['Cu (mg/kg)','Leaf Cu (mg/kg)','Cu']) is not None else 'N.D.'})
 
-            leaf_mappings = [
-                ('Nitrogen (%)', ['N (%)', 'Nitrogen (%)'], 'Nitrogen (%)'),
-                ('Phosphorus (%)', ['P (%)', 'Phosphorus (%)'], 'Phosphorus (%)'),
-                ('Potassium (%)', ['K (%)', 'Potassium (%)'], 'Potassium (%)'),
-                ('Magnesium (%)', ['Mg (%)', 'Magnesium (%)'], 'Magnesium (%)'),
-                ('Calcium (%)', ['Ca (%)', 'Calcium (%)'], 'Calcium (%)'),
-                ('Boron (mg/kg)', ['B (mg/kg)', 'Boron (mg/kg)'], 'Boron (mg/kg)'),
-                ('Copper (mg/kg)', ['Cu (mg/kg)', 'Copper (mg/kg)'], 'Copper (mg/kg)'),
-                ('Zinc (mg/kg)', ['Zn (mg/kg)', 'Zinc (mg/kg)'], 'Zinc (mg/kg)')
-            ]
-
-            for param_name, aliases, standard_key in leaf_mappings:
-                avg_val = find_avg(l, aliases)
-                standard = mpob_standards['leaf'].get(standard_key, 'N.D.')
-                gap = calculate_gap(avg_val, standard)
-
-                rows.append({
-                    'Parameter': param_name,
-                    'Sumber': t('leaf_source', 'Daun'),
-                    'Purata': f"{avg_val:.2f}" if avg_val is not None else 'N.D.',
-                    'Piawaian MPOB': standard,
-                    'Jurang': gap
-                })
-
-        # Display the table
-        table_title = t('soil_leaf_test_results_vs_mpob', 'Ringkasan Ujian Tanah dan Daun vs. Piawaian Malaysia')
-        st.markdown(f"#### {table_title}")
-
+        st.markdown(f"#### {t('your_soil_leaf_test_results', 'Your Soil and Leaf Test Results')} {t('summary_label', 'Summary')}")
         if rows:
             df = pd.DataFrame(rows)
-
-            # Create HTML table for better formatting
-            html_table = f"""
-            <div style="margin: 20px 0; border-radius: 10px; overflow: hidden; box-shadow: 0 4px 15px rgba(0,0,0,0.1);">
-                <table style="width: 100%; border-collapse: collapse; background: white;">
-                    <thead style="background: linear-gradient(135deg, #2E8B57, #228B22); color: white;">
-                        <tr>
-                            <th style="padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #ddd;">{t('table_parameter', 'Parameter')}</th>
-                            <th style="padding: 12px; text-align: left; font-weight: 600; border-bottom: 2px solid #ddd;">{t('table_source', 'Sumber')}</th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; border-bottom: 2px solid #ddd;">{t('table_average', 'Purata')}</th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; border-bottom: 2px solid #ddd;">{t('mpob_standard', 'Piawaian MPOB')}</th>
-                            <th style="padding: 12px; text-align: center; font-weight: 600; border-bottom: 2px solid #ddd;">{t('table_gap', 'Jurang')}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-            """
-
-            for i, row in enumerate(rows):
-                bg_color = "#f8f9fa" if i % 2 == 0 else "white"
-                html_table += f"""
-                        <tr style="background: {bg_color};">
-                            <td style="padding: 10px; border-bottom: 1px solid #eee; font-weight: 500;">{row['Parameter']}</td>
-                            <td style="padding: 10px; border-bottom: 1px solid #eee;">{row['Sumber']}</td>
-                            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">{row['Purata']}</td>
-                            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">{row['Piawaian MPOB']}</td>
-                            <td style="padding: 10px; border-bottom: 1px solid #eee; text-align: center;">{row['Jurang']}</td>
-                        </tr>
-                """
-
-            html_table += """
-                    </tbody>
-                </table>
-            </div>
-            """
-
-            st.markdown(html_table, unsafe_allow_html=True)
+            apply_table_styling()
+            st.dataframe(translate_column_headers(df), use_container_width=True)
         else:
-            st.info(t('no_summary_data', 'No summary data available to display.'))
-
+            st.info("No summary data available to display.")
     except Exception as e:
         logger.error(f"Error in display_overall_results_summary_table: {e}")
-        st.error(t('error_displaying_table', 'Error displaying results table.'))
 
 def display_nutrient_gap_analysis_table(analysis_data):
     """Display a Nutrient Gap Analysis table using observed averages vs minimum thresholds."""
