@@ -9563,6 +9563,10 @@ def display_enhanced_step_result(step_result, step_number):
         # Handle different interpretation formats
         if isinstance(interpretations, list):
             for idx, interpretation in enumerate(interpretations, 1):
+                # Skip if interpretation is not a valid type
+                if not isinstance(interpretation, (str, dict)):
+                    continue
+                
                 # Handle both string and dict formats
                 if isinstance(interpretation, dict):
                     # Extract text from dictionary format
@@ -9573,19 +9577,21 @@ def display_enhanced_step_result(step_result, step_number):
                     interpretation_text = str(interpretation)
                 
                 if interpretation_text and isinstance(interpretation_text, str) and interpretation_text.strip():
-                # Remove any existing "Interpretation X:" prefix to avoid duplication
+                    # Remove any existing "Interpretation X:" prefix to avoid duplication
                     clean_interpretation = interpretation_text.strip()
-                if clean_interpretation.startswith(f"Interpretation {idx}:"):
-                    clean_interpretation = clean_interpretation.replace(f"Interpretation {idx}:", "").strip()
-                elif clean_interpretation.startswith(f"Detailed interpretation {idx}"):
-                    clean_interpretation = clean_interpretation.replace(f"Detailed interpretation {idx}", "").strip()
-                
-                st.markdown(
-                    f'<div style="margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, #f8f9fa, #ffffff); border-left: 4px solid #007bff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.1);">'
-                    f'<p style="margin: 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Interpretation {idx}:</strong> {clean_interpretation}</p>'
-                        f'</div>',
-                        unsafe_allow_html=True
-                    )
+                    if clean_interpretation.startswith(f"Interpretation {idx}:"):
+                        clean_interpretation = clean_interpretation.replace(f"Interpretation {idx}:", "").strip()
+                    elif clean_interpretation.startswith(f"Detailed interpretation {idx}"):
+                        clean_interpretation = clean_interpretation.replace(f"Detailed interpretation {idx}", "").strip()
+                    
+                    # Only display if we have valid text after cleaning
+                    if clean_interpretation:
+                        st.markdown(
+                            f'<div style="margin-bottom: 15px; padding: 12px; background: linear-gradient(135deg, #f8f9fa, #ffffff); border-left: 4px solid #007bff; border-radius: 6px; box-shadow: 0 1px 4px rgba(0,0,0,0.1);">'
+                            f'<p style="margin: 0; font-size: 15px; line-height: 1.5; color: #2c3e50;"><strong>Interpretation {idx}:</strong> {clean_interpretation}</p>'
+                            f'</div>',
+                            unsafe_allow_html=True
+                        )
         elif isinstance(interpretations, str):
             # Single interpretation as string
             if interpretations.strip():
@@ -9633,26 +9639,37 @@ def display_enhanced_step_result(step_result, step_number):
     if has_key_findings and step_number != 3:
         key_findings = analysis_data.get('key_findings')
         normalized_kf = []
+        
+        # Skip if key_findings is not a valid type (e.g., raw list representation as string)
+        if isinstance(key_findings, str) and key_findings.strip().startswith('['):
+            # This is likely a string representation of a list, skip it
+            logger.warning(f"⚠️ key_findings appears to be a string representation of a list, skipping: {key_findings[:100]}")
+            key_findings = None
+        
         if isinstance(key_findings, dict):
             ordered_keys = sorted(key_findings.keys(), key=lambda x: (not x.startswith('item_'), int(x.split('_')[1]) if x.startswith('item_') and x.split('_')[1].isdigit() else 1000000000))
             for k in ordered_keys:
                 v = key_findings.get(k)
-                if isinstance(v, str) and v.strip():
+                if isinstance(v, str) and v.strip() and not v.strip().startswith('['):
                     # Try to parse JSON objects like {"finding": "...", "implication": "..."}
                     parsed_finding = _parse_json_finding(v.strip())
-                    normalized_kf.append(parsed_finding)
+                    if parsed_finding:
+                        normalized_kf.append(parsed_finding)
         elif isinstance(key_findings, list):
             for v in key_findings:
-                if isinstance(v, str) and v.strip():
+                # Skip non-string items and string representations of lists
+                if isinstance(v, str) and v.strip() and not v.strip().startswith('['):
                     # Try to parse JSON objects like {"finding": "...", "implication": "..."}
                     parsed_finding = _parse_json_finding(v.strip())
-                    normalized_kf.append(parsed_finding)
-        elif isinstance(key_findings, str) and key_findings.strip():
-            parts = [p.strip('-• ').strip() for p in key_findings.strip().split('\n') if p.strip()]
+                    if parsed_finding:
+                        normalized_kf.append(parsed_finding)
+        elif isinstance(key_findings, str) and key_findings.strip() and not key_findings.strip().startswith('['):
+            parts = [p.strip('-• ').strip() for p in key_findings.strip().split('\n') if p.strip() and not p.strip().startswith('[')]
             for part in (parts if parts else [key_findings.strip()]):
                 # Try to parse JSON objects like {"finding": "...", "implication": "..."}
                 parsed_finding = _parse_json_finding(part)
-                normalized_kf.append(parsed_finding)
+                if parsed_finding:
+                    normalized_kf.append(parsed_finding)
 
         if normalized_kf:
             st.markdown(
@@ -16316,15 +16333,24 @@ def display_forecast_graph_content(analysis_data, step_number=None, step_title=N
     forecast = None
     if 'yield_forecast' in analysis_data:
         forecast = analysis_data['yield_forecast']
-    elif 'analysis' in analysis_data and 'yield_forecast' in analysis_data['analysis']:
+    elif 'analysis' in analysis_data and isinstance(analysis_data['analysis'], dict) and 'yield_forecast' in analysis_data['analysis']:
         forecast = analysis_data['analysis']['yield_forecast']
+    
+    # CRITICAL: Ensure forecast is a dictionary before using .get()
+    if forecast and not isinstance(forecast, dict):
+        # If forecast is a string, try to parse it or set to None
+        if isinstance(forecast, str):
+            logger.warning(f"⚠️ yield_forecast is a string, not a dict: {forecast[:100]}")
+            forecast = None
+        else:
+            logger.warning(f"⚠️ yield_forecast is not a dict or string: {type(forecast)}")
+            forecast = None
         
-    if forecast:
+    if forecast and isinstance(forecast, dict):
         # Filter out any "Missing" text from the forecast data itself
-        if isinstance(forecast, dict):
-            for key, value in forecast.items():
-                if isinstance(value, str):
-                    forecast[key] = filter_step6_net_profit_placeholders(value)
+        for key, value in forecast.items():
+            if isinstance(value, str):
+                forecast[key] = filter_step6_net_profit_placeholders(value)
         
         # Show baseline yield. Prefer explicit baseline; fall back to user's economic data
         raw_baseline = forecast.get('baseline_yield')
@@ -16339,20 +16365,21 @@ def display_forecast_graph_content(analysis_data, step_number=None, step_title=N
             # nested under analysis
             if 'analysis' in analysis_data and isinstance(analysis_data['analysis'], dict):
                 analysis_econ = analysis_data['analysis'].get('economic_forecast', {})
-                if analysis_econ:
+                if analysis_econ and isinstance(analysis_econ, dict):
                     baseline_yield = _extract_first_float(
                         analysis_econ.get('current_yield_tonnes_per_ha') or analysis_econ.get('current_yield'),
                         0.0,
                     )
             if not baseline_yield and 'economic_forecast' in analysis_data:
                 econ = analysis_data.get('economic_forecast', {})
-                baseline_yield = _extract_first_float(
-                    econ.get('current_yield_tonnes_per_ha') or econ.get('current_yield'),
-                    0.0,
-                )
+                if isinstance(econ, dict):
+                    baseline_yield = _extract_first_float(
+                        econ.get('current_yield_tonnes_per_ha') or econ.get('current_yield'),
+                        0.0,
+                    )
 
         # As a final fallback, attempt to use the first point of any numeric series
-        if not baseline_yield:
+        if not baseline_yield and isinstance(forecast, dict):
             for key in ['medium_investment', 'high_investment', 'low_investment']:
                 series = forecast.get(key)
                 if isinstance(series, list) and len(series) > 0:
@@ -16363,6 +16390,11 @@ def display_forecast_graph_content(analysis_data, step_number=None, step_title=N
         if baseline_yield > 0:
             st.markdown(f"**{t('baseline_yield', 'Current Yield Baseline')}:** {baseline_yield:.1f} {t('tonnes_per_hectare', 'tonnes/hectare')}")
             st.markdown("")
+        
+        # Only proceed with graph if forecast is a valid dict
+        if not isinstance(forecast, dict):
+            st.warning("⚠️ Yield forecast data is not in the expected format. Cannot display forecast graph.")
+            return
         
         try:
             import plotly.graph_objects as go
@@ -16393,6 +16425,7 @@ def display_forecast_graph_content(analysis_data, step_number=None, step_title=N
             
             for scenario_key, scenario_name, color in investment_scenarios:
                 scenario_values = [baseline_yield]  # Start with baseline
+                scenario_data = None  # Initialize to None
                 
                 if scenario_key in forecast:
                     scenario_data = forecast[scenario_key]
@@ -16412,9 +16445,11 @@ def display_forecast_graph_content(analysis_data, step_number=None, step_title=N
                                 scenario_values.append(baseline_yield)
                     else:
                         # Invalid data format, generate fallback
+                        scenario_data = None  # Reset to None for invalid format
                         scenario_values = _generate_fallback_values(baseline_yield, scenario_key)
                 else:
                     # Generate fallback data if scenario is missing
+                    scenario_data = None
                     scenario_values = _generate_fallback_values(baseline_yield, scenario_key)
                 
                 # Ensure we have exactly 6 values
@@ -16435,7 +16470,7 @@ def display_forecast_graph_content(analysis_data, step_number=None, step_title=N
                     else:
                         # Try to get the original range data for hover
                         year_key = f'year_{i}'
-                        if isinstance(scenario_data, dict) and year_key in scenario_data:
+                        if scenario_data and isinstance(scenario_data, dict) and year_key in scenario_data:
                             original_value = scenario_data[year_key]
                             if isinstance(original_value, str) and '-' in original_value:
                                 # This is a range, show it in hover

@@ -1060,18 +1060,21 @@ def upload_section():
     
     land_yield_provided = land_size > 0 and current_yield > 0
     
-    # Check upload limits before allowing analysis
-    can_start = True
+    # CRITICAL: First update session state from URL params to get latest values
+    # This must happen BEFORE checking can_start_analysis() to ensure accurate limit checking
     limit_info = None
+    uploads_used = 0
+    uploads_limit = 0
+    uploads_remaining = 0
+    
     try:
-        from utils.cropdrive_integration import can_start_analysis, get_upload_limit_info
-        can_start = can_start_analysis()
+        from utils.cropdrive_integration import get_upload_limit_info
         limit_info = get_upload_limit_info()
     except ImportError:
-        # CropDrive integration not available, allow analysis
+        # CropDrive integration not available
         pass
     except Exception:
-        # Error checking limits, allow analysis to proceed
+        # Error getting limit info
         pass
     
     if soil_uploaded and leaf_uploaded and land_yield_provided:
@@ -1115,6 +1118,18 @@ def upload_section():
             uploads_used = limit_info.get('uploads_used', 0) if limit_info else 0
             uploads_limit = limit_info.get('uploads_limit', 0) if limit_info else 0
             uploads_remaining = limit_info.get('uploads_remaining', 0) if limit_info else 0
+        
+        # CRITICAL: Now check if analysis can start AFTER updating session state
+        can_start = True
+        try:
+            from utils.cropdrive_integration import can_start_analysis
+            can_start = can_start_analysis()
+        except ImportError:
+            # CropDrive integration not available, allow analysis
+            can_start = True
+        except Exception:
+            # Error checking limits, allow analysis to proceed
+            can_start = True
         
         if limit_info or (uploads_limit > 0):
             # Only show limit info if limit is set (greater than 0)

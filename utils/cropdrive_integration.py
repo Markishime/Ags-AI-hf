@@ -684,12 +684,24 @@ def can_start_analysis():
     upload_limit_exceeded = st.session_state.get('upload_limit_exceeded', False)
     uploads_remaining = st.session_state.get('uploads_remaining', 0)
     
+    # Ensure values are numeric
+    try:
+        uploads_used = int(uploads_used) if uploads_used is not None else 0
+        uploads_limit = int(uploads_limit) if uploads_limit is not None else 0
+    except (ValueError, TypeError):
+        uploads_used = 0
+        uploads_limit = 0
+    
+    logger.info(f"🔍 can_start_analysis check: used={uploads_used}, limit={uploads_limit}, exceeded={upload_limit_exceeded}, remaining={uploads_remaining}")
+    
     # If upload_limit_exceeded flag is set, block analysis
     if upload_limit_exceeded:
+        logger.info("❌ Analysis blocked: upload_limit_exceeded flag is True")
         return False
     
     # If no limit set (0 or -1), allow unlimited analyses
     if uploads_limit == 0 or uploads_limit == -1:
+        logger.info("✅ Analysis allowed: no limit set (unlimited)")
         return True
     
     # Recalculate remaining to ensure accuracy: limit - used
@@ -697,13 +709,16 @@ def can_start_analysis():
     
     # If calculated remaining is infinity, allow
     if calculated_remaining == float('inf'):
+        logger.info("✅ Analysis allowed: unlimited remaining")
         return True
     
     # If calculated remaining is greater than 0, allow analysis
     if calculated_remaining > 0:
+        logger.info(f"✅ Analysis allowed: {calculated_remaining} remaining")
         return True
     
     # Otherwise, block (remaining is 0 or less)
+    logger.info(f"❌ Analysis blocked: {calculated_remaining} remaining (limit reached)")
     return False
 
 def get_upload_limit_info():
