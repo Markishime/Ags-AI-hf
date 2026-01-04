@@ -70,6 +70,93 @@ def translate_column_headers(df):
     return translated_df
 
 
+def translate_analysis_key(key):
+    """Translate common analysis keys that appear in Additional Analysis Results"""
+    key_lower = key.lower().strip()
+    key_normalized = key.replace('_', ' ').strip()
+    
+    # Map common keys to translation keys
+    translation_map = {
+        'analysis': 'analysis_label',
+        'analysis:': 'analysis_label',
+        'summary': 'summary_label',
+        'summary:': 'summary_label',
+        'detailed analysis': 'detailed_analysis_label',
+        'detailed analysis:': 'detailed_analysis_label',
+        'formatted analysis': 'formatted_analysis_label',
+        'formatted analysis:': 'formatted_analysis_label',
+    }
+    
+    # Check exact matches first
+    if key_lower in translation_map:
+        return t(translation_map[key_lower], key)
+    
+    # Check normalized key
+    if key_normalized.lower() in translation_map:
+        return t(translation_map[key_normalized.lower()], key)
+    
+    # Return original key if no translation found
+    return key
+
+
+def translate_step_title(step_title, step_number):
+    """Translate step titles, handling common patterns like 'Your soil and leaf test results and analysis'"""
+    if not step_title:
+        return t(f'step_{step_number}_title', f'Step {step_number}')
+    
+    step_title_lower = step_title.lower().strip()
+    
+    # First, try to use the standard translation key for this step number
+    translation_key = f'step_{step_number}_title'
+    standard_translation = t(translation_key, None)
+    if standard_translation and standard_translation != translation_key:
+        # If the step title contains additional text beyond the standard title, try to preserve it
+        # For example, "Step 1 Your soil and leaf test results and analysis" vs "Step 1: Data Analysis"
+        standard_lower = standard_translation.lower()
+        if standard_lower in step_title_lower or any(word in step_title_lower for word in standard_lower.split() if len(word) > 3):
+            # The title contains the standard translation, use it
+            return standard_translation
+    
+    # Map common step title patterns to translation keys
+    # These patterns match common LLM-generated step titles
+    title_patterns = {
+        'your soil and leaf test results and analysis': ('your_soil_leaf_test_results_analysis', 'Keputusan Ujian Tanah dan Daun Anda dan Analisis'),
+        'your soil and leaf test results': ('your_soil_leaf_test_results', 'Keputusan Ujian Tanah dan Daun Anda'),
+        'soil and leaf test results': ('soil_leaf_test_results', 'Keputusan Ujian Tanah dan Daun'),
+        'diagnose agronomic issues': ('step_2_title', 'Langkah 2: Diagnosis Isu'),
+        'issue diagnosis': ('step_2_title', 'Langkah 2: Diagnosis Isu'),
+        'recommend solutions': ('step_3_title', 'Langkah 3: Cadangan Penyelesaian'),
+        'solution recommendations': ('step_3_title', 'Langkah 3: Cadangan Penyelesaian'),
+        'regenerative agriculture strategies': ('step_4_title', 'Langkah 4: Pertanian Regeneratif'),
+        'regenerative agriculture': ('step_4_title', 'Langkah 4: Pertanian Regeneratif'),
+        'economic impact forecast': ('step_5_title', 'Langkah 5: Ramalan Kesan Ekonomi'),
+        'economic impact': ('step_5_title', 'Langkah 5: Ramalan Kesan Ekonomi'),
+        'forecast graph': ('step_6_title', 'Langkah 6: Ramalan & Unjuran Hasil'),
+        'yield forecast': ('step_6_title', 'Langkah 6: Ramalan & Unjuran Hasil'),
+        'yield forecast & projections': ('step_6_title', 'Langkah 6: Ramalan & Unjuran Hasil'),
+    }
+    
+    # Check if the step title matches any pattern
+    for pattern, (trans_key, default_trans) in title_patterns.items():
+        if pattern in step_title_lower:
+            # Try to preserve the step number if present
+            import re
+            step_match = re.search(r'step\s*(\d+)', step_title_lower)
+            if step_match:
+                step_num = step_match.group(1)
+                translated_text = t(trans_key, default_trans)
+                return f'Langkah {step_num}: {translated_text}'
+            translated_text = t(trans_key, default_trans)
+            return translated_text
+    
+    # If no pattern matches, try the standard translation key again
+    if standard_translation and standard_translation != translation_key:
+        return standard_translation
+    
+    # Return original title if no translation found
+    return step_title
+
+
 def normalize_markdown_block_for_step3(text):
     """Normalize inline dense markdown into readable headings and lists for Step 3.
 
@@ -6285,7 +6372,8 @@ def display_step_by_step_results(results_data):
                 continue
             
             step_number = step_result.get('step_number', i+1)
-            step_title = step_result.get('step_title', t(f'step_{step_number}_title', f'Step {step_number}'))
+            raw_step_title = step_result.get('step_title', t(f'step_{step_number}_title', f'Step {step_number}'))
+            step_title = translate_step_title(raw_step_title, step_number)
             
             # Create a visual separator between steps
             if i > 0:
@@ -7599,7 +7687,7 @@ def display_step5_economic_forecast(analysis_data):
             if 'formatted_analysis' in analysis_data and analysis_data['formatted_analysis']:
                 st.markdown(f"### 📊 **{t('economic_analysis_tables_formatted', 'Economic Analysis Tables (Formatted)')}**")
                 st.info("📋 Displaying formatted economic analysis from analysis text.")
-                display_formatted_economic_tables(analysis_data['formatted_analysis'])
+                display_formatted_economic_tables(analysis_data['formatted_analysis'], analysis_data)
             else:
                 # Generate a basic economic summary if no data is available
                 st.markdown(f"### 📊 **{t('economic_impact_analysis', 'Economic Impact Analysis')}**")
@@ -7786,7 +7874,7 @@ def display_economic_yearly_table(scenario_name, yearly_data, economic_forecast)
         logger.error(f"Error displaying economic yearly table: {e}")
         st.error(f"Error displaying economic table for {scenario_name}")
 
-def display_formatted_economic_tables(formatted_text):
+def display_formatted_economic_tables(formatted_text, analysis_data=None):
     """Parse and display tables from formatted economic analysis text."""
     try:
         import pandas as pd
@@ -7807,6 +7895,85 @@ def display_formatted_economic_tables(formatted_text):
         formatted_text = re.sub(r'Table generation needed.*?', '', formatted_text, flags=re.IGNORECASE)
         formatted_text = re.sub(r'Pending.*?', '', formatted_text, flags=re.IGNORECASE)
         formatted_text = re.sub(r'Please regenerate with table data.*?', '', formatted_text, flags=re.IGNORECASE)
+        
+        # Replace table placeholders with actual tables if analysis_data is provided
+        if analysis_data:
+            # Get economic forecast data
+            economic_forecast = analysis_data.get('economic_forecast', {})
+            if not economic_forecast:
+                economic_forecast = analysis_data.get('result', {}).get('economic_forecast', {})
+            if not economic_forecast:
+                economic_forecast = analysis_data.get('data', {}).get('economic_forecast', {})
+            
+            # Map placeholder numbers to scenario names
+            scenario_map = {
+                '2': 'high',
+                '3': 'medium',
+                '4': 'low'
+            }
+            
+            # Find all table placeholders
+            placeholder_pattern = r'<div class="custom-table-container">__TABLE_PLACEHOLDER_(\d+)__</div>'
+            placeholders = re.findall(placeholder_pattern, formatted_text)
+            
+            # Replace each placeholder with the corresponding table
+            for placeholder_num in placeholders:
+                scenario_key = scenario_map.get(placeholder_num)
+                if scenario_key and economic_forecast.get('scenarios'):
+                    scenarios = economic_forecast['scenarios']
+                    scenario_data = scenarios.get(scenario_key) or scenarios.get(scenario_key.title()) or scenarios.get(scenario_key.upper())
+                    
+                    if scenario_data and isinstance(scenario_data, dict) and 'yearly_data' in scenario_data:
+                        yearly_data = scenario_data['yearly_data']
+                        if yearly_data and len(yearly_data) > 0:
+                            # Create a marker to insert the table here
+                            placeholder_full = f'<div class="custom-table-container">__TABLE_PLACEHOLDER_{placeholder_num}__</div>'
+                            # Replace with a unique marker that we'll replace later
+                            formatted_text = formatted_text.replace(placeholder_full, f'__TABLE_INSERT_{placeholder_num}__', 1)
+            
+            # Split text by table insertion markers and display tables at the right positions
+            parts = re.split(r'__TABLE_INSERT_(\d+)__', formatted_text)
+            result_parts = []
+            
+            for i, part in enumerate(parts):
+                if part.isdigit() and part in scenario_map:
+                    # This is a table insertion point
+                    scenario_key = scenario_map[part]
+                    if economic_forecast.get('scenarios'):
+                        scenarios = economic_forecast['scenarios']
+                        scenario_data = scenarios.get(scenario_key) or scenarios.get(scenario_key.title()) or scenarios.get(scenario_key.upper())
+                        
+                        if scenario_data and isinstance(scenario_data, dict) and 'yearly_data' in scenario_data:
+                            yearly_data = scenario_data['yearly_data']
+                            if yearly_data and len(yearly_data) > 0:
+                                # Display the text before the table
+                                if result_parts:
+                                    prev_text = ''.join(result_parts)
+                                    if prev_text.strip():
+                                        # Display previous text
+                                        st.markdown(prev_text, unsafe_allow_html=True)
+                                        result_parts = []
+                                
+                                # Display the table
+                                display_economic_yearly_table(scenario_key, yearly_data, economic_forecast)
+                                continue
+                
+                # Regular text part
+                result_parts.append(part)
+            
+            # Display any remaining text
+            if result_parts:
+                remaining_text = ''.join(result_parts)
+                if remaining_text.strip():
+                    # Remove any remaining placeholder divs
+                    remaining_text = re.sub(r'<div class="custom-table-container">__TABLE_PLACEHOLDER_\d+__</div>', '', remaining_text)
+                    if remaining_text.strip():
+                        st.markdown(remaining_text, unsafe_allow_html=True)
+                        return
+            
+            # If we've already displayed everything via placeholders, return early
+            if any(re.search(r'__TABLE_INSERT_\d+__', part) for part in parts):
+                return
 
         # PRIORITY 1: Check for complete HTML table blocks with div wrappers and classes
         # These should be rendered directly as HTML
@@ -9687,7 +9854,7 @@ def display_enhanced_step_result(step_result, step_number):
     if other_fields:
         for key in other_fields:
             value = analysis_data.get(key)
-            title = key.replace('_', ' ').title()
+            title = translate_analysis_key(key.replace('_', ' ').title())
             
             # Skip raw LLM output patterns
             if key.startswith('Item ') or key in ['deterministic', 'raw_llm_output', 'raw_output', 'llm_output']:
@@ -9705,7 +9872,8 @@ def display_enhanced_step_result(step_result, step_number):
                     if norm_sub_k in ['key_findings','specific_recommendations','tables','interpretations','visualizations','yield_forecast','format_analysis','data_format_recommendations','plantation_values_vs_reference','soil_issues','issues_source']:
                         continue
                     if sub_v is not None and sub_v != "":
-                        st.markdown(f"- **{sub_k.replace('_',' ').title()}:** {sub_v}")
+                        translated_sub_k = translate_analysis_key(sub_k.replace('_',' ').title())
+                        st.markdown(f"- **{translated_sub_k}:** {sub_v}")
             elif isinstance(value, list) and value:
                 st.markdown(f"**{title}:**")
                 for idx, item in enumerate(value, 1):
@@ -9841,7 +10009,9 @@ def display_enhanced_step_result(step_result, step_number):
         # This catches any raw data that might have leaked through from LLM responses
         analysis_data = remove_economic_scenarios_from_analysis(analysis_data)
 
-        display_forecast_graph_content(analysis_data, step_number, step_result.get('step_title', f'Step {step_number}'))
+        raw_step_title = step_result.get('step_title', f'Step {step_number}')
+        translated_step_title = translate_step_title(raw_step_title, step_number)
+        display_forecast_graph_content(analysis_data, step_number, translated_step_title)
 
         # Also show Step 5 reference tables/text when available
         try:
@@ -10785,7 +10955,8 @@ def display_step_specific_content(step_result, step_number):
     
     # Only show forecast graph if step instructions contain forecast graph keywords
     if should_show_forecast_graph(step_result) and has_yield_forecast_data(analysis_data):
-        step_title = analysis_data.get('step_title', t(f'step_{step_number}_title', f'Step {step_number}'))
+        raw_step_title = analysis_data.get('step_title', t(f'step_{step_number}_title', f'Step {step_number}'))
+        step_title = translate_step_title(raw_step_title, step_number)
         display_forecast_graph_content(analysis_data, step_number, step_title)
 
 def display_bar_chart(data, title):
@@ -12102,10 +12273,10 @@ def display_step1_data_analysis(analysis_data):
     other_fields = [k for k in analysis_data.keys() if k not in excluded_keys and analysis_data.get(k) is not None and analysis_data.get(k) != ""]
     
     if other_fields:
-        st.markdown("#### 📊 Additional Analysis Results")
+        st.markdown(f"#### 📊 {t('additional_analysis_results', 'Additional Analysis Results')}")
         for key in other_fields:
             value = analysis_data.get(key)
-            title = key.replace('_', ' ').title()
+            title = translate_analysis_key(key.replace('_', ' ').title())
             
             # Skip raw LLM output patterns
             if key.startswith('Item ') or key in ['deterministic', 'raw_llm_output', 'raw_output', 'llm_output']:
@@ -12123,7 +12294,8 @@ def display_step1_data_analysis(analysis_data):
                     if norm_sub_k in ['key_findings','specific_recommendations','tables','interpretations','visualizations','yield_forecast','format_analysis','data_format_recommendations','plantation_values_vs_reference','soil_issues','issues_source','economic_forecast','scenarios','assumptions']:
                         continue
                     if sub_v is not None and sub_v != "":
-                        st.markdown(f"- **{sub_k.replace('_',' ').title()}:** {sub_v}")
+                        translated_sub_k = translate_analysis_key(sub_k.replace('_',' ').title())
+                        st.markdown(f"- **{translated_sub_k}:** {sub_v}")
             elif isinstance(value, list) and value:
                 st.markdown(f"**{title}:**")
                 for i, item in enumerate(value, 1):
@@ -15682,7 +15854,7 @@ def display_step3_solution_recommendations(analysis_data):
 
     # 3c. INTERPRETATIONS
     if analysis_data.get('interpretations'):
-        st.markdown("#### 🔍 Detailed Interpretations")
+        st.markdown(f"#### 🔍 {t('detailed_interpretations', 'Detailed Interpretations')}")
         interpretations_html = '<div style="background: linear-gradient(135deg, #f8f9fa, #ffffff); padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-left: 4px solid #007bff;">'
         interpretations_html += '<ol style="margin: 0; padding-left: 20px; color: #2c3e50; line-height: 1.6;">'
         for i, text in enumerate(analysis_data['interpretations'], 1):
@@ -16105,7 +16277,7 @@ def display_regenerative_agriculture_content(analysis_data):
     try:
         interps = analysis_data.get('interpretations')
         if interps:
-            st.markdown("#### 🔍 Detailed Interpretations")
+            st.markdown(f"#### 🔍 {t('detailed_interpretations', 'Detailed Interpretations')}")
             # Reuse normalization helper used elsewhere
             items = _normalize_interpretations_section(interps)
             interpretations_html = '<div style="background: linear-gradient(135deg, #f8f9fa, #ffffff); padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-left: 4px solid #007bff;">'
