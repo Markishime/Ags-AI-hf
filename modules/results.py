@@ -23,7 +23,7 @@ from utils.ocr_utils import extract_data_from_image
 from modules.admin import get_active_prompt
 from utils.feedback_system import (
     display_feedback_section as display_feedback_section_util)
-from utils.translations import t, get_language, translate_step_title, translate_text_headers
+from utils.translations import t, get_language
 
 # Import CropDrive integration for user ID
 try:
@@ -168,22 +168,38 @@ def display_step1_placeholder_tables(analysis_data, detailed_text):
                     try:
                         display_overall_results_summary_table(analysis_data)
                     except Exception as _e:
-                        st.info("📋 Your Soil and Leaf Test Results Summary: No data available to display.")
+                        current_lang = get_language()
+                        if current_lang == 'ms':
+                            st.info("📋 Ringkasan Keputusan Ujian Tanah dan Daun Anda: Tiada data tersedia untuk dipaparkan.")
+                        else:
+                            st.info("📋 Your Soil and Leaf Test Results Summary: No data available to display.")
                 elif num == 1:
                     try:
                         display_soil_ratio_table(analysis_data)
                     except Exception:
-                        st.info("📋 Soil Nutrient Ratios: No data available to display.")
+                        current_lang = get_language()
+                        if current_lang == 'ms':
+                            st.info("📋 Nisbah Nutrien Tanah: Tiada data tersedia untuk dipaparkan.")
+                        else:
+                            st.info("📋 Soil Nutrient Ratios: No data available to display.")
                 elif num == 2:
                     try:
                         display_leaf_ratio_table(analysis_data)
                     except Exception:
-                        st.info("📋 Leaf Nutrient Ratios: No data available to display.")
+                        current_lang = get_language()
+                        if current_lang == 'ms':
+                            st.info("📋 Nisbah Nutrien Daun: Tiada data tersedia untuk dipaparkan.")
+                        else:
+                            st.info("📋 Leaf Nutrient Ratios: No data available to display.")
                 elif num == 3:
                     try:
                         display_nutrient_gap_analysis_table(analysis_data)
                     except Exception:
-                        st.info("📋 Nutrient Gap Analysis: No data available to display.")
+                        current_lang = get_language()
+                        if current_lang == 'ms':
+                            st.info("📋 Analisis Jurang Nutrien: Tiada data tersedia untuk dipaparkan.")
+                        else:
+                            st.info("📋 Nutrient Gap Analysis: No data available to display.")
             except Exception as e:
                 logger.error(f"Error rendering numbered table placeholder {num}: {e}")
 
@@ -2794,7 +2810,11 @@ def display_raw_data_section(results_data):
             else:
                 display_leaf_data_table(leaf_data)
     else:
-        st.info("📋 No raw data available for this analysis.")
+        current_lang = get_language()
+        if current_lang == 'ms':
+            st.info("📋 Tiada data mentah tersedia untuk analisis ini.")
+        else:
+            st.info("📋 No raw data available for this analysis.")
         st.write(f"{t('results_data_keys', 'Results data keys')}: {list(results_data.keys())}")
         if analysis_results:
             st.write(f"{t('analysis_results_keys', 'Analysis results keys')}: {list(analysis_results.keys())}")
@@ -6285,9 +6305,7 @@ def display_step_by_step_results(results_data):
                 continue
             
             step_number = step_result.get('step_number', i+1)
-            raw_step_title = step_result.get('step_title', t(f'step_{step_number}_title', f'Step {step_number}'))
-            # Translate step title if it contains English patterns
-            step_title = translate_step_title(raw_step_title, step_number)
+            step_title = step_result.get('step_title', t(f'step_{step_number}_title', f'Step {step_number}'))
             
             # Create a visual separator between steps
             if i > 0:
@@ -6584,6 +6602,9 @@ def display_step_block(step_result, step_number, step_title):
     
     config = step_configs.get(step_number, {"color": "#667eea", "icon": "📋", "description": t('results_step_analysis', 'Analysis Step')})
     
+    # Get translated step prefix
+    step_prefix = t('step_prefix', 'STEP')
+    
     # Create a prominent step header with step-specific styling
     st.markdown(f"""
     <div style="
@@ -6604,7 +6625,7 @@ def display_step_block(step_result, step_number, step_title):
                 font-size: 18px;
                 margin-right: 20px;
             ">
-                {config['icon']} Step {step_number}
+                {config['icon']} {step_prefix} {step_number}
             </div>
             <div>
                 <h3 style="color: white; margin: 0; font-size: 24px;">{step_title}</h3>
@@ -7092,7 +7113,11 @@ def display_enhanced_step_result(step_result, step_number):
                 if detailed_text.strip():
                     parse_and_display_json_analysis(detailed_text)
             else:
-                st.info("📋 No detailed analysis available for this step.")
+                current_lang = get_language()
+                if current_lang == 'ms':
+                    st.info("📋 Tiada analisis terperinci tersedia untuk langkah ini.")
+                else:
+                    st.info("📋 No detailed analysis available for this step.")
 
     # Detailed Data Tables section removed as requested
     # 4. VISUALIZATIONS SECTION - Show if available (skip for Step 3)
@@ -7600,26 +7625,43 @@ def display_step5_economic_forecast(analysis_data):
         if all_tables_displayed == 0:
             if 'formatted_analysis' in analysis_data and analysis_data['formatted_analysis']:
                 st.markdown(f"### 📊 **{t('economic_analysis_tables_formatted', 'Economic Analysis Tables (Formatted)')}**")
-                st.info("📋 Displaying formatted economic analysis from analysis text.")
+                current_lang = get_language()
+                if current_lang == 'ms':
+                    st.info("📋 Memaparkan analisis ekonomi terformat dari teks analisis.")
+                else:
+                    st.info("📋 Displaying formatted economic analysis from analysis text.")
                 display_formatted_economic_tables(analysis_data['formatted_analysis'])
             else:
                 # Generate a basic economic summary if no data is available
                 st.markdown(f"### 📊 **{t('economic_impact_analysis', 'Economic Impact Analysis')}**")
-                st.info("💡 **Economic Analysis Summary:** The analysis indicates potential for yield improvements through proper nutrient management. Complete soil and leaf analysis in previous steps to generate detailed economic projections.")
-
-                # Show basic economic insights
-                st.markdown("""
-                **Key Economic Considerations:**
-                - **Investment Benefits**: Proper nutrient correction can improve yields by 15-40%
-                - **ROI Potential**: Fertilizer investments typically provide 60-120% returns within 2-3 years
-                - **Cost Recovery**: Most corrective programs pay for themselves within 12-18 months
-                - **Long-term Value**: Sustainable nutrient management ensures continued plantation productivity
-                """)
-
-                st.markdown("**💡 Recommendation:** Complete the full analysis suite (Steps 1-4) to generate detailed 5-year economic projections with specific costs, revenues, and ROI calculations.")
+                current_lang = get_language()
+                if current_lang == 'ms':
+                    st.info("💡 **Ringkasan Analisis Ekonomi:** Analisis menunjukkan potensi untuk peningkatan hasil melalui pengurusan nutrien yang betul. Lengkapkan analisis tanah dan daun pada langkah sebelumnya untuk menjana unjuran ekonomi yang terperinci.")
+                    st.markdown("""
+                    **Pertimbangan Ekonomi Utama:**
+                    - **Manfaat Pelaburan**: Pembetulan nutrien yang betul boleh meningkatkan hasil sebanyak 15-40%
+                    - **Potensi ROI**: Pelaburan baja biasanya memberikan pulangan 60-120% dalam 2-3 tahun
+                    - **Pemulihan Kos**: Kebanyakan program pembetulan membayar sendiri dalam 12-18 bulan
+                    - **Nilai Jangka Panjang**: Pengurusan nutrien yang mampan memastikan produktiviti ladang berterusan
+                    """)
+                    st.markdown("**💡 Cadangan:** Lengkapkan rangkaian analisis penuh (Langkah 1-4) untuk menjana unjuran ekonomi 5 tahun yang terperinci dengan kos, pendapatan dan pengiraan ROI yang spesifik.")
+                else:
+                    st.info("💡 **Economic Analysis Summary:** The analysis indicates potential for yield improvements through proper nutrient management. Complete soil and leaf analysis in previous steps to generate detailed economic projections.")
+                    st.markdown("""
+                    **Key Economic Considerations:**
+                    - **Investment Benefits**: Proper nutrient correction can improve yields by 15-40%
+                    - **ROI Potential**: Fertilizer investments typically provide 60-120% returns within 2-3 years
+                    - **Cost Recovery**: Most corrective programs pay for themselves within 12-18 months
+                    - **Long-term Value**: Sustainable nutrient management ensures continued plantation productivity
+                    """)
+                    st.markdown("**💡 Recommendation:** Complete the full analysis suite (Steps 1-4) to generate detailed 5-year economic projections with specific costs, revenues, and ROI calculations.")
 
         # Show completion message
-        st.info("📊 **Economic Impact Analysis Complete** - All projections and ROI calculations are displayed in the tables above.")
+        current_lang = get_language()
+        if current_lang == 'ms':
+            st.info("📊 **Analisis Kesan Ekonomi Selesai** - Semua unjuran dan pengiraan ROI dipaparkan dalam jadual di atas.")
+        else:
+            st.info("📊 **Economic Impact Analysis Complete** - All projections and ROI calculations are displayed in the tables above.")
 
         # CRITICAL: Ensure ALL tables are displayed (including non-economic ones)
         # This prevents tables from being missed in Step 5 display
@@ -7686,16 +7728,26 @@ def display_step5_economic_forecast(analysis_data):
         logger.error(f"Error in display_step5_economic_forecast: {str(e)}")
         st.error(f"Error displaying Step 5 economic forecast: {str(e)}")
         # Continue with basic economic summary as fallback
-        st.markdown("### 📊 **Economic Impact Analysis**")
-        st.info("💡 **Economic Analysis Summary:** The analysis indicates potential for yield improvements through proper nutrient management.")
-
-        st.markdown("""
-        **Key Economic Considerations:**
-        - **Investment Benefits**: Proper nutrient correction can improve yields by 15-40%
-        - **ROI Potential**: Fertilizer investments typically provide 60-120% returns within 2-3 years
-        - **Cost Recovery**: Most corrective programs pay for themselves within 12-18 months
-        - **Long-term Value**: Sustainable nutrient management ensures continued plantation productivity
-        """)
+        st.markdown(f"### 📊 **{t('economic_impact_analysis', 'Economic Impact Analysis')}**")
+        current_lang = get_language()
+        if current_lang == 'ms':
+            st.info("💡 **Ringkasan Analisis Ekonomi:** Analisis menunjukkan potensi untuk peningkatan hasil melalui pengurusan nutrien yang betul.")
+            st.markdown("""
+            **Pertimbangan Ekonomi Utama:**
+            - **Manfaat Pelaburan**: Pembetulan nutrien yang betul boleh meningkatkan hasil sebanyak 15-40%
+            - **Potensi ROI**: Pelaburan baja biasanya memberikan pulangan 60-120% dalam 2-3 tahun
+            - **Pemulihan Kos**: Kebanyakan program pembetulan membayar sendiri dalam 12-18 bulan
+            - **Nilai Jangka Panjang**: Pengurusan nutrien yang mampan memastikan produktiviti ladang berterusan
+            """)
+        else:
+            st.info("💡 **Economic Analysis Summary:** The analysis indicates potential for yield improvements through proper nutrient management.")
+            st.markdown("""
+            **Key Economic Considerations:**
+            - **Investment Benefits**: Proper nutrient correction can improve yields by 15-40%
+            - **ROI Potential**: Fertilizer investments typically provide 60-120% returns within 2-3 years
+            - **Cost Recovery**: Most corrective programs pay for themselves within 12-18 months
+            - **Long-term Value**: Sustainable nutrient management ensures continued plantation productivity
+            """)
 
     return  # Exit immediately - no further processing
 
@@ -7941,14 +7993,25 @@ def display_formatted_economic_tables(formatted_text):
 
         # If no tables found after filtering, show a helpful message
         if not tables and not html_table_blocks:
-            st.info("📊 **Economic Analysis Summary:** The analysis indicates potential for yield improvements through proper nutrient management. Complete soil and leaf analysis in previous steps to generate detailed economic projections.")
-            st.markdown("""
-            **Key Economic Considerations:**
-            - **Investment Benefits**: Proper nutrient correction can improve yields by 15-40%
-            - **ROI Potential**: Fertilizer investments typically provide 60-120% returns within 2-3 years
-            - **Cost Recovery**: Most corrective programs pay for themselves within 12-18 months
-            - **Long-term Value**: Sustainable nutrient management ensures continued plantation productivity
-            """)
+            current_lang = get_language()
+            if current_lang == 'ms':
+                st.info("📊 **Ringkasan Analisis Ekonomi:** Analisis menunjukkan potensi untuk peningkatan hasil melalui pengurusan nutrien yang betul. Lengkapkan analisis tanah dan daun pada langkah sebelumnya untuk menjana unjuran ekonomi yang terperinci.")
+                st.markdown("""
+                **Pertimbangan Ekonomi Utama:**
+                - **Manfaat Pelaburan**: Pembetulan nutrien yang betul boleh meningkatkan hasil sebanyak 15-40%
+                - **Potensi ROI**: Pelaburan baja biasanya memberikan pulangan 60-120% dalam 2-3 tahun
+                - **Pemulihan Kos**: Kebanyakan program pembetulan membayar sendiri dalam 12-18 bulan
+                - **Nilai Jangka Panjang**: Pengurusan nutrien yang mampan memastikan produktiviti ladang berterusan
+                """)
+            else:
+                st.info("📊 **Economic Analysis Summary:** The analysis indicates potential for yield improvements through proper nutrient management. Complete soil and leaf analysis in previous steps to generate detailed economic projections.")
+                st.markdown("""
+                **Key Economic Considerations:**
+                - **Investment Benefits**: Proper nutrient correction can improve yields by 15-40%
+                - **ROI Potential**: Fertilizer investments typically provide 60-120% returns within 2-3 years
+                - **Cost Recovery**: Most corrective programs pay for themselves within 12-18 months
+                - **Long-term Value**: Sustainable nutrient management ensures continued plantation productivity
+                """)
             return
 
         for i, (title, table_content, format_type) in enumerate(tables):
@@ -8682,8 +8745,6 @@ def parse_and_display_json_analysis(json_text):
         st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
         # Filter out known sections from raw text display
         filtered_text = filter_known_sections_from_text(json_text)
-        # Translate headers in the text
-        filtered_text = translate_text_headers(filtered_text)
 
         # Additional check for corrupted soil issues data in fallback
         if ('"parameter": "pH"' in filtered_text and '"optimal_range": "4.0-5.5"' in filtered_text and
@@ -8700,8 +8761,6 @@ def parse_and_display_json_analysis(json_text):
         st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
         # Filter out known sections from raw text display
         filtered_text = filter_known_sections_from_text(json_text)
-        # Translate headers in the text
-        filtered_text = translate_text_headers(filtered_text)
 
         # Additional check for corrupted soil issues data in fallback
         if ('"parameter": "pH"' in filtered_text and '"optimal_range": "4.0-5.5"' in filtered_text and
@@ -8781,8 +8840,6 @@ def display_structured_analysis(data):
             elif value:  # If it's not a list but has content
                 # Filter out known sections from raw text display
                 filtered_value = filter_known_sections_from_text(str(value))
-                # Translate headers in the text
-                filtered_value = translate_text_headers(filtered_value)
                 st.markdown(filtered_value)
 
 def display_economic_forecast(economic_forecast):
@@ -9206,7 +9263,10 @@ def display_step_block(step_result, step_number, step_title):
             6: {"color": "#000000", "icon": "📈", "description": "Yield Forecast & Projections"}
         }
     
-    config = step_configs.get(step_number, {"color": "#667eea", "icon": "📋", "description": "Analysis Step"})
+    config = step_configs.get(step_number, {"color": "#667eea", "icon": "📋", "description": t('results_step_analysis', 'Analysis Step')})
+    
+    # Get translated step prefix
+    step_prefix = t('step_prefix', 'STEP')
     
     # Create a prominent step header with step-specific styling
     st.markdown(f"""
@@ -9229,7 +9289,7 @@ def display_step_block(step_result, step_number, step_title):
                 margin-right: 20px;
                 backdrop-filter: blur(10px);
             ">
-                {config['icon']} STEP {step_number}
+                {config['icon']} {step_prefix} {step_number}
             </div>
             <h2 style="color: white; margin: 0; font-size: 28px; font-weight: 700; text-shadow: 0 2px 4px rgba(0,0,0,0.3);">
                 {step_title}
@@ -9740,8 +9800,6 @@ def display_enhanced_step_result(step_result, step_number):
                     if original_filtered == "Content filtered to prevent raw LLM output display.":
                         pass  # Don't display anything
                     else:
-                        # Translate headers in the text before displaying
-                        filtered_value = translate_text_headers(filtered_value)
                         st.markdown(f"**{title}:** {filtered_value}")
             st.markdown("")
 
@@ -9851,7 +9909,7 @@ def display_enhanced_step_result(step_result, step_number):
         # This catches any raw data that might have leaked through from LLM responses
         analysis_data = remove_economic_scenarios_from_analysis(analysis_data)
 
-        display_forecast_graph_content(analysis_data, step_number, step_result.get('step_title', f'Step {step_number}'))
+        display_forecast_graph_content(analysis_data, step_number, step_result.get('step_title', t(f'step_{step_number}_title', f'Step {step_number}')))
 
         # Also show Step 5 reference tables/text when available
         try:
@@ -14507,7 +14565,11 @@ def display_nutrient_gap_analysis_table(analysis_data):
             except Exception as e:
                 logger.error(f"Nutrient gap analysis sorting failed: {e}")
                 pass
-            st.markdown("#### Table 3: Nutrient Gap Analysis: Plantation Average vs. MPOB Standards")
+            current_lang = get_language()
+            if current_lang == 'ms':
+                st.markdown("#### Jadual 3: Analisis Jurang Nutrien: Purata Ladang vs Standard MPOB")
+            else:
+                st.markdown("#### Table 3: Nutrient Gap Analysis: Plantation Average vs. MPOB Standards")
             df = pd.DataFrame(rows)
             # Rename columns to match user expectations
             df = df.rename(columns={
@@ -16324,10 +16386,18 @@ def _extract_first_float(value, default_value=0.0):
 def display_forecast_graph_content(analysis_data, step_number=None, step_title=None):
     """Display Forecast Graph content with baseline - works for any step with yield forecast data"""
     # Dynamic header based on step information
+    step_prefix = t('step_prefix', 'STEP')
+    current_lang = get_language()
     if step_number and step_title:
-        header_title = f"📈 STEP {step_number} — {step_title}: 5-Year Yield Forecast & Projections"
+        if current_lang == 'ms':
+            header_title = f"📈 {step_prefix} {step_number} — {step_title}: Ramalan & Unjuran Hasil 5 Tahun"
+        else:
+            header_title = f"📈 {step_prefix} {step_number} — {step_title}: 5-Year Yield Forecast & Projections"
     else:
-        header_title = "📈 5-Year Yield Forecast & Projections"
+        if current_lang == 'ms':
+            header_title = "📈 Ramalan & Unjuran Hasil 5 Tahun"
+        else:
+            header_title = "📈 5-Year Yield Forecast & Projections"
     
     # Styled header with updated background color
     st.markdown(
@@ -16743,7 +16813,7 @@ def display_economic_analysis(analysis_data):
     if not investment_scenarios:
         return
     
-    st.markdown("### 💹 Economic Impact Analysis")
+    st.markdown(f"### 💹 {t('economic_impact_analysis', 'Economic Impact Analysis')}")
     
     # Create DataFrame for table display
     scenarios_data = []
@@ -16762,7 +16832,7 @@ def display_economic_analysis(analysis_data):
         st.dataframe(df, use_container_width=True)
         
         # Summary metrics
-        st.markdown("### 📊 Economic Summary")
+        st.markdown(f"### 📊 {t('economic_summary', 'Economic Summary')}")
         col1, col2, col3 = st.columns(3)
         
         costs = [data.get('total_cost', 0) for data in investment_scenarios.values() if isinstance(data.get('total_cost', 0), (int, float))]
