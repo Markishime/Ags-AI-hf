@@ -260,6 +260,22 @@ TRANSLATIONS = {
         'step_5_title': 'Step 5: Economic Impact Forecast',
         'step_6_title': 'Step 6: Yield Forecast & Projections',
         
+        # Extended Step Titles (for LLM-generated titles)
+        'step_1_full_title': 'Step 1: Your soil and leaf test results and analysis',
+        'step_2_full_title': 'Step 2: Diagnose Agronomic Issues',
+        'step_3_full_title': 'Step 3: Recommend Solutions',
+        'step_4_full_title': 'Step 4: Regenerative Agriculture Strategies',
+        'step_5_full_title': 'Step 5: Economic Impact Forecast',
+        'step_6_full_title': 'Step 6: Forecast Graph',
+        
+        # Step Title Patterns (for dynamic translation)
+        'step_1_pattern': 'Your soil and leaf test results and analysis',
+        'step_2_pattern': 'Diagnose Agronomic Issues',
+        'step_3_pattern': 'Recommend Solutions',
+        'step_4_pattern': 'Regenerative Agriculture Strategies',
+        'step_5_pattern': 'Economic Impact Forecast',
+        'step_6_pattern': 'Forecast Graph',
+        
         # Yield Forecast
         'yield_forecast_title': 'Yield Forecast & Projections',
         'baseline_yield': 'Baseline Yield',
@@ -646,6 +662,22 @@ TRANSLATIONS = {
         'step_5_title': 'Langkah 5: Ramalan Kesan Ekonomi',
         'step_6_title': 'Langkah 6: Ramalan & Unjuran Hasil',
         
+        # Extended Step Titles (for LLM-generated titles)
+        'step_1_full_title': 'Langkah 1: Keputusan Ujian Tanah dan Daun Anda dan Analisis',
+        'step_2_full_title': 'Langkah 2: Diagnosis Isu Agronomi',
+        'step_3_full_title': 'Langkah 3: Cadangan Penyelesaian',
+        'step_4_full_title': 'Langkah 4: Strategi Pertanian Regeneratif',
+        'step_5_full_title': 'Langkah 5: Ramalan Kesan Ekonomi',
+        'step_6_full_title': 'Langkah 6: Graf Ramalan',
+        
+        # Step Title Patterns (for dynamic translation)
+        'step_1_pattern': 'Your soil and leaf test results and analysis',
+        'step_2_pattern': 'Diagnose Agronomic Issues',
+        'step_3_pattern': 'Recommend Solutions',
+        'step_4_pattern': 'Regenerative Agriculture Strategies',
+        'step_5_pattern': 'Economic Impact Forecast',
+        'step_6_pattern': 'Forecast Graph',
+        
         # Yield Forecast (Malaysian)
         'yield_forecast_title': 'Ramalan & Unjuran Hasil',
         'baseline_yield': 'Hasil Asas',
@@ -896,8 +928,6 @@ TRANSLATIONS = {
         'combined_analysis_summary': 'Ringkasan Analisis Gabungan',
         'step_by_step_analysis': 'Analisis Langkah Demi Langkah',
         'your_soil_leaf_test_results': 'Keputusan Ujian Tanah dan Daun Anda',
-        'your_soil_leaf_test_results_analysis': 'Keputusan Ujian Tanah dan Daun Anda dan Analisis',
-        'soil_leaf_test_results': 'Keputusan Ujian Tanah dan Daun',
         'detailed_analysis': 'Analisis Terperinci',
         'real_values_observed_vs_recommended': 'Nilai SEBENAR dari data semasa anda - Diperhatikan (Purata) vs Disyorkan (MPOB)',
         'additional_analysis_results': 'Keputusan Analisis Tambahan',
@@ -918,8 +948,6 @@ TRANSLATIONS = {
         'combined_analysis_summary': 'Ringkasan Analisis Gabungan',
         'step_by_step_analysis': 'Analisis Langkah Demi Langkah',
         'your_soil_leaf_test_results': 'Keputusan Ujian Tanah dan Daun Anda',
-        'your_soil_leaf_test_results_analysis': 'Keputusan Ujian Tanah dan Daun Anda dan Analisis',
-        'soil_leaf_test_results': 'Keputusan Ujian Tanah dan Daun',
         'detailed_analysis': 'Analisis Terperinci',
         'real_values_observed_vs_recommended': 'Nilai SEBENAR dari data semasa anda - Diperhatikan (Purata) vs Disyorkan (MPOB)',
         'additional_analysis_results': 'Keputusan Analisis Tambahan',
@@ -1073,3 +1101,126 @@ def translate(key: str, default: str = None, **kwargs) -> str:
 def t(key: str, default: str = None, **kwargs) -> str:
     """Short alias for translate"""
     return translate(key, default, **kwargs)
+
+def translate_step_title(step_title: str, step_number: int) -> str:
+    """
+    Translate step title from English to current language if needed.
+    Handles both generic titles and LLM-generated descriptive titles.
+    """
+    if not step_title:
+        return t(f'step_{step_number}_title', f'Step {step_number}')
+    
+    lang = get_language()
+    if lang == 'en':
+        return step_title  # Already in English
+    
+    # Check if title matches known patterns and translate
+    step_title_lower = step_title.lower()
+    
+    # Pattern-based translation for common LLM-generated titles
+    patterns = {
+        1: {
+            'en': ['your soil and leaf test results and analysis', 'soil and leaf test results'],
+            'ms': t('step_1_full_title', 'Langkah 1: Keputusan Ujian Tanah dan Daun Anda dan Analisis')
+        },
+        2: {
+            'en': ['diagnose agronomic issues', 'issue diagnosis'],
+            'ms': t('step_2_full_title', 'Langkah 2: Diagnosis Isu Agronomi')
+        },
+        3: {
+            'en': ['recommend solutions', 'solution recommendations'],
+            'ms': t('step_3_full_title', 'Langkah 3: Cadangan Penyelesaian')
+        },
+        4: {
+            'en': ['regenerative agriculture strategies', 'regenerative agriculture'],
+            'ms': t('step_4_full_title', 'Langkah 4: Strategi Pertanian Regeneratif')
+        },
+        5: {
+            'en': ['economic impact forecast', 'economic forecast'],
+            'ms': t('step_5_full_title', 'Langkah 5: Ramalan Kesan Ekonomi')
+        },
+        6: {
+            'en': ['forecast graph', 'yield forecast', 'forecast & projections'],
+            'ms': t('step_6_full_title', 'Langkah 6: Graf Ramalan')
+        }
+    }
+    
+    # Check if title matches any pattern for this step
+    if step_number in patterns:
+        for pattern in patterns[step_number]['en']:
+            if pattern in step_title_lower:
+                # Replace the English part with Malaysian translation
+                # Try to preserve "Step X:" prefix if present
+                if step_title_lower.startswith(f'step {step_number}') or step_title_lower.startswith(f'step {step_number}:'):
+                    return patterns[step_number]['ms']
+                else:
+                    # Just return the full translated title
+                    return patterns[step_number]['ms']
+    
+    # If no pattern match, try to translate common words
+    # Replace "Step X:" with "Langkah X:"
+    import re
+    translated = re.sub(r'^Step\s+(\d+)[:\s]*', r'Langkah \1: ', step_title, flags=re.IGNORECASE)
+    
+    # Common word replacements
+    replacements = {
+        'your soil and leaf test results and analysis': 'Keputusan Ujian Tanah dan Daun Anda dan Analisis',
+        'diagnose agronomic issues': 'Diagnosis Isu Agronomi',
+        'recommend solutions': 'Cadangan Penyelesaian',
+        'regenerative agriculture strategies': 'Strategi Pertanian Regeneratif',
+        'economic impact forecast': 'Ramalan Kesan Ekonomi',
+        'forecast graph': 'Graf Ramalan',
+        'yield forecast & projections': 'Ramalan & Unjuran Hasil',
+        'data analysis': 'Analisis Data',
+        'issue diagnosis': 'Diagnosis Isu',
+        'solution recommendations': 'Cadangan Penyelesaian',
+        'regenerative agriculture': 'Pertanian Regeneratif',
+    }
+    
+    for en_text, ms_text in replacements.items():
+        if en_text.lower() in translated.lower():
+            translated = re.sub(re.escape(en_text), ms_text, translated, flags=re.IGNORECASE)
+    
+    # If translation didn't change much, use the default translated title
+    if translated == step_title and lang == 'ms':
+        return t(f'step_{step_number}_title', f'Langkah {step_number}')
+    
+    return translated
+
+def translate_text_headers(text: str) -> str:
+    """
+    Translate common headers that appear in LLM output text.
+    Handles headers like "Analysis:", "Summary:", "Formatted Analysis:", etc.
+    """
+    if not text or not isinstance(text, str):
+        return text
+    
+    lang = get_language()
+    if lang == 'en':
+        return text  # Already in English
+    
+    import re
+    
+    # Header translation patterns (case-insensitive)
+    header_replacements = {
+        r'\*\*Analysis:\*\*': f"**{t('analysis_label', 'Analisis:')}**",
+        r'\*\*Analysis\*\*': f"**{t('analysis_label', 'Analisis:').rstrip(':')}**",
+        r'^Analysis:\s*': f"{t('analysis_label', 'Analisis:')} ",
+        r'\*\*Summary:\*\*': f"**{t('summary_label', 'Ringkasan:')}**",
+        r'\*\*Summary\*\*': f"**{t('summary_label', 'Ringkasan:').rstrip(':')}**",
+        r'^Summary:\s*': f"{t('summary_label', 'Ringkasan:')} ",
+        r'\*\*Formatted Analysis:\*\*': f"**{t('formatted_analysis_label', 'Analisis Terformat:')}**",
+        r'\*\*Formatted Analysis\*\*': f"**{t('formatted_analysis_label', 'Analisis Terformat:').rstrip(':')}**",
+        r'^Formatted Analysis:\s*': f"{t('formatted_analysis_label', 'Analisis Terformat:')} ",
+        r'\*\*Detailed Analysis:\*\*': f"**{t('detailed_analysis_label', 'Analisis Terperinci:')}**",
+        r'\*\*Detailed Analysis\*\*': f"**{t('detailed_analysis_label', 'Analisis Terperinci:').rstrip(':')}**",
+        r'^Detailed Analysis:\s*': f"{t('detailed_analysis_label', 'Analisis Terperinci:')} ",
+        r'🔍\s*\*\*Detailed Interpretations\*\*': f"🔍 **{t('detailed_interpretations', 'Tafsiran Terperinci')}**",
+        r'🔍\s*Detailed Interpretations': f"🔍 {t('detailed_interpretations', 'Tafsiran Terperinci')}",
+    }
+    
+    translated_text = text
+    for pattern, replacement in header_replacements.items():
+        translated_text = re.sub(pattern, replacement, translated_text, flags=re.IGNORECASE | re.MULTILINE)
+    
+    return translated_text
