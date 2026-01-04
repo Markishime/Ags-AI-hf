@@ -941,12 +941,14 @@ TRANSLATIONS = {
         'summary_label': 'Ringkasan:',
         'detailed_analysis_label': 'Analisis Terperinci:',
         'formatted_analysis_label': 'Analisis Terformat:',
+        'step': 'Langkah',
 
         # LLM content labels that need translation
-        'analysis_label': 'Analisis:',
-        'summary_label': 'Ringkasan:',
-        'detailed_analysis_label': 'Analisis Terperinci:',
-        'formatted_analysis_label': 'Analisis Terformat:',
+        'analysis_label': 'Analysis:',
+        'summary_label': 'Summary:',
+        'detailed_analysis_label': 'Detailed Analysis:',
+        'formatted_analysis_label': 'Formatted Analysis:',
+        'step': 'Step',
 
         # Economic analysis section headers
         'economic_analysis_tables': 'Jadual Analisis Ekonomi',

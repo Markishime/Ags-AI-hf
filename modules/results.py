@@ -6285,7 +6285,14 @@ def display_step_by_step_results(results_data):
                 continue
             
             step_number = step_result.get('step_number', i+1)
-            step_title = step_result.get('step_title', t(f'step_{step_number}_title', f'Step {step_number}'))
+            # Always translate step title - get from data or use translation key
+            raw_step_title = step_result.get('step_title', '')
+            if raw_step_title:
+                # If step_title exists in data, try to match it to translation keys
+                # Otherwise use the translation key directly
+                step_title = t(f'step_{step_number}_title', raw_step_title)
+            else:
+                step_title = t(f'step_{step_number}_title', f'{t("step", "Step")} {step_number}')
             
             # Create a visual separator between steps
             if i > 0:
@@ -6602,7 +6609,7 @@ def display_step_block(step_result, step_number, step_title):
                 font-size: 18px;
                 margin-right: 20px;
             ">
-                {config['icon']} Step {step_number}
+{config['icon']} {t('step', 'Step')} {step_number}
             </div>
             <div>
                 <h3 style="color: white; margin: 0; font-size: 24px;">{step_title}</h3>
@@ -6615,13 +6622,45 @@ def display_step_block(step_result, step_number, step_title):
     # Display the enhanced step result content
     display_enhanced_step_result(step_result, step_number)
 
+def translate_llm_headers(text):
+    """Translate common English headers in LLM output text to current language"""
+    if not isinstance(text, str):
+        return text
+    
+    current_lang = get_language()
+    if current_lang != 'ms':
+        return text  # No translation needed for English
+    
+    import re
+    # Translation mappings for common headers
+    header_translations = {
+        r'\bAnalysis:\s*': t('analysis_label', 'Analysis:'),
+        r'\bSummary:\s*': t('summary_label', 'Summary:'),
+        r'\bDetailed Analysis:\s*': t('detailed_analysis_label', 'Detailed Analysis:'),
+        r'\bFormatted Analysis:\s*': t('formatted_analysis_label', 'Formatted Analysis:'),
+        r'###\s*Analysis\s*': f"### {t('analysis_label', 'Analysis:').rstrip(':')}",
+        r'####\s*Analysis\s*': f"#### {t('analysis_label', 'Analysis:').rstrip(':')}",
+        r'###\s*Summary\s*': f"### {t('summary_label', 'Summary:').rstrip(':')}",
+        r'####\s*Summary\s*': f"#### {t('summary_label', 'Summary:').rstrip(':')}",
+        r'###\s*Detailed Analysis\s*': f"### {t('detailed_analysis_label', 'Detailed Analysis:').rstrip(':')}",
+        r'####\s*Detailed Analysis\s*': f"#### {t('detailed_analysis_label', 'Detailed Analysis:').rstrip(':')}",
+        r'###\s*Formatted Analysis\s*': f"### {t('formatted_analysis_label', 'Formatted Analysis:').rstrip(':')}",
+        r'####\s*Formatted Analysis\s*': f"#### {t('formatted_analysis_label', 'Formatted Analysis:').rstrip(':')}",
+    }
+    
+    translated_text = text
+    for pattern, replacement in header_translations.items():
+        translated_text = re.sub(pattern, replacement, translated_text, flags=re.IGNORECASE)
+    
+    return translated_text
+
 def sanitize_persona_and_enforce_article(text):
     """Remove persona phrases and ensure the text starts with 'The'.
 
     - Strips phrases like 'As an experienced agronomist', 'As your consulting agronomist',
       'As an expert', 'my analysis', 'I recommend', etc.
-    - Replaces 'our' with 'The' and removes 'my' and other first-person pronouns
-    - If first non-space word is not 'The' (case-insensitive), prepend 'The ' (with capitalization).
+      - Replaces 'our' with 'The' and removes 'my' and other first-person pronouns
+      - If first non-space word is not 'The' (case-insensitive), prepend 'The ' (with capitalization).
     """
     try:
         if not isinstance(text, str):
@@ -11974,6 +12013,8 @@ def display_step1_data_analysis(analysis_data):
         st.markdown(f"#### 📋 {t('summary', 'Summary')}")
         summary_text = analysis_data['summary']
         if isinstance(summary_text, str) and summary_text.strip():
+            # Translate common English headers in LLM output
+            summary_text = translate_llm_headers(summary_text)
             st.markdown(
                 f'<div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #e8f5e8, #ffffff); border-left: 4px solid #28a745; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">'
                 f'<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #2c3e50;">{summary_text.strip()}</p>'
@@ -11994,10 +12035,16 @@ def display_step1_data_analysis(analysis_data):
         elif not isinstance(detailed_text, str):
             detailed_text = str(detailed_text) if detailed_text is not None else "No detailed analysis available"
 
+        # Translate common English headers in LLM output
+        detailed_text = translate_llm_headers(detailed_text)
+        
         # If the LLM included a prefixed "Formatted Analysis:" section, prefer its content
         try:
             import re
-            formatted_block = re.search(r"Formatted Analysis:\s*(.*)$", detailed_text, re.DOTALL | re.IGNORECASE)
+            # Check for both English and translated versions
+            formatted_block = re.search(rf"{re.escape(t('formatted_analysis_label', 'Formatted Analysis:'))}\s*(.*)$", detailed_text, re.DOTALL | re.IGNORECASE)
+            if not formatted_block:
+                formatted_block = re.search(r"Formatted Analysis:\s*(.*)$", detailed_text, re.DOTALL | re.IGNORECASE)
             if formatted_block and formatted_block.group(1).strip():
                 detailed_text = formatted_block.group(1).strip()
         except Exception:
@@ -12019,6 +12066,9 @@ def display_step1_data_analysis(analysis_data):
         except Exception:
             pass
 
+        # Translate common English headers in LLM output
+        detailed_text = translate_llm_headers(detailed_text)
+        
         # Sanitize persona and enforce neutral tone before rendering
         detailed_text = sanitize_persona_and_enforce_article(detailed_text)
         
@@ -12102,7 +12152,7 @@ def display_step1_data_analysis(analysis_data):
     other_fields = [k for k in analysis_data.keys() if k not in excluded_keys and analysis_data.get(k) is not None and analysis_data.get(k) != ""]
     
     if other_fields:
-        st.markdown("#### 📊 Additional Analysis Results")
+        st.markdown(f"#### 📊 {t('additional_analysis_results', 'Additional Analysis Results')}")
         for key in other_fields:
             value = analysis_data.get(key)
             title = key.replace('_', ' ').title()
@@ -15682,7 +15732,7 @@ def display_step3_solution_recommendations(analysis_data):
 
     # 3c. INTERPRETATIONS
     if analysis_data.get('interpretations'):
-        st.markdown("#### 🔍 Detailed Interpretations")
+        st.markdown(f"#### 🔍 {t('detailed_interpretations', 'Detailed Interpretations')}")
         interpretations_html = '<div style="background: linear-gradient(135deg, #f8f9fa, #ffffff); padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-left: 4px solid #007bff;">'
         interpretations_html += '<ol style="margin: 0; padding-left: 20px; color: #2c3e50; line-height: 1.6;">'
         for i, text in enumerate(analysis_data['interpretations'], 1):
@@ -16105,7 +16155,7 @@ def display_regenerative_agriculture_content(analysis_data):
     try:
         interps = analysis_data.get('interpretations')
         if interps:
-            st.markdown("#### 🔍 Detailed Interpretations")
+            st.markdown(f"#### 🔍 {t('detailed_interpretations', 'Detailed Interpretations')}")
             # Reuse normalization helper used elsewhere
             items = _normalize_interpretations_section(interps)
             interpretations_html = '<div style="background: linear-gradient(135deg, #f8f9fa, #ffffff); padding: 20px; border-radius: 10px; margin-bottom: 20px; box-shadow: 0 2px 10px rgba(0,0,0,0.1); border-left: 4px solid #007bff;">'
