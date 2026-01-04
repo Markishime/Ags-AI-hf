@@ -15696,10 +15696,27 @@ def display_step3_solution_recommendations(analysis_data):
                     formatted_content = formatted_block.group(1).strip()
                     # Clean up persona language
                     clean_content = sanitize_persona_and_enforce_article(formatted_content)
+                    # Convert <br> tags to line breaks
+                    clean_content = re.sub(r'<br\s*/?>', '\n\n', clean_content, flags=re.IGNORECASE)
+                    # Extract and render markdown tables first
+                    clean_content = _extract_and_render_markdown_tables(clean_content)
                     # Normalize markdown formatting
                     normalized_content = normalize_markdown_block_for_step3(clean_content)
                     st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
-                    st.markdown(normalized_content)
+                    # Split into paragraphs and display
+                    paragraphs = normalized_content.split('\n\n') if '\n\n' in normalized_content else [normalized_content]
+                    for paragraph in paragraphs:
+                        if paragraph.strip():
+                            # Check if it contains markdown formatting
+                            if any(token in paragraph for token in ['\n- ', '\n* ', '\n1.', '\n2.', '### ', '#### ', '**']):
+                                st.markdown(paragraph)
+                            else:
+                                st.markdown(
+                                    f'<div style="margin-bottom: 18px; padding: 15px; background: linear-gradient(135deg, #ffffff, #f8f9fa); border: 1px solid #e9ecef; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">'
+                                    f'<p style="margin: 0; line-height: 1.8; font-size: 16px; color: #2c3e50;">{paragraph.strip()}</p>'
+                                    f'</div>',
+                                    unsafe_allow_html=True
+                                )
                     st.markdown("")
                     return  # Exit early to avoid showing duplicate content
             except Exception:
@@ -16122,13 +16139,25 @@ def display_regenerative_agriculture_content(analysis_data):
 
                     # Only display if content remains after filtering
                     if detailed_text.strip():
+                        # Convert <br> tags to line breaks
+                        detailed_text = re.sub(r'<br\s*/?>', '\n\n', detailed_text, flags=re.IGNORECASE)
+                        # Extract and render markdown tables first
+                        detailed_text = _extract_and_render_markdown_tables(detailed_text)
                         st.markdown(f"#### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
-                        st.markdown(
-                            f'<div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #ffffff, #f8f9fa); border: 1px solid #e9ecef; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">'
-                            f'<div style="color: #2c3e50; line-height: 1.7;">{detailed_text}</div>'
-                            f'</div>',
-                            unsafe_allow_html=True
-                        )
+                        # Split into paragraphs and display
+                        paragraphs = detailed_text.split('\n\n') if '\n\n' in detailed_text else [detailed_text]
+                        for paragraph in paragraphs:
+                            if paragraph.strip():
+                                # Check if it contains markdown formatting or tables
+                                if any(token in paragraph for token in ['\n- ', '\n* ', '\n1.', '\n2.', '### ', '#### ', '**', '<table']):
+                                    st.markdown(paragraph, unsafe_allow_html=True)
+                                else:
+                                    st.markdown(
+                                        f'<div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #ffffff, #f8f9fa); border: 1px solid #e9ecef; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">'
+                                        f'<div style="color: #2c3e50; line-height: 1.7;">{paragraph.strip()}</div>'
+                                        f'</div>',
+                                        unsafe_allow_html=True
+                                    )
 
             # Nuclear option: remove any Economic Analysis with braces
             if re.search(r"Economic Analysis:\s*\{", detailed_text, re.IGNORECASE):
@@ -16169,6 +16198,12 @@ def display_regenerative_agriculture_content(analysis_data):
         )
 
         detailed_text = sanitize_persona_and_enforce_article(detailed_text)
+        
+        # Convert <br> tags to line breaks
+        detailed_text = re.sub(r'<br\s*/?>', '\n\n', detailed_text, flags=re.IGNORECASE)
+        
+        # Extract and render markdown tables first
+        detailed_text = _extract_and_render_markdown_tables(detailed_text)
 
         # Process HTML/XML tables in the content first
         processed_text = process_html_tables(detailed_text)
