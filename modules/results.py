@@ -14615,8 +14615,8 @@ def display_nutrient_gap_analysis_table(analysis_data):
                         'Parameter': name,
                         'Average Value': f"{avg:.2f}",
                         'MPOB Minimum': f"{minimum:.2f}",
-                        'Gap (%)': f"{gap:+.1f}%",
-                        'Magnitude (%)': f"{gap_magnitude:.1f}%",
+                        'Gap (%)': f"{gap:+.1f}",
+                        'Magnitude (%)': f"{gap_magnitude:.1f}",
                         'Severity': severity
                     })
 
@@ -14634,6 +14634,8 @@ def display_nutrient_gap_analysis_table(analysis_data):
                 def get_gap_magnitude(row):
                     try:
                         mag_str = row.get('Magnitude (%)', '0.0')
+                        # Remove '%' character if present and convert to float
+                        mag_str = str(mag_str).replace('%', '').strip()
                         return float(mag_str)
                     except Exception as e:
                         logger.warning(f"Error parsing gap magnitude for {row.get('Parameter', 'Unknown')}: {row.get('Magnitude (%)')}, error: {e}")
@@ -14669,7 +14671,14 @@ def display_nutrient_gap_analysis_table(analysis_data):
             except Exception as e:
                 logger.error(f"Nutrient gap analysis sorting failed: {e}")
                 pass
-            st.markdown("#### Table 3: Nutrient Gap Analysis: Plantation Average vs. MPOB Standards")
+            # Use translated table title
+            current_lang = get_language()
+            if current_lang == 'ms':
+                table_title = "#### Jadual 2: Analisis Jurang Nutrien: Purata Ladang vs. Piawaian MPOB"
+            else:
+                table_title = "#### Table 2: Nutrient Gap Analysis: Plantation Average vs. MPOB Standards"
+            st.markdown(table_title)
+            
             df = pd.DataFrame(rows)
             # Rename columns to match user expectations
             df = df.rename(columns={
