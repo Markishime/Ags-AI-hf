@@ -1049,7 +1049,7 @@ class PDFReportGenerator:
                                 executive_sections.append(f"Year 5 projections: Low {year5_row[1]}, Medium {year5_row[2]}, High {year5_row[3]}")
 
             if not any("year" in section.lower() or "projection" in section.lower() for section in executive_sections[-5:]):
-                executive_sections.append(self._t('yield_projections_sustainable', '5-year yield projections indicate sustainable production improvements with proper nutrient management.'))
+                executive_sections.append("5-year yield projections indicate sustainable production improvements with proper nutrient management.")
             executive_sections.append("")
 
             # 7. REGENERATIVE AGRICULTURE - Pull from Step 4
@@ -4051,8 +4051,7 @@ class PDFReportGenerator:
                         logger.info("🔍 DEBUG Step 6 - Chart is None, adding failure message")
                         story.append(Paragraph(f"📈 {step_prefix} 6 — {forecast_title}", self.styles['Heading3']))
                         story.append(Spacer(1, 8))
-                        error_msg = self._t('yield_forecast_5_year', '5-Year Yield Forecast') + " (t/ha) - Chart generation failed"
-                        story.append(Paragraph(error_msg, self.styles['Normal']))
+                        story.append(Paragraph("5-Year Yield Forecast (t/ha) - Chart generation failed", self.styles['Normal']))
 
                 except Exception as e:
                     logger.error(f"❌ Step 6: Error adding yield forecast chart: {str(e)}")
@@ -4062,8 +4061,7 @@ class PDFReportGenerator:
                     forecast_title = self._t('pdf_forecast_graph_title', 'Forecast Graph: 5-Year Yield Forecast & Projections')
                     story.append(Paragraph(f"📈 {step_prefix} 6 — {forecast_title}", self.styles['Heading3']))
                     story.append(Spacer(1, 8))
-                    error_msg = self._t('yield_forecast_5_year', '5-Year Yield Forecast') + " (t/ha) - Chart generation error"
-                    story.append(Paragraph(error_msg, self.styles['Normal']))
+                    story.append(Paragraph("5-Year Yield Forecast (t/ha) - Chart generation error", self.styles['Normal']))
             
             # Visualizations and Charts - ONLY Step 1 bar graphs; remove charts for Steps 2-6
             try:
@@ -4341,7 +4339,7 @@ class PDFReportGenerator:
             
             return {
                 'type': 'line_chart',
-                'title': self._t('yield_forecast_by_scenario', '5-Year Yield Forecast by Investment Scenario'),
+                'title': '5-Year Yield Forecast by Investment Scenario',
                 'subtitle': 'Projected yield increase over 5 years with different investment levels',
                 'data': {
                     'categories': [f'Year {year}' for year in years],
@@ -6077,7 +6075,7 @@ class PDFReportGenerator:
         
         # Yield Projections Table
         if 'yield_projections' in step and step['yield_projections']:
-            story.append(Paragraph(self._t('pdf_yield_projections', '5-Year Yield Projections'), self.styles['Heading3']))
+            story.append(Paragraph("5-Year Yield Projections", self.styles['Heading3']))
             projections = step['yield_projections']
             
             years = list(range(2025, 2030))
@@ -6712,7 +6710,7 @@ class PDFReportGenerator:
             
             ax.set_xlabel('Year')
             ax.set_ylabel('Yield (tonnes/hectare)')
-            ax.set_title(self._t('yield_projections_by_level', '5-Year Yield Projections by Investment Level'))
+            ax.set_title('5-Year Yield Projections by Investment Level')
             ax.legend()
             ax.grid(True, alpha=0.3)
             ax.set_xticks(years)
@@ -7008,7 +7006,7 @@ class PDFReportGenerator:
         story = []
         
         # 5-Year Yield Forecast header
-        story.append(Paragraph(self._t('yield_forecast_5_year', '5-Year Yield Forecast'), self.styles['Heading1']))
+        story.append(Paragraph("5-Year Yield Forecast", self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Find yield forecast data from multiple possible locations
@@ -7136,7 +7134,7 @@ class PDFReportGenerator:
             # Customize the graph
             ax.set_xlabel('Years', fontsize=12, fontweight='bold')
             ax.set_ylabel('Yield (tons/ha)', fontsize=12, fontweight='bold')
-            ax.set_title(self._t('yield_forecast_from_baseline', '5-Year Yield Forecast from Current Baseline'), fontsize=14, fontweight='bold')
+            ax.set_title('5-Year Yield Forecast from Current Baseline', fontsize=14, fontweight='bold')
             ax.legend(fontsize=10)
             ax.grid(True, alpha=0.3)
             ax.set_xticks(years)
@@ -7191,7 +7189,7 @@ class PDFReportGenerator:
             # Customize the graph
             ax.set_xlabel('Years', fontsize=12, fontweight='bold')
             ax.set_ylabel('Yield (tons/ha)', fontsize=12, fontweight='bold')
-            ax.set_title(self._t('yield_forecast_sample_projections', '5-Year Yield Forecast - Sample Projections'), fontsize=14, fontweight='bold')
+            ax.set_title('5-Year Yield Forecast - Sample Projections', fontsize=14, fontweight='bold')
             ax.legend(fontsize=10)
             ax.grid(True, alpha=0.3)
             ax.set_xticks(years)
@@ -8071,7 +8069,7 @@ class PDFReportGenerator:
             # Set chart properties - IMPROVED TO MATCH RESULTS PAGE
             ax.set_xlabel('Years', fontsize=12, fontweight='bold')
             ax.set_ylabel('Yield (tons/ha)', fontsize=12, fontweight='bold')
-            ax.set_title(self._t('yield_projection_from_baseline', '5-Year Yield Projection from Current Baseline'), fontsize=14, fontweight='bold', pad=20)
+            ax.set_title('5-Year Yield Projection from Current Baseline', fontsize=14, fontweight='bold', pad=20)
 
             # Position legend at top right - EXACT SAME AS RESULTS PAGE
             ax.legend(loc='upper right', bbox_to_anchor=(1.0, 1.0), framealpha=0.8)
@@ -8245,7 +8243,7 @@ class PDFReportGenerator:
             
             ax.set_xlabel('Year')
             ax.set_ylabel('Yield (tonnes/hectare)')
-            ax.set_title(self._t('yield_forecast_tha', '5-Year Yield Forecast (t/ha)'))
+            ax.set_title('5-Year Yield Forecast (t/ha)')
             ax.legend()
             ax.grid(True, alpha=0.3)
 

@@ -266,15 +266,6 @@ TRANSLATIONS = {
         
         # Yield Forecast
         'yield_forecast_title': 'Yield Forecast & Projections',
-        'yield_forecast_5_year_header': '5-Year Yield Forecast & Projections',
-        'yield_forecast_5_year': '5-Year Yield Forecast',
-        'yield_projection_from_baseline': '5-Year Yield Projection from Current Baseline',
-        'yield_forecast_from_baseline': '5-Year Yield Forecast from Current Baseline',
-        'yield_forecast_sample_projections': '5-Year Yield Forecast - Sample Projections',
-        'yield_forecast_tha': '5-Year Yield Forecast (t/ha)',
-        'yield_forecast_by_scenario': '5-Year Yield Forecast by Investment Scenario',
-        'yield_projections_by_level': '5-Year Yield Projections by Investment Level',
-        'yield_projections_sustainable': '5-year yield projections indicate sustainable production improvements with proper nutrient management.',
         'baseline_yield': 'Baseline Yield',
         'projected_yield': 'Projected Yield',
         'year_1': 'Year 1',
@@ -684,15 +675,6 @@ TRANSLATIONS = {
         
         # Yield Forecast (Malaysian)
         'yield_forecast_title': 'Ramalan & Unjuran Hasil',
-        'yield_forecast_5_year_header': 'Ramalan & Unjuran Hasil 5 Tahun',
-        'yield_forecast_5_year': 'Ramalan Hasil 5 Tahun',
-        'yield_projection_from_baseline': 'Unjuran Hasil 5 Tahun dari Asas Semasa',
-        'yield_forecast_from_baseline': 'Ramalan Hasil 5 Tahun dari Asas Semasa',
-        'yield_forecast_sample_projections': 'Ramalan Hasil 5 Tahun - Unjuran Sampel',
-        'yield_forecast_tha': 'Ramalan Hasil 5 Tahun (t/ha)',
-        'yield_forecast_by_scenario': 'Ramalan Hasil 5 Tahun mengikut Senario Pelaburan',
-        'yield_projections_by_level': 'Unjuran Hasil 5 Tahun mengikut Tahap Pelaburan',
-        'yield_projections_sustainable': 'Unjuran hasil 5 tahun menunjukkan peningkatan pengeluaran mampan dengan pengurusan nutrien yang betul.',
         'baseline_yield': 'Hasil Asas',
         'projected_yield': 'Hasil Unjuran',
         'year_1': 'Tahun 1',
