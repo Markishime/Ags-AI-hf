@@ -10971,7 +10971,7 @@ def create_yield_projection_viz(yield_data):
         
         return {
             'type': 'line_chart',
-            'title': '5-Year Yield Forecast by Investment Scenario',
+            'title': t('yield_forecast_by_scenario', '5-Year Yield Forecast by Investment Scenario'),
             'subtitle': 'Projected yield increase over 5 years with different investment levels',
             'data': {
                 'categories': [f'Year {year}' for year in years],
@@ -16589,11 +16589,11 @@ def display_forecast_graph_content(analysis_data, step_number=None, step_title=N
     # Dynamic header based on step information
     if step_number and step_title:
         step_prefix = t('step_prefix', 'STEP')
-        forecast_text = t('pdf_5_year_yield_forecast_projections', '5-Year Yield Forecast & Projections')
-        header_title = f"📈 {step_prefix} {step_number} — {step_title}: {forecast_text}"
+        forecast_header = t('yield_forecast_5_year_header', '5-Year Yield Forecast & Projections')
+        header_title = f"📈 {step_prefix} {step_number} — {step_title}: {forecast_header}"
     else:
-        forecast_text = t('pdf_5_year_yield_forecast_projections', '5-Year Yield Forecast & Projections')
-        header_title = f"📈 {forecast_text}"
+        forecast_header = t('yield_forecast_5_year_header', '5-Year Yield Forecast & Projections')
+        header_title = f"📈 {forecast_header}"
     
     # Styled header with updated background color
     st.markdown(
@@ -16677,34 +16677,26 @@ def display_forecast_graph_content(analysis_data, step_number=None, step_title=N
             
             # Years including baseline (0-5)
             years = list(range(0, 6))
-            year_labels = [
-                t('pdf_current', 'Current'),
-                t('pdf_year_1', 'Year 1'),
-                t('pdf_year_2', 'Year 2'),
-                t('pdf_year_3', 'Year 3'),
-                t('pdf_year_4', 'Year 4'),
-                t('pdf_year_5', 'Year 5')
-            ]
+            year_labels = ['Current', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5']
             
             fig = go.Figure()
             
             # Add baseline reference line
             if baseline_yield > 0:
-                current_baseline_text = t('pdf_current_baseline', 'Current Baseline')
                 fig.add_hline(
                     y=baseline_yield, 
                     line_dash="dash", 
                     line_color="gray",
-                    annotation_text=f"{current_baseline_text}: {baseline_yield:.1f} t/ha",
+                    annotation_text=f"Current Baseline: {baseline_yield:.1f} t/ha",
                     annotation_position="top right"
                 )
             
             # Add lines for different investment approaches. Ensure Year 0 matches baseline.
             # Always add all three investment lines, even if data is missing
             investment_scenarios = [
-                ('high_investment', t('pdf_high_investment', 'High Investment'), '#e74c3c'),
-                ('medium_investment', t('pdf_medium_investment', 'Medium Investment'), '#f39c12'),
-                ('low_investment', t('pdf_low_investment', 'Low Investment'), '#27ae60')
+                ('high_investment', 'High Investment', '#e74c3c'),
+                ('medium_investment', 'Medium Investment', '#f39c12'),
+                ('low_investment', 'Low Investment', '#27ae60')
             ]
             
             for scenario_key, scenario_name, color in investment_scenarios:
@@ -16778,9 +16770,9 @@ def display_forecast_graph_content(analysis_data, step_number=None, step_title=N
                 ))
             
             fig.update_layout(
-                title=t('pdf_5_year_yield_projection_title', '5-Year Yield Projection from Current Baseline'),
-                xaxis_title=t('pdf_years', 'Years'),
-                yaxis_title=t('pdf_yield_tons_ha', 'Yield (tons/ha)'),
+                title=t('yield_projection_from_baseline', '5-Year Yield Projection from Current Baseline'),
+                xaxis_title='Years',
+                yaxis_title='Yield (tons/ha)',
                 xaxis=dict(
                     tickmode='array',
                     tickvals=years,
@@ -16916,7 +16908,8 @@ def display_economic_forecast(economic_forecast):
     # Display 5-year projection if available
     five_year_projection = economic_forecast.get('five_year_projection', {})
     if five_year_projection:
-        st.markdown("### 📊 5-Year Yield Projection")
+        projection_title = t('yield_projection_from_baseline', '5-Year Yield Projection from Current Baseline')
+        st.markdown(f"### 📊 {t('yield_forecast_5_year', '5-Year Yield Forecast')}")
         
         # Create projection chart
         years = list(range(1, 6))
@@ -16933,7 +16926,7 @@ def display_economic_forecast(economic_forecast):
         ))
         
         fig.update_layout(
-            title="5-Year Yield Projection",
+            title=t('yield_projection_from_baseline', '5-Year Yield Projection from Current Baseline'),
             xaxis_title="Year",
             yaxis_title="Yield (tonnes/hectare)",
             height=400
@@ -17091,7 +17084,8 @@ def display_forecast_visualization(analysis_data):
     if not forecast_data:
         return
     
-    st.markdown("### 📈 5-Year Yield Forecast")
+    forecast_title = t('yield_forecast_5_year', '5-Year Yield Forecast')
+    st.markdown(f"### 📈 {forecast_title}")
     
     # Create interactive Plotly chart
     years = list(range(2024, 2029))
