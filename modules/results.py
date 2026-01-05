@@ -99,6 +99,36 @@ def translate_analysis_key(key):
     return key
 
 
+def translate_content_labels(text):
+    """Replace English labels in content text with translated versions based on current language"""
+    if not isinstance(text, str) or not text:
+        return text
+    
+    current_lang = get_language()
+    if current_lang != 'ms':
+        return text
+    
+    import re
+    
+    # Map English labels to translation keys (handle both single and double colons)
+    label_replacements = [
+        (r'Analysis::\s*', t('analysis_label', 'Analysis:')),
+        (r'Analysis:\s*', t('analysis_label', 'Analysis:')),
+        (r'Summary::\s*', t('summary_label', 'Summary:')),
+        (r'Summary:\s*', t('summary_label', 'Summary:')),
+        (r'Detailed Analysis::\s*', t('detailed_analysis_label', 'Detailed Analysis:')),
+        (r'Detailed Analysis:\s*', t('detailed_analysis_label', 'Detailed Analysis:')),
+        (r'Formatted Analysis::\s*', t('formatted_analysis_label', 'Formatted Analysis:')),
+        (r'Formatted Analysis:\s*', t('formatted_analysis_label', 'Formatted Analysis:')),
+    ]
+    
+    # Apply replacements (order matters - double colon first, then single colon)
+    for pattern, replacement in label_replacements:
+        text = re.sub(pattern, replacement, text, flags=re.IGNORECASE)
+    
+    return text
+
+
 def translate_step_title(step_title, step_number):
     """Translate step titles, handling common patterns like 'Your soil and leaf test results and analysis'"""
     if not step_title:
@@ -6986,6 +7016,7 @@ def display_enhanced_step_result(step_result, step_number):
         summary_text = analysis_data['summary']
         # Sanitize persona and enforce neutral tone
         if isinstance(summary_text, str):
+            summary_text = translate_content_labels(summary_text)
             summary_text = sanitize_persona_and_enforce_article(summary_text)
             # For Step 5 and 6, remove any placeholder/missing notices AND raw economic data
             if step_num == 5 or step_number == 6:
@@ -7043,6 +7074,10 @@ def display_enhanced_step_result(step_result, step_number):
                     detailed_text = detailed_text['content']
                 else:
                     detailed_text = str(detailed_text)
+
+            # Translate English labels in content
+            if isinstance(detailed_text, str):
+                detailed_text = translate_content_labels(detailed_text)
 
             if isinstance(detailed_text, str) and detailed_text.strip():
                 # FIRST: Extract and display HTML tables if present
@@ -7533,6 +7568,7 @@ def display_step2_issue_diagnosis(analysis_data):
         st.markdown(f"#### 📋 {t('summary', 'Summary')}")
         summary_text = analysis_data['summary']
         if isinstance(summary_text, str) and summary_text.strip():
+            summary_text = translate_content_labels(summary_text)
             try:
                 # Remove any raw dict dumps if the LLM leaked them into the summary
                 summary_text = _strip_step5_raw_economic_blocks(summary_text)
@@ -7724,6 +7760,8 @@ def display_step5_economic_forecast(analysis_data):
         if 'summary' in analysis_data and analysis_data['summary']:
             summary_text = analysis_data['summary']
             if isinstance(summary_text, str):
+                # Translate English labels in content
+                summary_text = translate_content_labels(summary_text)
                 # Strip any potential raw data patterns from summary
                 import re
                 summary_text = re.sub(r'Economic Analysis:.*?(?=\n\n|\Z)', '', summary_text, flags=re.DOTALL | re.IGNORECASE)
@@ -9488,6 +9526,9 @@ def display_enhanced_step_result(step_result, step_number):
             detailed_text = str(detailed_text)
         elif not isinstance(detailed_text, str):
             detailed_text = str(detailed_text) if detailed_text is not None else "No detailed analysis available"
+        
+        # Translate English labels in content
+        detailed_text = translate_content_labels(detailed_text)
         
         # Sanitize persona and enforce neutral tone before other filtering
         detailed_text = sanitize_persona_and_enforce_article(detailed_text)
@@ -12145,6 +12186,7 @@ def display_step1_data_analysis(analysis_data):
         st.markdown(f"#### 📋 {t('summary', 'Summary')}")
         summary_text = analysis_data['summary']
         if isinstance(summary_text, str) and summary_text.strip():
+            summary_text = translate_content_labels(summary_text)
             st.markdown(
                 f'<div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #e8f5e8, #ffffff); border-left: 4px solid #28a745; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">'
                 f'<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #2c3e50;">{summary_text.strip()}</p>'
@@ -12164,6 +12206,9 @@ def display_step1_data_analysis(analysis_data):
             detailed_text = str(detailed_text)
         elif not isinstance(detailed_text, str):
             detailed_text = str(detailed_text) if detailed_text is not None else "No detailed analysis available"
+
+        # Translate English labels in content
+        detailed_text = translate_content_labels(detailed_text)
 
         # If the LLM included a prefixed "Formatted Analysis:" section, prefer its content
         try:
@@ -15671,6 +15716,7 @@ def display_step3_solution_recommendations(analysis_data):
         st.markdown(f"### 📋 {t('summary', 'Summary')}")
         summary_text = analysis_data['summary']
         if isinstance(summary_text, str) and summary_text.strip():
+            summary_text = translate_content_labels(summary_text)
             st.markdown(
                 f'<div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #e8f5e8, #ffffff); border-left: 4px solid #28a745; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">'
                 f'<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #2c3e50;">{summary_text.strip()}</p>'
@@ -15687,6 +15733,8 @@ def display_step3_solution_recommendations(analysis_data):
         
         # Parse and format the detailed analysis properly
         if isinstance(detailed_text, str) and detailed_text.strip():
+            # Translate English labels in content
+            detailed_text = translate_content_labels(detailed_text)
             # Check for "Formatted Analysis:" block first - this is what we want to show
             try:
                 import re
@@ -16104,6 +16152,7 @@ def display_regenerative_agriculture_content(analysis_data):
     try:
         summary_text = analysis_data.get('summary')
         if isinstance(summary_text, str) and summary_text.strip():
+            summary_text = translate_content_labels(summary_text)
             st.markdown(f"#### 📋 {t('summary', 'Summary')}")
             st.markdown(
                 f'<div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #e8f5e8, #ffffff); border-left: 4px solid #28a745; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">'
@@ -16118,6 +16167,8 @@ def display_regenerative_agriculture_content(analysis_data):
     try:
         detailed_text = analysis_data.get('detailed_analysis') or analysis_data.get('formatted_analysis')
         if isinstance(detailed_text, str) and detailed_text.strip():
+            # Translate English labels in content
+            detailed_text = translate_content_labels(detailed_text)
             # NUCLEAR FILTER: Remove the exact Economic Analysis block immediately
             if "Economic Analysis: {'current_yield': 28.0, 'land_size': 31.0, 'investment_scenarios':" in detailed_text:
                 st.info("📊 Economic analysis data has been processed and is displayed in the formatted tables above.")
@@ -16380,6 +16431,8 @@ def display_economic_impact_content(analysis_data):
         if step_number == 4 and 'detailed_analysis' in analysis_data:
             detailed_text = analysis_data['detailed_analysis']
             if isinstance(detailed_text, str):
+                # Translate English labels in content
+                detailed_text = translate_content_labels(detailed_text)
                 # Look for table patterns in detailed analysis
                 import re
                 table_patterns = [
