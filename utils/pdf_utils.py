@@ -7962,22 +7962,30 @@ class PDFReportGenerator:
             
             # Years including baseline (0-5) - EXACT SAME AS RESULTS PAGE
             years = list(range(0, 6))
-            year_labels = ['Current', 'Year 1', 'Year 2', 'Year 3', 'Year 4', 'Year 5']
+            year_labels = [
+                self._t('pdf_current', 'Current'),
+                self._t('pdf_year_1', 'Year 1'),
+                self._t('pdf_year_2', 'Year 2'),
+                self._t('pdf_year_3', 'Year 3'),
+                self._t('pdf_year_4', 'Year 4'),
+                self._t('pdf_year_5', 'Year 5')
+            ]
             
             # Add baseline reference line - EXACT SAME AS RESULTS PAGE
             if baseline_yield > 0:
                 ax.axhline(y=baseline_yield, color='gray', linestyle='--', alpha=0.7, linewidth=2)
                 # Add annotation text for baseline - position it at top right
-                ax.text(1.02, baseline_yield, f'Current Baseline: {baseline_yield:.1f} t/ha',
+                current_baseline_text = self._t('pdf_current_baseline', 'Current Baseline')
+                ax.text(1.02, baseline_yield, f'{current_baseline_text}: {baseline_yield:.1f} t/ha',
                        transform=ax.get_yaxis_transform(), fontsize=10, color='gray',
                        verticalalignment='center', bbox=dict(boxstyle='round', facecolor='white', alpha=0.8))
 
             # Add lines for different investment approaches - EXACT SAME LOGIC AS RESULTS PAGE
             # Always add all three investment lines, even if data is missing
             investment_scenarios = [
-                ('high_investment', 'High Investment', '#e74c3c'),      # Red
-                ('medium_investment', 'Medium Investment', '#f39c12'),  # Orange
-                ('low_investment', 'Low Investment', '#27ae60')         # Green
+                ('high_investment', self._t('pdf_high_investment', 'High Investment'), '#e74c3c'),      # Red
+                ('medium_investment', self._t('pdf_medium_investment', 'Medium Investment'), '#f39c12'),  # Orange
+                ('low_investment', self._t('pdf_low_investment', 'Low Investment'), '#27ae60')         # Green
             ]
 
             for scenario_key, scenario_name, color in investment_scenarios:
@@ -8119,7 +8127,8 @@ class PDFReportGenerator:
             ax.set_xticklabels(year_labels)
             
             # Mandatory footnote
-            plt.figtext(0.5, -0.05, "Projections assume continued yearly intervention with recommended nutrient management and stable market conditions.", ha='center', fontsize=8)
+            footnote_text = self._t('pdf_yield_projection_footnote', 'Projections assume continued yearly intervention with recommended nutrient management and stable market conditions.')
+            plt.figtext(0.5, -0.05, footnote_text, ha='center', fontsize=8)
             plt.tight_layout()
 
             # Save to buffer with error handling
