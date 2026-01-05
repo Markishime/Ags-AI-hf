@@ -3771,7 +3771,7 @@ class PDFReportGenerator:
         story = []
         
         # Step-by-Step Analysis header
-        story.append(Paragraph("Step-by-Step Analysis", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_step_by_step_analysis', 'Step-by-Step Analysis'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Handle data structure - analysis_data might be the analysis_results content directly
@@ -3827,12 +3827,12 @@ class PDFReportGenerator:
         # If still no steps, create a comprehensive fallback message
         if not step_results:
             logger.warning("🔍 DEBUG - No step data found anywhere, creating comprehensive fallback content")
-            story.append(Paragraph("Comprehensive Analysis Results:", self.styles['Heading2']))
+            story.append(Paragraph(self._t('pdf_comprehensive_analysis_results', 'Comprehensive Analysis Results:'), self.styles['Heading2']))
             story.append(Paragraph("The analysis has been completed successfully. Below are the key findings and recommendations:", self.styles['Normal']))
             
             # Add key findings if available
             if 'key_findings' in analysis_results:
-                story.append(Paragraph("Key Findings:", self.styles['Heading3']))
+                story.append(Paragraph(f"{self._t('pdf_key_findings', 'Key Findings')}:", self.styles['Heading3']))
                 key_findings = analysis_results['key_findings']
                 normalized_kf = []
 
@@ -3862,13 +3862,13 @@ class PDFReportGenerator:
             
             # Add summary if available
             if 'summary' in analysis_results:
-                story.append(Paragraph("Summary:", self.styles['Heading3']))
+                story.append(Paragraph(f"{self._t('pdf_summary', 'Summary')}:", self.styles['Heading3']))
                 story.append(Paragraph(str(analysis_results['summary']), self.styles['CustomBody']))
                 story.append(Spacer(1, 8))
             
             # Add detailed analysis if available
             if 'detailed_analysis' in analysis_results:
-                story.append(Paragraph("Detailed Analysis:", self.styles['Heading3']))
+                story.append(Paragraph(f"{self._t('pdf_detailed_analysis', 'Detailed Analysis')}:", self.styles['Heading3']))
                 story.append(Paragraph(str(analysis_results['detailed_analysis']), self.styles['CustomBody']))
                 story.append(Spacer(1, 8))
             
@@ -3897,19 +3897,24 @@ class PDFReportGenerator:
 
             # Step-specific colors and icons (matching results page)
             step_configs = {
-                1: {"color": "#667eea", "icon": "📊", "description": "Data Analysis & Interpretation"},
-                2: {"color": "#f093fb", "icon": "🔍", "description": "Issue Diagnosis & Problem Identification"},
-                3: {"color": "#4facfe", "icon": "💡", "description": "Solution Recommendations & Strategies"},
-                4: {"color": "#43e97b", "icon": "🌱", "description": "Regenerative Agriculture Integration"},
-                5: {"color": "#fa709a", "icon": "💰", "description": "Economic Impact & ROI Analysis"},
-                6: {"color": "#000000", "icon": "📈", "description": "Yield Forecast & Projections"}
+                1: {"color": "#667eea", "icon": "📊", "description_key": "pdf_step1_description"},
+                2: {"color": "#f093fb", "icon": "🔍", "description_key": "pdf_step2_description"},
+                3: {"color": "#4facfe", "icon": "💡", "description_key": "pdf_step3_description"},
+                4: {"color": "#43e97b", "icon": "🌱", "description_key": "pdf_step4_description"},
+                5: {"color": "#fa709a", "icon": "💰", "description_key": "pdf_step5_description"},
+                6: {"color": "#000000", "icon": "📈", "description_key": "pdf_step6_description"}
             }
             
-            config = step_configs.get(step_number, {"color": "#667eea", "icon": "📋", "description": "Analysis Step"})
+            config = step_configs.get(step_number, {"color": "#667eea", "icon": "📋", "description_key": "pdf_step1_description"})
+            
+            # Translate step title
+            step_title_translated = self._t(f'step_{step_number}_title', step_title)
+            step_description = self._t(config['description_key'], 'Analysis Step')
+            step_prefix = self._t('pdf_step_prefix', 'STEP')
             
             # Create prominent step header with step-specific styling (PDF version)
-            story.append(Paragraph(f"{config['icon']} STEP {step_number}: {step_title}", self.styles['Heading1']))
-            story.append(Paragraph(config['description'], self.styles['Heading2']))
+            story.append(Paragraph(f"{config['icon']} {step_prefix} {step_number}: {step_title_translated}", self.styles['Heading1']))
+            story.append(Paragraph(step_description, self.styles['Heading2']))
             story.append(Spacer(1, 12))
 
             # Process step content based on step number (matching results page logic)
@@ -3930,7 +3935,7 @@ class PDFReportGenerator:
             
             # Statistical Analysis (from enhanced LLM output)
             if 'statistical_analysis' in step and step['statistical_analysis']:
-                story.append(Paragraph("Statistical Analysis:", self.styles['Heading3']))
+                story.append(Paragraph(f"{self._t('pdf_statistical_analysis', 'Statistical Analysis')}:", self.styles['Heading3']))
                 if isinstance(step['statistical_analysis'], dict):
                     for key, value in step['statistical_analysis'].items():
                         story.append(Paragraph(f"<b>{key.replace('_', ' ').title()}:</b> {value}", self.styles['CustomBody']))
@@ -3940,7 +3945,7 @@ class PDFReportGenerator:
             
             # Issues Identified (crucial for farmers)
             if 'issues_identified' in step and step['issues_identified']:
-                story.append(Paragraph("Issues Identified:", self.styles['Heading3']))
+                story.append(Paragraph(f"{self._t('pdf_issues_identified', 'Issues Identified')}:", self.styles['Heading3']))
                 for i, issue in enumerate(step['issues_identified'], 1):
                     issue_text = f"<b>{i}.</b> {issue}"
                     story.append(Paragraph(issue_text, self.styles['CustomBody']))
@@ -3948,7 +3953,7 @@ class PDFReportGenerator:
             
             # Key Findings (from enhanced LLM output)
             if 'key_findings' in step and step['key_findings']:
-                story.append(Paragraph("Key Findings:", self.styles['Heading3']))
+                story.append(Paragraph(f"{self._t('pdf_key_findings', 'Key Findings')}:", self.styles['Heading3']))
                 key_findings = step['key_findings']
                 normalized_kf = []
 
@@ -3981,7 +3986,7 @@ class PDFReportGenerator:
             
             # Legacy recommendations (for backward compatibility)
             if 'recommendations' in step and step['recommendations']:
-                story.append(Paragraph("Additional Recommendations:", self.styles['Heading3']))
+                story.append(Paragraph(f"{self._t('pdf_additional_recommendations', 'Additional Recommendations')}:", self.styles['Heading3']))
                 for i, rec in enumerate(step['recommendations'], 1):
                     rec_text = f"<b>{i}.</b> {rec}"
                     story.append(Paragraph(rec_text, self.styles['CustomBody']))
@@ -3998,7 +4003,7 @@ class PDFReportGenerator:
                 # Explicitly list specific recommendations if provided
                 specific_recs = step.get('specific_recommendations', [])
                 if isinstance(specific_recs, list) and specific_recs:
-                    story.append(Paragraph("Specific Recommendations (Rates):", self.styles['Heading3']))
+                    story.append(Paragraph(f"{self._t('pdf_specific_recommendations_rates', 'Specific Recommendations (Rates)')}:", self.styles['Heading3']))
                     for i, rec in enumerate(specific_recs, 1):
                         story.append(Paragraph(f"{i}. {rec}", self.styles['CustomBody']))
                     story.append(Spacer(1, 8))
@@ -4032,9 +4037,11 @@ class PDFReportGenerator:
                     yield_chart = self._create_accurate_yield_forecast_chart_for_pdf(analysis_results)
                     logger.info(f"🔍 DEBUG Step 6 - Chart method returned: {type(yield_chart)}")
 
+                    step_prefix = self._t('pdf_step_prefix', 'STEP')
+                    forecast_title = self._t('pdf_forecast_graph_title', 'Forecast Graph: 5-Year Yield Forecast & Projections')
                     if yield_chart is not None:
                         logger.info("🔍 DEBUG Step 6 - Adding chart to story")
-                        story.append(Paragraph("📈 STEP 6 — Forecast Graph: 5-Year Yield Forecast & Projections", self.styles['Heading3']))
+                        story.append(Paragraph(f"📈 {step_prefix} 6 — {forecast_title}", self.styles['Heading3']))
                         story.append(Spacer(1, 8))
                         story.append(yield_chart)
                         story.append(Spacer(1, 12))
@@ -4042,7 +4049,7 @@ class PDFReportGenerator:
                     else:
                         logger.warning("❌ Step 6: Yield forecast chart is None")
                         logger.info("🔍 DEBUG Step 6 - Chart is None, adding failure message")
-                        story.append(Paragraph("📈 STEP 6 — Forecast Graph: 5-Year Yield Forecast & Projections", self.styles['Heading3']))
+                        story.append(Paragraph(f"📈 {step_prefix} 6 — {forecast_title}", self.styles['Heading3']))
                         story.append(Spacer(1, 8))
                         story.append(Paragraph("5-Year Yield Forecast (t/ha) - Chart generation failed", self.styles['Normal']))
 
@@ -4050,7 +4057,9 @@ class PDFReportGenerator:
                     logger.error(f"❌ Step 6: Error adding yield forecast chart: {str(e)}")
                     import traceback
                     logger.error(f"Step 6 Full traceback: {traceback.format_exc()}")
-                    story.append(Paragraph("📈 STEP 6 — Forecast Graph: 5-Year Yield Forecast & Projections", self.styles['Heading3']))
+                    step_prefix = self._t('pdf_step_prefix', 'STEP')
+                    forecast_title = self._t('pdf_forecast_graph_title', 'Forecast Graph: 5-Year Yield Forecast & Projections')
+                    story.append(Paragraph(f"📈 {step_prefix} 6 — {forecast_title}", self.styles['Heading3']))
                     story.append(Spacer(1, 8))
                     story.append(Paragraph("5-Year Yield Forecast (t/ha) - Chart generation error", self.styles['Normal']))
             
@@ -6299,7 +6308,7 @@ class PDFReportGenerator:
         story = []
         
         # Step-by-Step Analysis header
-        story.append(Paragraph("Step-by-Step Analysis", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_step_by_step_analysis', 'Step-by-Step Analysis'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         step_results = analysis_data.get('step_by_step_analysis', [])
@@ -7282,7 +7291,7 @@ class PDFReportGenerator:
         story = []
         
         # Results header
-        story.append(Paragraph("Analysis Results", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_analysis_results', 'Analysis Results'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Create simplified metadata table without debug information
@@ -7295,12 +7304,12 @@ class PDFReportGenerator:
                 formatted_time = timestamp.strftime("%Y-%m-%d")
             else:
                 formatted_time = str(timestamp)[:10]  # Just the date part
-            metadata_data.append(['Analysis Date', formatted_time])
+            metadata_data.append([self._t('pdf_analysis_date', 'Analysis Date'), formatted_time])
         
         # Report Types only
         report_types = analysis_data.get('report_types', ['soil', 'leaf'])
         if report_types:
-            metadata_data.append(['Report Types', ', '.join(report_types)])
+            metadata_data.append([self._t('pdf_report_types', 'Report Types'), ', '.join(report_types)])
         
         if metadata_data:
             metadata_table = self._create_table_with_proper_layout(metadata_data)
