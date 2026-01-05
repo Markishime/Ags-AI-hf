@@ -54,32 +54,6 @@ class PDFReportGenerator:
         except Exception:
             return default or key
     
-    def _translate_step_title_for_pdf(self, step_title: str, step_number: int) -> str:
-        """Translate step title for PDF based on current language"""
-        if not step_title:
-            return self._t(f'step_{step_number}_title', f'Step {step_number}')
-        
-        # Use the translation system from results.py
-        try:
-            from modules.results import translate_step_title
-            return translate_step_title(step_title, step_number)
-        except Exception:
-            # Fallback to simple translation
-            step_title_lower = step_title.lower().strip()
-            if self.language == 'ms':
-                title_map = {
-                    'your soil and leaf test results and analysis': self._t('step_1_title', 'Keputusan Ujian Tanah dan Daun Anda dan Analisis'),
-                    'diagnose agronomic issues': self._t('step_2_title', 'Langkah 2: Diagnosis Isu'),
-                    'recommend solutions': self._t('step_3_title', 'Langkah 3: Cadangan Penyelesaian'),
-                    'regenerative agriculture strategies': self._t('step_4_title', 'Langkah 4: Pertanian Regeneratif'),
-                    'economic impact forecast': self._t('step_5_title', 'Langkah 5: Ramalan Kesan Ekonomi'),
-                    'forecast graph': self._t('step_6_title', 'Langkah 6: Ramalan & Unjuran Hasil'),
-                }
-                for pattern, translation in title_map.items():
-                    if pattern in step_title_lower:
-                        return translation
-            return step_title
-    
     def _translate_table_header(self, header: str) -> str:
         """Translate common table header names"""
         if not header or not isinstance(header, str):
@@ -90,6 +64,8 @@ class PDFReportGenerator:
             'en': {
                 'Parameter': 'Parameter',
                 'Average': 'Average',
+                'Average Value': 'Average Value',
+                'Nilai Purata': 'Average Value',
                 'MPOB Standard': 'MPOB Standard',
                 'Status': 'Status',
                 'Gap': 'Gap',
@@ -104,10 +80,19 @@ class PDFReportGenerator:
                 'Maximum': 'Maximum',
                 'Standard Deviation': 'Standard Deviation',
                 'Sample Count': 'Sample Count',
+                'Unit': 'Unit',
+                'Type': 'Type',
+                'Jenis': 'Type',
+                'Min': 'Min',
+                'Max': 'Max',
+                'Samples': 'Samples',
+                'Value': 'Value',
             },
             'ms': {
                 'Parameter': 'Parameter',
                 'Average': 'Purata',
+                'Average Value': 'Nilai Purata',
+                'Nilai Purata': 'Nilai Purata',
                 'MPOB Standard': 'Standard MPOB',
                 'Status': 'Status',
                 'Gap': 'Jurang',
@@ -122,6 +107,13 @@ class PDFReportGenerator:
                 'Maximum': 'Maksimum',
                 'Standard Deviation': 'Sisihan Piawai',
                 'Sample Count': 'Bilangan Sampel',
+                'Unit': 'Unit',
+                'Type': 'Jenis',
+                'Jenis': 'Jenis',
+                'Min': 'Min',
+                'Max': 'Maks',
+                'Samples': 'Sampel',
+                'Value': 'Nilai',
             }
         }
         
@@ -156,9 +148,6 @@ class PDFReportGenerator:
             wrapped_row = []
             for cell in row:
                 if isinstance(cell, str):
-                    # Translate headers (first row) automatically
-                    if r_idx == 0:
-                        cell = self._translate_table_header(cell)
                     style = header_style if r_idx == 0 else body_style
                     wrapped_row.append(Paragraph(cell.replace('\n', '<br/>'), style))
                 else:
@@ -1588,17 +1577,18 @@ class PDFReportGenerator:
             if isinstance(tables, list) and tables:
                 logger.info(f"🔍 DEBUG - Step 3 first table: {tables[0] if tables else 'Empty'}")
         
-        # Check if Solution Recommendations section has content before displaying
+        # Check if Solution Recommendations section has content before adding it
         has_solution_content = False
         if 'specific_recommendations' in analysis_data and analysis_data['specific_recommendations']:
-            if isinstance(analysis_data['specific_recommendations'], list) and len(analysis_data['specific_recommendations']) > 0:
-                has_solution_content = True
-            elif isinstance(analysis_data['specific_recommendations'], dict) and analysis_data['specific_recommendations']:
-                has_solution_content = True
-            elif isinstance(analysis_data['specific_recommendations'], str) and analysis_data['specific_recommendations'].strip():
-                has_solution_content = True
+            has_solution_content = True
+        elif 'tables' in analysis_data and analysis_data['tables']:
+            has_solution_content = True
+        elif 'summary' in analysis_data and analysis_data['summary']:
+            has_solution_content = True
+        elif 'detailed_analysis' in analysis_data and analysis_data['detailed_analysis']:
+            has_solution_content = True
         
-        # Only show Solution Recommendations section if it has content
+        # Only add Solution Recommendations header if there's content
         if has_solution_content:
             story.append(Paragraph(f"💡 {self._t('pdf_solution_recommendations', 'Solution Recommendations')}", self.styles['Heading2']))
             story.append(Spacer(1, 8))
@@ -3812,7 +3802,7 @@ class PDFReportGenerator:
         story = []
         
         # Step-by-Step Analysis header
-        story.append(Paragraph(self._t('pdf_step_by_step_analysis', 'Step-by-Step Analysis'), self.styles['Heading1']))
+        story.append(Paragraph("Step-by-Step Analysis", self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Handle data structure - analysis_data might be the analysis_results content directly
@@ -3868,7 +3858,7 @@ class PDFReportGenerator:
         # If still no steps, create a comprehensive fallback message
         if not step_results:
             logger.warning("🔍 DEBUG - No step data found anywhere, creating comprehensive fallback content")
-            story.append(Paragraph("Comprehensive Analysis Results:", self.styles['Heading2']))
+            story.append(Paragraph(f"{self._t('pdf_analysis_results', 'Analysis Results')}:", self.styles['Heading2']))
             story.append(Paragraph("The analysis has been completed successfully. Below are the key findings and recommendations:", self.styles['Normal']))
             
             # Add key findings if available
@@ -3937,34 +3927,21 @@ class PDFReportGenerator:
                 story.append(Spacer(1, 20))
 
             # Step-specific colors and icons (matching results page)
-            if self.language == 'ms':
-                step_configs = {
-                    1: {"color": "#667eea", "icon": "📊", "description": self._t('step_1_description', 'Analisis Data & Interpretasi')},
-                    2: {"color": "#f093fb", "icon": "🔍", "description": self._t('step_2_description', 'Diagnosis Isu & Pengenalan Masalah')},
-                    3: {"color": "#4facfe", "icon": "💡", "description": self._t('step_3_description', 'Cadangan Penyelesaian & Strategi')},
-                    4: {"color": "#43e97b", "icon": "🌱", "description": self._t('step_4_description', 'Integrasi Pertanian Regeneratif')},
-                    5: {"color": "#fa709a", "icon": "💰", "description": self._t('step_5_description', 'Kesan Ekonomi & Analisis ROI')},
-                    6: {"color": "#000000", "icon": "📈", "description": self._t('step_6_description', 'Ramalan & Unjuran Hasil')}
-                }
-            else:
-                step_configs = {
-                    1: {"color": "#667eea", "icon": "📊", "description": "Data Analysis & Interpretation"},
-                    2: {"color": "#f093fb", "icon": "🔍", "description": "Issue Diagnosis & Problem Identification"},
-                    3: {"color": "#4facfe", "icon": "💡", "description": "Solution Recommendations & Strategies"},
-                    4: {"color": "#43e97b", "icon": "🌱", "description": "Regenerative Agriculture Integration"},
-                    5: {"color": "#fa709a", "icon": "💰", "description": "Economic Impact & ROI Analysis"},
-                    6: {"color": "#000000", "icon": "📈", "description": "Yield Forecast & Projections"}
-                }
+            step_configs = {
+                1: {"color": "#667eea", "icon": "📊", "description_key": "pdf_step1_description"},
+                2: {"color": "#f093fb", "icon": "🔍", "description_key": "pdf_step2_description"},
+                3: {"color": "#4facfe", "icon": "💡", "description_key": "pdf_step3_description"},
+                4: {"color": "#43e97b", "icon": "🌱", "description_key": "pdf_step4_description"},
+                5: {"color": "#fa709a", "icon": "💰", "description_key": "pdf_step5_description"},
+                6: {"color": "#000000", "icon": "📈", "description_key": "pdf_step6_description"}
+            }
             
-            config = step_configs.get(step_number, {"color": "#667eea", "icon": "📋", "description": self._t('analysis_step', 'Analysis Step')})
-            
-            # Translate step title if needed
-            translated_step_title = self._translate_step_title_for_pdf(step_title, step_number)
+            config = step_configs.get(step_number, {"color": "#667eea", "icon": "📋", "description_key": "pdf_step_by_step_analysis"})
+            description = self._t(config.get('description_key', 'pdf_step_by_step_analysis'), 'Analysis Step')
             
             # Create prominent step header with step-specific styling (PDF version)
-            step_prefix = self._t('step_prefix', 'STEP')
-            story.append(Paragraph(f"{config['icon']} {step_prefix} {step_number}: {translated_step_title}", self.styles['Heading1']))
-            story.append(Paragraph(config['description'], self.styles['Heading2']))
+            story.append(Paragraph(f"{config['icon']} STEP {step_number}: {step_title}", self.styles['Heading1']))
+            story.append(Paragraph(description, self.styles['Heading2']))
             story.append(Spacer(1, 12))
 
             # Process step content based on step number (matching results page logic)
@@ -4089,9 +4066,7 @@ class PDFReportGenerator:
 
                     if yield_chart is not None:
                         logger.info("🔍 DEBUG Step 6 - Adding chart to story")
-                        step_prefix = self._t('step_prefix', 'STEP')
-                    yield_forecast_title = self._t('yield_forecast_title', '5-Year Yield Forecast & Projections')
-                    story.append(Paragraph(f"📈 {step_prefix} 6 — {self._t('pdf_forecast_graph', 'Forecast Graph')}: {yield_forecast_title}", self.styles['Heading3']))
+                        story.append(Paragraph(f"📈 {self._t('pdf_step6_forecast_graph', 'STEP 6 — Forecast Graph: 5-Year Yield Forecast & Projections')}", self.styles['Heading3']))
                         story.append(Spacer(1, 8))
                         story.append(yield_chart)
                         story.append(Spacer(1, 12))
@@ -4099,9 +4074,7 @@ class PDFReportGenerator:
                     else:
                         logger.warning("❌ Step 6: Yield forecast chart is None")
                         logger.info("🔍 DEBUG Step 6 - Chart is None, adding failure message")
-                        step_prefix = self._t('step_prefix', 'STEP')
-                    yield_forecast_title = self._t('yield_forecast_title', '5-Year Yield Forecast & Projections')
-                    story.append(Paragraph(f"📈 {step_prefix} 6 — {self._t('pdf_forecast_graph', 'Forecast Graph')}: {yield_forecast_title}", self.styles['Heading3']))
+                        story.append(Paragraph(f"📈 {self._t('pdf_step6_forecast_graph', 'STEP 6 — Forecast Graph: 5-Year Yield Forecast & Projections')}", self.styles['Heading3']))
                         story.append(Spacer(1, 8))
                         story.append(Paragraph("5-Year Yield Forecast (t/ha) - Chart generation failed", self.styles['Normal']))
 
@@ -4109,9 +4082,7 @@ class PDFReportGenerator:
                     logger.error(f"❌ Step 6: Error adding yield forecast chart: {str(e)}")
                     import traceback
                     logger.error(f"Step 6 Full traceback: {traceback.format_exc()}")
-                    step_prefix = self._t('step_prefix', 'STEP')
-                    yield_forecast_title = self._t('yield_forecast_title', '5-Year Yield Forecast & Projections')
-                    story.append(Paragraph(f"📈 {step_prefix} 6 — {self._t('pdf_forecast_graph', 'Forecast Graph')}: {yield_forecast_title}", self.styles['Heading3']))
+                    story.append(Paragraph("📈 STEP 6 — Forecast Graph: 5-Year Yield Forecast & Projections", self.styles['Heading3']))
                     story.append(Spacer(1, 8))
                     story.append(Paragraph("5-Year Yield Forecast (t/ha) - Chart generation error", self.styles['Normal']))
             
@@ -5141,7 +5112,10 @@ class PDFReportGenerator:
         if soil_params:
             story.append(Paragraph("Soil Nutrient Status:", self.styles['Heading3']))
             
-            table_data = [['Parameter', 'Average', 'Status', 'Unit']]
+            table_data = [[self._translate_table_header('Parameter'), 
+                          self._translate_table_header('Average'), 
+                          self._translate_table_header('Status'), 
+                          self._translate_table_header('Unit')]]
             for param, data in soil_params.items():
                 if isinstance(data, dict):
                     # Clean the average value before displaying
@@ -5662,7 +5636,7 @@ class PDFReportGenerator:
         
         # Regenerative Strategies Table
         if 'regenerative_strategies' in step and step['regenerative_strategies']:
-            story.append(Paragraph("Regenerative Agriculture Strategies", self.styles['Heading3']))
+            story.append(Paragraph(self._t('pdf_regenerative_agriculture_strategies', 'Regenerative Agriculture Strategies'), self.styles['Heading3']))
             strategies = step['regenerative_strategies']
             
             if isinstance(strategies, list):
@@ -5721,7 +5695,7 @@ class PDFReportGenerator:
         
         # Summary only
         if 'summary' in step and step['summary']:
-            story.append(Paragraph("Summary:", self.styles['Heading3']))
+            story.append(Paragraph(f"{self._t('pdf_summary', 'Summary')}:", self.styles['Heading3']))
             summary_text = str(step['summary'])
             # Apply comprehensive cleaning
             summary_text = self._clean_persona_wording(summary_text.strip())
@@ -5732,7 +5706,7 @@ class PDFReportGenerator:
         
         # Key Findings only
         if 'key_findings' in step and step['key_findings']:
-            story.append(Paragraph("Key Findings:", self.styles['Heading3']))
+            story.append(Paragraph(f"{self._t('pdf_key_findings', 'Key Findings')}:", self.styles['Heading3']))
             key_findings = step['key_findings']
             normalized_kf = []
 
@@ -6360,7 +6334,7 @@ class PDFReportGenerator:
         story = []
         
         # Step-by-Step Analysis header
-        story.append(Paragraph(self._t('pdf_step_by_step_analysis', 'Step-by-Step Analysis'), self.styles['Heading1']))
+        story.append(Paragraph("Step-by-Step Analysis", self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         step_results = analysis_data.get('step_by_step_analysis', [])
@@ -6531,12 +6505,12 @@ class PDFReportGenerator:
         # Create metrics table
         metrics_data = []
         if current_yield > 0:
-            metrics_data.append([self._t('current_yield_tonnes_ha', 'Current Yield'), f"{current_yield:.1f} {self._t('tonnes_per_hectare', 'tonnes/ha')}"])
+            metrics_data.append(['Current Yield', f"{current_yield:.1f} tonnes/ha"])
         if land_size > 0:
-            metrics_data.append([self._t('land_size_hectares', 'Land Size'), f"{land_size:.1f} {self._t('hectares', 'hectares')}"])
+            metrics_data.append(['Land Size', f"{land_size:.1f} hectares"])
         # Use FFB price range instead of single oil palm price
         ffb_price_range = economic_data.get('oil_palm_price_range_rm_per_tonne', 'RM 650-750')
-        metrics_data.append([self._t('oil_palm_price_range', 'FFB Price Range'), f"{ffb_price_range}/{self._t('tonne', 'tonne')}"])
+        metrics_data.append(['FFB Price Range', f"{ffb_price_range}/tonne"])
         
         if metrics_data:
             # Use proper column widths for economic metrics table
@@ -6895,7 +6869,7 @@ class PDFReportGenerator:
             return story
 
         # Economic Impact Forecast header
-        story.append(Paragraph("Economic Impact Forecast", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_economic_impact_forecast', 'Economic Impact Forecast'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Find economic forecast data from multiple possible locations
@@ -6949,24 +6923,24 @@ class PDFReportGenerator:
             
             # Display basic information
             if current_yield > 0:
-                story.append(Paragraph(f"<b>{self._t('current_yield_tonnes_ha', 'Current Yield')}:</b> {current_yield:.1f} {self._t('tonnes_per_hectare', 'tons/ha')}", self.styles['CustomBody']))
+                story.append(Paragraph(f"<b>{self._t('pdf_current_yield', 'Current Yield:')}</b> {current_yield:.1f} tons/ha", self.styles['CustomBody']))
             else:
-                story.append(Paragraph(f"<b>Current Yield:</b> Based on analysis results", self.styles['CustomBody']))
+                story.append(Paragraph(f"<b>{self._t('pdf_current_yield', 'Current Yield:')}</b> Based on analysis results", self.styles['CustomBody']))
             
             if land_size > 0:
-                story.append(Paragraph(f"<b>{self._t('land_size_hectares', 'Land Size')}:</b> {land_size:.1f} {self._t('hectares', 'hectares')}", self.styles['CustomBody']))
+                story.append(Paragraph(f"<b>{self._t('pdf_land_size', 'Land Size:')}</b> {land_size:.1f} hectares", self.styles['CustomBody']))
             
             # Add palm density information if available
             palm_density = econ.get('palm_density_per_hectare', 0)
             total_palms = econ.get('total_palms', 0)
             if palm_density > 0:
-                story.append(Paragraph(f"<b>{self._t('palm_density_per_hectare', 'Palm Density')}:</b> {palm_density} {self._t('palms_per_hectare', 'palms/hectare')}", self.styles['CustomBody']))
+                story.append(Paragraph(f"<b>{self._t('pdf_palm_density', 'Palm Density:')}</b> {palm_density} palms/hectare", self.styles['CustomBody']))
             if total_palms > 0:
-                story.append(Paragraph(f"<b>{self._t('total_palms', 'Total Palms')}:</b> {total_palms:,} {self._t('palms', 'palms')}", self.styles['CustomBody']))
+                story.append(Paragraph(f"<b>{self._t('pdf_total_palms', 'Total Palms:')}</b> {total_palms:,} palms", self.styles['CustomBody']))
             
             # Use FFB price range for consistency
             ffb_price_range = econ.get('oil_palm_price_range_rm_per_tonne', 'RM 650-750')
-            story.append(Paragraph(f"<b>{self._t('oil_palm_price_range', 'FFB Price Range')}:</b> {ffb_price_range}/{self._t('tonne', 'tonne')}", self.styles['CustomBody']))
+            story.append(Paragraph(f"<b>{self._t('pdf_ffb_price_range', 'FFB Price Range:')}</b> {ffb_price_range}/tonne", self.styles['CustomBody']))
             story.append(Spacer(1, 12))
             
             # Remove Economic Forecast Assumptions section as requested
@@ -7399,7 +7373,11 @@ class PDFReportGenerator:
             story.append(Spacer(1, 8))
             
             # Create soil parameters table
-            soil_data = [['Parameter', 'Average', 'Min', 'Max', 'Unit']]
+            soil_data = [[self._translate_table_header('Parameter'), 
+                         self._translate_table_header('Average'), 
+                         self._translate_table_header('Min'), 
+                         self._translate_table_header('Max'), 
+                         self._translate_table_header('Unit')]]
             for param, data in soil_params.items():
                 if isinstance(data, dict) and 'average' in data:
                     unit = data.get('unit', '')
@@ -7432,7 +7410,11 @@ class PDFReportGenerator:
             story.append(Spacer(1, 8))
             
             # Create leaf parameters table
-            leaf_data = [['Parameter', 'Average', 'Min', 'Max', 'Unit']]
+            leaf_data = [[self._translate_table_header('Parameter'), 
+                         self._translate_table_header('Average'), 
+                         self._translate_table_header('Min'), 
+                         self._translate_table_header('Max'), 
+                         self._translate_table_header('Unit')]]
             for param, data in leaf_params.items():
                 if isinstance(data, dict) and 'average' in data:
                     unit = data.get('unit', '')
