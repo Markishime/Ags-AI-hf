@@ -70,6 +70,93 @@ def translate_column_headers(df):
     return translated_df
 
 
+def translate_analysis_key(key):
+    """Translate common analysis keys that appear in Additional Analysis Results"""
+    key_lower = key.lower().strip()
+    key_normalized = key.replace('_', ' ').strip()
+    
+    # Map common keys to translation keys
+    translation_map = {
+        'analysis': 'analysis_label',
+        'analysis:': 'analysis_label',
+        'summary': 'summary_label',
+        'summary:': 'summary_label',
+        'detailed analysis': 'detailed_analysis_label',
+        'detailed analysis:': 'detailed_analysis_label',
+        'formatted analysis': 'formatted_analysis_label',
+        'formatted analysis:': 'formatted_analysis_label',
+    }
+    
+    # Check exact matches first
+    if key_lower in translation_map:
+        return t(translation_map[key_lower], key)
+    
+    # Check normalized key
+    if key_normalized.lower() in translation_map:
+        return t(translation_map[key_normalized.lower()], key)
+    
+    # Return original key if no translation found
+    return key
+
+
+def translate_step_title(step_title, step_number):
+    """Translate step titles, handling common patterns like 'Your soil and leaf test results and analysis'"""
+    if not step_title:
+        return t(f'step_{step_number}_title', f'Step {step_number}')
+    
+    step_title_lower = step_title.lower().strip()
+    
+    # First, try to use the standard translation key for this step number
+    translation_key = f'step_{step_number}_title'
+    standard_translation = t(translation_key, None)
+    if standard_translation and standard_translation != translation_key:
+        # If the step title contains additional text beyond the standard title, try to preserve it
+        # For example, "Step 1 Your soil and leaf test results and analysis" vs "Step 1: Data Analysis"
+        standard_lower = standard_translation.lower()
+        if standard_lower in step_title_lower or any(word in step_title_lower for word in standard_lower.split() if len(word) > 3):
+            # The title contains the standard translation, use it
+            return standard_translation
+    
+    # Map common step title patterns to translation keys
+    # These patterns match common LLM-generated step titles
+    title_patterns = {
+        'your soil and leaf test results and analysis': ('your_soil_leaf_test_results_analysis', 'Keputusan Ujian Tanah dan Daun Anda dan Analisis'),
+        'your soil and leaf test results': ('your_soil_leaf_test_results', 'Keputusan Ujian Tanah dan Daun Anda'),
+        'soil and leaf test results': ('soil_leaf_test_results', 'Keputusan Ujian Tanah dan Daun'),
+        'diagnose agronomic issues': ('step_2_title', 'Langkah 2: Diagnosis Isu'),
+        'issue diagnosis': ('step_2_title', 'Langkah 2: Diagnosis Isu'),
+        'recommend solutions': ('step_3_title', 'Langkah 3: Cadangan Penyelesaian'),
+        'solution recommendations': ('step_3_title', 'Langkah 3: Cadangan Penyelesaian'),
+        'regenerative agriculture strategies': ('step_4_title', 'Langkah 4: Pertanian Regeneratif'),
+        'regenerative agriculture': ('step_4_title', 'Langkah 4: Pertanian Regeneratif'),
+        'economic impact forecast': ('step_5_title', 'Langkah 5: Ramalan Kesan Ekonomi'),
+        'economic impact': ('step_5_title', 'Langkah 5: Ramalan Kesan Ekonomi'),
+        'forecast graph': ('step_6_title', 'Langkah 6: Ramalan & Unjuran Hasil'),
+        'yield forecast': ('step_6_title', 'Langkah 6: Ramalan & Unjuran Hasil'),
+        'yield forecast & projections': ('step_6_title', 'Langkah 6: Ramalan & Unjuran Hasil'),
+    }
+    
+    # Check if the step title matches any pattern
+    for pattern, (trans_key, default_trans) in title_patterns.items():
+        if pattern in step_title_lower:
+            # Try to preserve the step number if present
+            import re
+            step_match = re.search(r'step\s*(\d+)', step_title_lower)
+            if step_match:
+                step_num = step_match.group(1)
+                translated_text = t(trans_key, default_trans)
+                return f'Langkah {step_num}: {translated_text}'
+            translated_text = t(trans_key, default_trans)
+            return translated_text
+    
+    # If no pattern matches, try the standard translation key again
+    if standard_translation and standard_translation != translation_key:
+        return standard_translation
+    
+    # Return original title if no translation found
+    return step_title
+
+
 def normalize_markdown_block_for_step3(text):
     """Normalize inline dense markdown into readable headings and lists for Step 3.
 
@@ -6285,14 +6372,8 @@ def display_step_by_step_results(results_data):
                 continue
             
             step_number = step_result.get('step_number', i+1)
-            # Always translate step title - get from data or use translation key
-            raw_step_title = step_result.get('step_title', '')
-            if raw_step_title:
-                # If step_title exists in data, try to match it to translation keys
-                # Otherwise use the translation key directly
-                step_title = t(f'step_{step_number}_title', raw_step_title)
-            else:
-                step_title = t(f'step_{step_number}_title', f'{t("step", "Step")} {step_number}')
+            raw_step_title = step_result.get('step_title', t(f'step_{step_number}_title', f'Step {step_number}'))
+            step_title = translate_step_title(raw_step_title, step_number)
             
             # Create a visual separator between steps
             if i > 0:
@@ -6609,7 +6690,7 @@ def display_step_block(step_result, step_number, step_title):
                 font-size: 18px;
                 margin-right: 20px;
             ">
-{config['icon']} {t('step', 'Step')} {step_number}
+                {config['icon']} Step {step_number}
             </div>
             <div>
                 <h3 style="color: white; margin: 0; font-size: 24px;">{step_title}</h3>
@@ -6622,45 +6703,13 @@ def display_step_block(step_result, step_number, step_title):
     # Display the enhanced step result content
     display_enhanced_step_result(step_result, step_number)
 
-def translate_llm_headers(text):
-    """Translate common English headers in LLM output text to current language"""
-    if not isinstance(text, str):
-        return text
-    
-    current_lang = get_language()
-    if current_lang != 'ms':
-        return text  # No translation needed for English
-    
-    import re
-    # Translation mappings for common headers
-    header_translations = {
-        r'\bAnalysis:\s*': t('analysis_label', 'Analysis:'),
-        r'\bSummary:\s*': t('summary_label', 'Summary:'),
-        r'\bDetailed Analysis:\s*': t('detailed_analysis_label', 'Detailed Analysis:'),
-        r'\bFormatted Analysis:\s*': t('formatted_analysis_label', 'Formatted Analysis:'),
-        r'###\s*Analysis\s*': f"### {t('analysis_label', 'Analysis:').rstrip(':')}",
-        r'####\s*Analysis\s*': f"#### {t('analysis_label', 'Analysis:').rstrip(':')}",
-        r'###\s*Summary\s*': f"### {t('summary_label', 'Summary:').rstrip(':')}",
-        r'####\s*Summary\s*': f"#### {t('summary_label', 'Summary:').rstrip(':')}",
-        r'###\s*Detailed Analysis\s*': f"### {t('detailed_analysis_label', 'Detailed Analysis:').rstrip(':')}",
-        r'####\s*Detailed Analysis\s*': f"#### {t('detailed_analysis_label', 'Detailed Analysis:').rstrip(':')}",
-        r'###\s*Formatted Analysis\s*': f"### {t('formatted_analysis_label', 'Formatted Analysis:').rstrip(':')}",
-        r'####\s*Formatted Analysis\s*': f"#### {t('formatted_analysis_label', 'Formatted Analysis:').rstrip(':')}",
-    }
-    
-    translated_text = text
-    for pattern, replacement in header_translations.items():
-        translated_text = re.sub(pattern, replacement, translated_text, flags=re.IGNORECASE)
-    
-    return translated_text
-
 def sanitize_persona_and_enforce_article(text):
     """Remove persona phrases and ensure the text starts with 'The'.
 
     - Strips phrases like 'As an experienced agronomist', 'As your consulting agronomist',
       'As an expert', 'my analysis', 'I recommend', etc.
-      - Replaces 'our' with 'The' and removes 'my' and other first-person pronouns
-      - If first non-space word is not 'The' (case-insensitive), prepend 'The ' (with capitalization).
+    - Replaces 'our' with 'The' and removes 'my' and other first-person pronouns
+    - If first non-space word is not 'The' (case-insensitive), prepend 'The ' (with capitalization).
     """
     try:
         if not isinstance(text, str):
@@ -7638,7 +7687,7 @@ def display_step5_economic_forecast(analysis_data):
             if 'formatted_analysis' in analysis_data and analysis_data['formatted_analysis']:
                 st.markdown(f"### 📊 **{t('economic_analysis_tables_formatted', 'Economic Analysis Tables (Formatted)')}**")
                 st.info("📋 Displaying formatted economic analysis from analysis text.")
-                display_formatted_economic_tables(analysis_data['formatted_analysis'])
+                display_formatted_economic_tables(analysis_data['formatted_analysis'], analysis_data)
             else:
                 # Generate a basic economic summary if no data is available
                 st.markdown(f"### 📊 **{t('economic_impact_analysis', 'Economic Impact Analysis')}**")
@@ -7825,7 +7874,7 @@ def display_economic_yearly_table(scenario_name, yearly_data, economic_forecast)
         logger.error(f"Error displaying economic yearly table: {e}")
         st.error(f"Error displaying economic table for {scenario_name}")
 
-def display_formatted_economic_tables(formatted_text):
+def display_formatted_economic_tables(formatted_text, analysis_data=None):
     """Parse and display tables from formatted economic analysis text."""
     try:
         import pandas as pd
@@ -7846,6 +7895,85 @@ def display_formatted_economic_tables(formatted_text):
         formatted_text = re.sub(r'Table generation needed.*?', '', formatted_text, flags=re.IGNORECASE)
         formatted_text = re.sub(r'Pending.*?', '', formatted_text, flags=re.IGNORECASE)
         formatted_text = re.sub(r'Please regenerate with table data.*?', '', formatted_text, flags=re.IGNORECASE)
+        
+        # Replace table placeholders with actual tables if analysis_data is provided
+        if analysis_data:
+            # Get economic forecast data
+            economic_forecast = analysis_data.get('economic_forecast', {})
+            if not economic_forecast:
+                economic_forecast = analysis_data.get('result', {}).get('economic_forecast', {})
+            if not economic_forecast:
+                economic_forecast = analysis_data.get('data', {}).get('economic_forecast', {})
+            
+            # Map placeholder numbers to scenario names
+            scenario_map = {
+                '2': 'high',
+                '3': 'medium',
+                '4': 'low'
+            }
+            
+            # Find all table placeholders
+            placeholder_pattern = r'<div class="custom-table-container">__TABLE_PLACEHOLDER_(\d+)__</div>'
+            placeholders = re.findall(placeholder_pattern, formatted_text)
+            
+            # Replace each placeholder with the corresponding table
+            for placeholder_num in placeholders:
+                scenario_key = scenario_map.get(placeholder_num)
+                if scenario_key and economic_forecast.get('scenarios'):
+                    scenarios = economic_forecast['scenarios']
+                    scenario_data = scenarios.get(scenario_key) or scenarios.get(scenario_key.title()) or scenarios.get(scenario_key.upper())
+                    
+                    if scenario_data and isinstance(scenario_data, dict) and 'yearly_data' in scenario_data:
+                        yearly_data = scenario_data['yearly_data']
+                        if yearly_data and len(yearly_data) > 0:
+                            # Create a marker to insert the table here
+                            placeholder_full = f'<div class="custom-table-container">__TABLE_PLACEHOLDER_{placeholder_num}__</div>'
+                            # Replace with a unique marker that we'll replace later
+                            formatted_text = formatted_text.replace(placeholder_full, f'__TABLE_INSERT_{placeholder_num}__', 1)
+            
+            # Split text by table insertion markers and display tables at the right positions
+            parts = re.split(r'__TABLE_INSERT_(\d+)__', formatted_text)
+            result_parts = []
+            
+            for i, part in enumerate(parts):
+                if part.isdigit() and part in scenario_map:
+                    # This is a table insertion point
+                    scenario_key = scenario_map[part]
+                    if economic_forecast.get('scenarios'):
+                        scenarios = economic_forecast['scenarios']
+                        scenario_data = scenarios.get(scenario_key) or scenarios.get(scenario_key.title()) or scenarios.get(scenario_key.upper())
+                        
+                        if scenario_data and isinstance(scenario_data, dict) and 'yearly_data' in scenario_data:
+                            yearly_data = scenario_data['yearly_data']
+                            if yearly_data and len(yearly_data) > 0:
+                                # Display the text before the table
+                                if result_parts:
+                                    prev_text = ''.join(result_parts)
+                                    if prev_text.strip():
+                                        # Display previous text
+                                        st.markdown(prev_text, unsafe_allow_html=True)
+                                        result_parts = []
+                                
+                                # Display the table
+                                display_economic_yearly_table(scenario_key, yearly_data, economic_forecast)
+                                continue
+                
+                # Regular text part
+                result_parts.append(part)
+            
+            # Display any remaining text
+            if result_parts:
+                remaining_text = ''.join(result_parts)
+                if remaining_text.strip():
+                    # Remove any remaining placeholder divs
+                    remaining_text = re.sub(r'<div class="custom-table-container">__TABLE_PLACEHOLDER_\d+__</div>', '', remaining_text)
+                    if remaining_text.strip():
+                        st.markdown(remaining_text, unsafe_allow_html=True)
+                        return
+            
+            # If we've already displayed everything via placeholders, return early
+            if any(re.search(r'__TABLE_INSERT_\d+__', part) for part in parts):
+                return
 
         # PRIORITY 1: Check for complete HTML table blocks with div wrappers and classes
         # These should be rendered directly as HTML
@@ -9726,7 +9854,7 @@ def display_enhanced_step_result(step_result, step_number):
     if other_fields:
         for key in other_fields:
             value = analysis_data.get(key)
-            title = key.replace('_', ' ').title()
+            title = translate_analysis_key(key.replace('_', ' ').title())
             
             # Skip raw LLM output patterns
             if key.startswith('Item ') or key in ['deterministic', 'raw_llm_output', 'raw_output', 'llm_output']:
@@ -9744,7 +9872,8 @@ def display_enhanced_step_result(step_result, step_number):
                     if norm_sub_k in ['key_findings','specific_recommendations','tables','interpretations','visualizations','yield_forecast','format_analysis','data_format_recommendations','plantation_values_vs_reference','soil_issues','issues_source']:
                         continue
                     if sub_v is not None and sub_v != "":
-                        st.markdown(f"- **{sub_k.replace('_',' ').title()}:** {sub_v}")
+                        translated_sub_k = translate_analysis_key(sub_k.replace('_',' ').title())
+                        st.markdown(f"- **{translated_sub_k}:** {sub_v}")
             elif isinstance(value, list) and value:
                 st.markdown(f"**{title}:**")
                 for idx, item in enumerate(value, 1):
@@ -9880,7 +10009,9 @@ def display_enhanced_step_result(step_result, step_number):
         # This catches any raw data that might have leaked through from LLM responses
         analysis_data = remove_economic_scenarios_from_analysis(analysis_data)
 
-        display_forecast_graph_content(analysis_data, step_number, step_result.get('step_title', f'Step {step_number}'))
+        raw_step_title = step_result.get('step_title', f'Step {step_number}')
+        translated_step_title = translate_step_title(raw_step_title, step_number)
+        display_forecast_graph_content(analysis_data, step_number, translated_step_title)
 
         # Also show Step 5 reference tables/text when available
         try:
@@ -10824,7 +10955,8 @@ def display_step_specific_content(step_result, step_number):
     
     # Only show forecast graph if step instructions contain forecast graph keywords
     if should_show_forecast_graph(step_result) and has_yield_forecast_data(analysis_data):
-        step_title = analysis_data.get('step_title', t(f'step_{step_number}_title', f'Step {step_number}'))
+        raw_step_title = analysis_data.get('step_title', t(f'step_{step_number}_title', f'Step {step_number}'))
+        step_title = translate_step_title(raw_step_title, step_number)
         display_forecast_graph_content(analysis_data, step_number, step_title)
 
 def display_bar_chart(data, title):
@@ -12013,8 +12145,6 @@ def display_step1_data_analysis(analysis_data):
         st.markdown(f"#### 📋 {t('summary', 'Summary')}")
         summary_text = analysis_data['summary']
         if isinstance(summary_text, str) and summary_text.strip():
-            # Translate common English headers in LLM output
-            summary_text = translate_llm_headers(summary_text)
             st.markdown(
                 f'<div style="margin-bottom: 20px; padding: 15px; background: linear-gradient(135deg, #e8f5e8, #ffffff); border-left: 4px solid #28a745; border-radius: 8px; box-shadow: 0 2px 8px rgba(0,0,0,0.1);">'
                 f'<p style="margin: 0; font-size: 16px; line-height: 1.6; color: #2c3e50;">{summary_text.strip()}</p>'
@@ -12035,16 +12165,10 @@ def display_step1_data_analysis(analysis_data):
         elif not isinstance(detailed_text, str):
             detailed_text = str(detailed_text) if detailed_text is not None else "No detailed analysis available"
 
-        # Translate common English headers in LLM output
-        detailed_text = translate_llm_headers(detailed_text)
-        
         # If the LLM included a prefixed "Formatted Analysis:" section, prefer its content
         try:
             import re
-            # Check for both English and translated versions
-            formatted_block = re.search(rf"{re.escape(t('formatted_analysis_label', 'Formatted Analysis:'))}\s*(.*)$", detailed_text, re.DOTALL | re.IGNORECASE)
-            if not formatted_block:
-                formatted_block = re.search(r"Formatted Analysis:\s*(.*)$", detailed_text, re.DOTALL | re.IGNORECASE)
+            formatted_block = re.search(r"Formatted Analysis:\s*(.*)$", detailed_text, re.DOTALL | re.IGNORECASE)
             if formatted_block and formatted_block.group(1).strip():
                 detailed_text = formatted_block.group(1).strip()
         except Exception:
@@ -12066,9 +12190,6 @@ def display_step1_data_analysis(analysis_data):
         except Exception:
             pass
 
-        # Translate common English headers in LLM output
-        detailed_text = translate_llm_headers(detailed_text)
-        
         # Sanitize persona and enforce neutral tone before rendering
         detailed_text = sanitize_persona_and_enforce_article(detailed_text)
         
@@ -12155,7 +12276,7 @@ def display_step1_data_analysis(analysis_data):
         st.markdown(f"#### 📊 {t('additional_analysis_results', 'Additional Analysis Results')}")
         for key in other_fields:
             value = analysis_data.get(key)
-            title = key.replace('_', ' ').title()
+            title = translate_analysis_key(key.replace('_', ' ').title())
             
             # Skip raw LLM output patterns
             if key.startswith('Item ') or key in ['deterministic', 'raw_llm_output', 'raw_output', 'llm_output']:
@@ -12173,7 +12294,8 @@ def display_step1_data_analysis(analysis_data):
                     if norm_sub_k in ['key_findings','specific_recommendations','tables','interpretations','visualizations','yield_forecast','format_analysis','data_format_recommendations','plantation_values_vs_reference','soil_issues','issues_source','economic_forecast','scenarios','assumptions']:
                         continue
                     if sub_v is not None and sub_v != "":
-                        st.markdown(f"- **{sub_k.replace('_',' ').title()}:** {sub_v}")
+                        translated_sub_k = translate_analysis_key(sub_k.replace('_',' ').title())
+                        st.markdown(f"- **{translated_sub_k}:** {sub_v}")
             elif isinstance(value, list) and value:
                 st.markdown(f"**{title}:**")
                 for i, item in enumerate(value, 1):
@@ -15574,10 +15696,27 @@ def display_step3_solution_recommendations(analysis_data):
                     formatted_content = formatted_block.group(1).strip()
                     # Clean up persona language
                     clean_content = sanitize_persona_and_enforce_article(formatted_content)
+                    # Convert <br> tags to line breaks
+                    clean_content = re.sub(r'<br\s*/?>', '\n\n', clean_content, flags=re.IGNORECASE)
+                    # Extract and render markdown tables first
+                    clean_content = _extract_and_render_markdown_tables(clean_content)
                     # Normalize markdown formatting
                     normalized_content = normalize_markdown_block_for_step3(clean_content)
                     st.markdown(f"### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
-                    st.markdown(normalized_content)
+                    # Split into paragraphs and display
+                    paragraphs = normalized_content.split('\n\n') if '\n\n' in normalized_content else [normalized_content]
+                    for paragraph in paragraphs:
+                        if paragraph.strip():
+                            # Check if it contains markdown formatting
+                            if any(token in paragraph for token in ['\n- ', '\n* ', '\n1.', '\n2.', '### ', '#### ', '**']):
+                                st.markdown(paragraph)
+                            else:
+                                st.markdown(
+                                    f'<div style="margin-bottom: 18px; padding: 15px; background: linear-gradient(135deg, #ffffff, #f8f9fa); border: 1px solid #e9ecef; border-radius: 8px; box-shadow: 0 2px 4px rgba(0,0,0,0.05);">'
+                                    f'<p style="margin: 0; line-height: 1.8; font-size: 16px; color: #2c3e50;">{paragraph.strip()}</p>'
+                                    f'</div>',
+                                    unsafe_allow_html=True
+                                )
                     st.markdown("")
                     return  # Exit early to avoid showing duplicate content
             except Exception:
@@ -16000,13 +16139,25 @@ def display_regenerative_agriculture_content(analysis_data):
 
                     # Only display if content remains after filtering
                     if detailed_text.strip():
+                        # Convert <br> tags to line breaks
+                        detailed_text = re.sub(r'<br\s*/?>', '\n\n', detailed_text, flags=re.IGNORECASE)
+                        # Extract and render markdown tables first
+                        detailed_text = _extract_and_render_markdown_tables(detailed_text)
                         st.markdown(f"#### 📋 {t('detailed_analysis', 'Detailed Analysis')}")
-                        st.markdown(
-                            f'<div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #ffffff, #f8f9fa); border: 1px solid #e9ecef; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">'
-                            f'<div style="color: #2c3e50; line-height: 1.7;">{detailed_text}</div>'
-                            f'</div>',
-                            unsafe_allow_html=True
-                        )
+                        # Split into paragraphs and display
+                        paragraphs = detailed_text.split('\n\n') if '\n\n' in detailed_text else [detailed_text]
+                        for paragraph in paragraphs:
+                            if paragraph.strip():
+                                # Check if it contains markdown formatting or tables
+                                if any(token in paragraph for token in ['\n- ', '\n* ', '\n1.', '\n2.', '### ', '#### ', '**', '<table']):
+                                    st.markdown(paragraph, unsafe_allow_html=True)
+                                else:
+                                    st.markdown(
+                                        f'<div style="margin-bottom: 20px; padding: 20px; background: linear-gradient(135deg, #ffffff, #f8f9fa); border: 1px solid #e9ecef; border-radius: 10px; box-shadow: 0 4px 15px rgba(0,0,0,0.08);">'
+                                        f'<div style="color: #2c3e50; line-height: 1.7;">{paragraph.strip()}</div>'
+                                        f'</div>',
+                                        unsafe_allow_html=True
+                                    )
 
             # Nuclear option: remove any Economic Analysis with braces
             if re.search(r"Economic Analysis:\s*\{", detailed_text, re.IGNORECASE):
@@ -16047,6 +16198,12 @@ def display_regenerative_agriculture_content(analysis_data):
         )
 
         detailed_text = sanitize_persona_and_enforce_article(detailed_text)
+        
+        # Convert <br> tags to line breaks
+        detailed_text = re.sub(r'<br\s*/?>', '\n\n', detailed_text, flags=re.IGNORECASE)
+        
+        # Extract and render markdown tables first
+        detailed_text = _extract_and_render_markdown_tables(detailed_text)
 
         # Process HTML/XML tables in the content first
         processed_text = process_html_tables(detailed_text)
