@@ -493,8 +493,8 @@ def show_results_page():
     if results_page_func is not None:
         results_page_func()
     else:
-        st.error(t('status_error') + ": " + t('results_no_results', default='Results module not available'))
-        st.info(t('status_info') + ": " + t('results_no_results', default='Please contact support if this issue persists.'))
+        st.error(t('results_module_not_available', 'Results module not available'))
+        st.info(t('results_contact_support', 'Please contact support if this issue persists.'))
 
 def show_help_improve_page():
     """Display Help Us Improve page"""

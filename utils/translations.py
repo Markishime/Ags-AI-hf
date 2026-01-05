@@ -129,6 +129,8 @@ TRANSLATIONS = {
         # Results
         'results_title': 'Analysis Results',
         'results_no_results': 'No results available',
+        'results_module_not_available': 'Results module not available',
+        'results_contact_support': 'Please contact support if this issue persists.',
         'results_header': 'Agricultural Analysis Results',
         'results_summary': 'Summary',
         'results_step_analysis': 'Step-by-Step Analysis',
@@ -537,6 +539,8 @@ TRANSLATIONS = {
         # Results
         'results_title': 'Hasil Analisis',
         'results_no_results': 'Tiada hasil tersedia',
+        'results_module_not_available': 'Modul hasil tidak tersedia',
+        'results_contact_support': 'Sila hubungi sokongan jika isu ini berterusan.',
         'results_header': 'Hasil Analisis Pertanian',
         'results_summary': 'Ringkasan',
         'results_step_analysis': 'Analisis Langkah Demi Langkah',
