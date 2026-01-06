@@ -4339,7 +4339,7 @@ class PDFReportGenerator:
             
             return {
                 'type': 'line_chart',
-                'title': '5-Year Yield Forecast by Investment Scenario',
+                'title': self._t('pdf_5_year_yield_forecast_scenario', '5-Year Yield Forecast by Investment Scenario'),
                 'subtitle': 'Projected yield increase over 5 years with different investment levels',
                 'data': {
                     'categories': [f'Year {year}' for year in years],
@@ -7006,7 +7006,7 @@ class PDFReportGenerator:
         story = []
         
         # 5-Year Yield Forecast header
-        story.append(Paragraph("5-Year Yield Forecast", self.styles['Heading1']))
+        story.append(Paragraph(self._t('pdf_5_year_yield_forecast', '5-Year Yield Forecast'), self.styles['Heading1']))
         story.append(Spacer(1, 12))
         
         # Find yield forecast data from multiple possible locations
@@ -7134,7 +7134,7 @@ class PDFReportGenerator:
             # Customize the graph
             ax.set_xlabel('Years', fontsize=12, fontweight='bold')
             ax.set_ylabel('Yield (tons/ha)', fontsize=12, fontweight='bold')
-            ax.set_title('5-Year Yield Forecast from Current Baseline', fontsize=14, fontweight='bold')
+            ax.set_title(self._t('pdf_5_year_yield_forecast_baseline', '5-Year Yield Forecast from Current Baseline'), fontsize=14, fontweight='bold')
             ax.legend(fontsize=10)
             ax.grid(True, alpha=0.3)
             ax.set_xticks(years)
@@ -7189,7 +7189,7 @@ class PDFReportGenerator:
             # Customize the graph
             ax.set_xlabel('Years', fontsize=12, fontweight='bold')
             ax.set_ylabel('Yield (tons/ha)', fontsize=12, fontweight='bold')
-            ax.set_title('5-Year Yield Forecast - Sample Projections', fontsize=14, fontweight='bold')
+            ax.set_title(self._t('pdf_5_year_yield_forecast_sample', '5-Year Yield Forecast - Sample Projections'), fontsize=14, fontweight='bold')
             ax.legend(fontsize=10)
             ax.grid(True, alpha=0.3)
             ax.set_xticks(years)
@@ -8069,7 +8069,7 @@ class PDFReportGenerator:
             # Set chart properties - IMPROVED TO MATCH RESULTS PAGE
             ax.set_xlabel('Years', fontsize=12, fontweight='bold')
             ax.set_ylabel('Yield (tons/ha)', fontsize=12, fontweight='bold')
-            ax.set_title('5-Year Yield Projection from Current Baseline', fontsize=14, fontweight='bold', pad=20)
+            ax.set_title(self._t('pdf_5_year_yield_projection_baseline', '5-Year Yield Projection from Current Baseline'), fontsize=14, fontweight='bold', pad=20)
 
             # Position legend at top right - EXACT SAME AS RESULTS PAGE
             ax.legend(loc='upper right', bbox_to_anchor=(1.0, 1.0), framealpha=0.8)
@@ -8243,7 +8243,7 @@ class PDFReportGenerator:
             
             ax.set_xlabel('Year')
             ax.set_ylabel('Yield (tonnes/hectare)')
-            ax.set_title('5-Year Yield Forecast (t/ha)')
+            ax.set_title(self._t('pdf_5_year_yield_forecast_tonnes', '5-Year Yield Forecast (t/ha)'))
             ax.legend()
             ax.grid(True, alpha=0.3)
 

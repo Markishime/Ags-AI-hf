@@ -16587,10 +16587,13 @@ def _extract_first_float(value, default_value=0.0):
 def display_forecast_graph_content(analysis_data, step_number=None, step_title=None):
     """Display Forecast Graph content with baseline - works for any step with yield forecast data"""
     # Dynamic header based on step information
+    forecast_text = t('pdf_5_year_yield_forecast_projections', '5-Year Yield Forecast & Projections')
     if step_number and step_title:
-        header_title = f"📈 STEP {step_number} — {step_title}: 5-Year Yield Forecast & Projections"
+        # Translate step title if needed
+        translated_step_title = translate_step_title(step_title, step_number)
+        header_title = f"📈 STEP {step_number} — {translated_step_title}: {forecast_text}"
     else:
-        header_title = "📈 5-Year Yield Forecast & Projections"
+        header_title = f"📈 {forecast_text}"
     
     # Styled header with updated background color
     st.markdown(
@@ -16767,7 +16770,7 @@ def display_forecast_graph_content(analysis_data, step_number=None, step_title=N
                 ))
             
             fig.update_layout(
-                title='5-Year Yield Projection from Current Baseline',
+                title=t('pdf_5_year_yield_projection_baseline', '5-Year Yield Projection from Current Baseline'),
                 xaxis_title='Years',
                 yaxis_title='Yield (tons/ha)',
                 xaxis=dict(
