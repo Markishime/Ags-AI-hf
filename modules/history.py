@@ -80,13 +80,37 @@ def inject_load_analysis_listener():
             
             const data = event.data;
             
+            // Handle multiple message formats
+            let analysisData = null;
+            let analysisId = null;
+            let messageReceived = false;
+            
+            // Format 1: Direct LOAD_ANALYSIS
             if (data && data.type === 'LOAD_ANALYSIS') {
-                console.log('📥 Received LOAD_ANALYSIS message:', data);
-                console.log('📥 analysisId:', data.analysisId);
-                console.log('📥 analysisData keys:', data.analysisData ? Object.keys(data.analysisData) : 'none');
-                
-                const analysisId = data.analysisId;
-                const analysisData = data.analysisData;
+                console.log('📥 Received LOAD_ANALYSIS (Format 1):', data);
+                analysisData = data.analysisData;
+                analysisId = data.analysisId;
+                messageReceived = true;
+            }
+            // Format 2: Nested MESSAGE
+            else if (data && data.type === 'MESSAGE' && data.message && data.message.type === 'LOAD_ANALYSIS') {
+                console.log('📥 Received nested LOAD_ANALYSIS (Format 2):', data.message);
+                analysisData = data.message.analysisData;
+                analysisId = data.message.analysisId;
+                messageReceived = true;
+            }
+            // Format 3: Action format
+            else if (data && data.action === 'load_analysis') {
+                console.log('📥 Received action load_analysis (Format 3):', data);
+                analysisData = data.data;
+                analysisId = data.analysisId || (data.data && data.data.id);
+                messageReceived = true;
+            }
+            
+            if (messageReceived) {
+                console.log('📥 analysisId:', analysisId);
+                console.log('📥 analysisData type:', analysisData ? typeof analysisData : 'none');
+                console.log('📥 analysisData keys:', analysisData ? Object.keys(analysisData) : 'none');
                 
                 if (!analysisId && !analysisData) {
                     console.error('❌ LOAD_ANALYSIS message missing both analysisId and analysisData');
@@ -132,8 +156,10 @@ def inject_load_analysis_listener():
                         }
                     }
                     
+                    // CRITICAL: Update URL and reload to trigger Streamlit routing
                     window.history.replaceState({}, '', url);
                     console.log('✅ Updated URL:', url.toString());
+                    console.log('✅ URL will route to history page with analysisId:', finalAnalysisId);
                     
                     // Trigger Streamlit rerun to load the analysis
                     console.log('🔄 Reloading page to display analysis...');
@@ -145,19 +171,36 @@ def inject_load_analysis_listener():
             }
         });
         
-        // Also check for analysisId in URL on page load
-        window.addEventListener('load', function() {
+        // Also check for analysisId in URL on page load (immediate check)
+        // This handles cases where the URL was already updated before page load
+        function checkUrlForAnalysisId() {
             const urlParams = new URLSearchParams(window.location.search);
             const analysisId = urlParams.get('analysisId');
-            if (analysisId) {
-                console.log('📋 Found analysisId in URL on load:', analysisId);
+            const analysisData = urlParams.get('analysisData');
+            if (analysisId || analysisData) {
+                console.log('📋 Found analysisId/analysisData in URL on load:', {
+                    analysisId: analysisId,
+                    hasAnalysisData: !!analysisData
+                });
                 // Store in sessionStorage for consistency
-                sessionStorage.setItem('load_analysis_id', analysisId);
+                if (analysisId) {
+                    sessionStorage.setItem('load_analysis_id', analysisId);
+                }
+                // The page should already be routing to history page via Streamlit
+                // But we log this for debugging
+                console.log('✅ URL contains analysis data - Streamlit should route to history page');
             }
-        });
+        }
+        
+        // Check immediately (in case DOM is already loaded)
+        checkUrlForAnalysisId();
+        
+        // Also check on load event
+        window.addEventListener('load', checkUrlForAnalysisId);
         
         // Log that listener is ready
         console.log('✅ LOAD_ANALYSIS listener ready and waiting for messages');
+        console.log('✅ Current URL:', window.location.href);
     })();
     </script>
     """

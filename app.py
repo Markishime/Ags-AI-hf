@@ -571,20 +571,32 @@ def main():
     # Initialize the application
     initialize_app()
     
-    # Check for analysisId in query params - if present, show history page
+    # CRITICAL: Check for analysisId in query params FIRST - if present, show history page
+    # This must happen before showing header/sidebar to ensure proper routing
     query_params = st.query_params
     analysis_id = query_params.get('analysisId', None)
     
-    if analysis_id and show_history_page:
+    # Also check for analysisData in URL (from postMessage)
+    analysis_data_encoded = query_params.get('analysisData', None)
+    
+    # Debug logging
+    if analysis_id or analysis_data_encoded:
+        print(f"🔍 Routing to history page - analysisId: {analysis_id}, has analysisData: {bool(analysis_data_encoded)}")
+    
+    # If we have analysisId or analysisData, route to history page
+    if (analysis_id or analysis_data_encoded) and show_history_page:
+        print("✅ Routing to history page")
         # Show header
         show_header()
         
         # Show sidebar
         show_sidebar()
         
-        # Show history page
+        # Show history page (it will handle loading the data)
         show_history_page()
         return
+    elif analysis_id or analysis_data_encoded:
+        print(f"⚠️ analysisId/analysisData found but show_history_page is not available")
     
     # Show header
     show_header()
