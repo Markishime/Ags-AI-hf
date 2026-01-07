@@ -422,9 +422,25 @@ def show_sidebar():
             st.session_state.current_page = 'home'
             st.rerun()
         
-        if st.button(t('nav_analyze'), use_container_width=True):
-            st.session_state.current_page = 'upload'
-            st.rerun()
+        # Check upload limit before allowing access to analyze page
+        can_analyze = True
+        try:
+            from utils.cropdrive_integration import can_start_analysis
+            can_analyze = can_start_analysis()
+        except ImportError:
+            # If cropdrive_integration not available, allow (fallback)
+            pass
+        except Exception:
+            # On error, allow (fallback)
+            pass
+        
+        if can_analyze:
+            if st.button(t('nav_analyze'), use_container_width=True):
+                st.session_state.current_page = 'upload'
+                st.rerun()
+        else:
+            # Disable button and show tooltip
+            st.button(t('nav_analyze'), use_container_width=True, disabled=True, help="Upload limit reached. Please view your analysis history instead.")
         
         # Admin panel button
         if st.button(t('nav_admin'), use_container_width=True):
@@ -477,10 +493,31 @@ def show_home_page():
         </div>
         """, unsafe_allow_html=True)
     
-    # Button to start - upload files
-    if st.button(t('home_upload_files'), use_container_width=True, type="primary"):
-        st.session_state.current_page = 'upload'
-        st.rerun()
+    # Button to start - upload files (check limit first)
+    can_analyze = True
+    try:
+        from utils.cropdrive_integration import can_start_analysis, get_upload_limit_info
+        can_analyze = can_start_analysis()
+        if not can_analyze:
+            limit_info = get_upload_limit_info()
+            uploads_used = limit_info.get('uploads_used', 0)
+            uploads_limit = limit_info.get('uploads_limit', 0)
+            st.warning(f"⚠️ **Upload Limit Reached:** You have used {uploads_used}/{uploads_limit} analyses. Please view your analysis history or upgrade your plan.")
+    except ImportError:
+        # If cropdrive_integration not available, allow (fallback)
+        pass
+    except Exception:
+        # On error, allow (fallback)
+        pass
+    
+    if can_analyze:
+        if st.button(t('home_upload_files'), use_container_width=True, type="primary"):
+            st.session_state.current_page = 'upload'
+            st.rerun()
+    else:
+        # Show disabled button with message
+        st.button(t('home_upload_files'), use_container_width=True, type="primary", disabled=True)
+        st.info("💡 **Tip:** View your past analyses from the CropDrive website by clicking 'Open Recent Analysis' on any report.")
     
 
 # Authentication pages removed - no longer needed

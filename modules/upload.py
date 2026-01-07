@@ -101,6 +101,48 @@ def show_upload_page():
     except ImportError:
         from translations import t
     
+    # CRITICAL: Check upload limit BEFORE showing upload page
+    try:
+        from utils.cropdrive_integration import can_start_analysis, get_upload_limit_info
+        
+        # Check if user can start analysis
+        if not can_start_analysis():
+            # Upload limit reached - show message and redirect to history
+            limit_info = get_upload_limit_info()
+            uploads_used = limit_info.get('uploads_used', 0)
+            uploads_limit = limit_info.get('uploads_limit', 0)
+            upload_limit_exceeded = limit_info.get('upload_limit_exceeded', False)
+            
+            st.error("🚫 **Upload Limit Reached**")
+            
+            if upload_limit_exceeded or (uploads_limit > 0 and uploads_used >= uploads_limit):
+                st.warning(f"⚠️ You have reached your upload limit: **{uploads_used}/{uploads_limit}** analyses used.")
+                st.info("💡 **What you can do:**")
+                st.markdown("""
+                - 📋 **View your past analyses** - Access your analysis history to review previous reports
+                - 🔄 **Upgrade your plan** - Contact support to increase your analysis limit
+                - 📊 **Review existing reports** - All your past analyses are still accessible
+                """)
+                
+                # Show button to view history (if analysisId is available)
+                st.markdown("---")
+                col1, col2, col3 = st.columns([1, 2, 1])
+                with col2:
+                    st.info("📋 **To view your analysis history, go to the CropDrive website and click 'Open Recent Analysis' on any report.**")
+                    if st.button("🏠 Back to Home", use_container_width=True, type="primary"):
+                        st.session_state.current_page = 'home'
+                        st.rerun()
+                
+                # Stop execution - don't show upload page
+                st.stop()
+    except ImportError:
+        # If cropdrive_integration is not available, allow upload (fallback)
+        pass
+    except Exception as e:
+        # Log error but allow upload (fallback)
+        import logging
+        logging.warning(f"Error checking upload limit: {e}")
+    
     st.markdown(f'<h1 style="color: #2E8B57; text-align: center; font-size: 3rem; font-weight: 700; margin: 1.5rem 0 1rem 0;">📤 {t("upload_title")}</h1>', unsafe_allow_html=True)
     st.markdown(f"### {t('upload_desc')}")
     
