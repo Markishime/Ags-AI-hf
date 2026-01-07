@@ -353,6 +353,14 @@ st.markdown("""
 
 def initialize_app():
     """Initialize the application"""
+    # CRITICAL: Inject LOAD_ANALYSIS listener globally so it's always active
+    # This ensures the listener works even if user is on a different page
+    try:
+        from modules.history import inject_load_analysis_listener
+        inject_load_analysis_listener()
+    except Exception as e:
+        print(f"Warning: Could not inject LOAD_ANALYSIS listener: {e}")
+    
     # Initialize CropDrive integration first (if available)
     # This handles language and user config from parent website
     if CROPDRIVE_INTEGRATION_AVAILABLE:

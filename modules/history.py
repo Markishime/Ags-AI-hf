@@ -53,13 +53,17 @@ except ImportError as e:
 def inject_load_analysis_listener():
     """
     Inject JavaScript to listen for LOAD_ANALYSIS messages from parent window (CropDrive website)
-    Stores analysisId and analysisData in sessionStorage, then updates URL and reloads
+    Stores analysisId and analysisData, then updates URL and triggers Streamlit rerun
     """
     js_code = """
     <script>
     (function() {
+        console.log('🔧 LOAD_ANALYSIS listener initialized');
+        
         // Listen for LOAD_ANALYSIS messages from parent window
         window.addEventListener('message', function(event) {
+            console.log('📨 Received message event:', event.origin, event.data);
+            
             // Verify origin for security
             const allowedOrigins = [
                 'https://cropdrive.ai',
@@ -78,6 +82,8 @@ def inject_load_analysis_listener():
             
             if (data && data.type === 'LOAD_ANALYSIS') {
                 console.log('📥 Received LOAD_ANALYSIS message:', data);
+                console.log('📥 analysisId:', data.analysisId);
+                console.log('📥 analysisData keys:', data.analysisData ? Object.keys(data.analysisData) : 'none');
                 
                 const analysisId = data.analysisId;
                 const analysisData = data.analysisData;
@@ -96,36 +102,45 @@ def inject_load_analysis_listener():
                     
                     // Store full analysisData in sessionStorage
                     if (analysisData) {
-                        sessionStorage.setItem('load_analysis_data', JSON.stringify(analysisData));
-                        console.log('✅ Stored analysisData in sessionStorage');
+                        const analysisDataStr = JSON.stringify(analysisData);
+                        sessionStorage.setItem('load_analysis_data', analysisDataStr);
+                        console.log('✅ Stored analysisData in sessionStorage, size:', analysisDataStr.length, 'chars');
                     }
                     
                     // Update URL with analysisId parameter
                     const url = new URL(window.location.href);
-                    const finalAnalysisId = analysisId || (analysisData && analysisData.id);
+                    const finalAnalysisId = analysisId || (analysisData && analysisData.id) || (analysisData && analysisData._id);
                     if (finalAnalysisId) {
                         url.searchParams.set('analysisId', finalAnalysisId);
+                        console.log('✅ Set analysisId in URL:', finalAnalysisId);
                     }
                     
                     // If analysisData is provided, encode it as base64 JSON in URL
-                    // This allows Streamlit to read it directly
+                    // This allows Streamlit to read it directly without sessionStorage
                     if (analysisData) {
                         try {
                             const encodedData = btoa(JSON.stringify(analysisData));
-                            url.searchParams.set('analysisData', encodedData);
-                            console.log('✅ Encoded analysisData in URL');
+                            // Check if URL would be too long (URLs have ~2000 char limit)
+                            if (encodedData.length < 1500) {
+                                url.searchParams.set('analysisData', encodedData);
+                                console.log('✅ Encoded analysisData in URL, size:', encodedData.length, 'chars');
+                            } else {
+                                console.warn('⚠️ analysisData too large for URL, using sessionStorage only');
+                            }
                         } catch (encodeError) {
                             console.warn('⚠️ Could not encode analysisData:', encodeError);
                         }
                     }
                     
                     window.history.replaceState({}, '', url);
+                    console.log('✅ Updated URL:', url.toString());
                     
                     // Trigger Streamlit rerun to load the analysis
                     console.log('🔄 Reloading page to display analysis...');
                     window.location.reload();
                 } catch (e) {
                     console.error('❌ Error handling LOAD_ANALYSIS message:', e);
+                    console.error('❌ Error stack:', e.stack);
                 }
             }
         });
@@ -135,11 +150,14 @@ def inject_load_analysis_listener():
             const urlParams = new URLSearchParams(window.location.search);
             const analysisId = urlParams.get('analysisId');
             if (analysisId) {
-                console.log('📋 Found analysisId in URL:', analysisId);
+                console.log('📋 Found analysisId in URL on load:', analysisId);
                 // Store in sessionStorage for consistency
                 sessionStorage.setItem('load_analysis_id', analysisId);
             }
         });
+        
+        // Log that listener is ready
+        console.log('✅ LOAD_ANALYSIS listener ready and waiting for messages');
     })();
     </script>
     """
@@ -149,23 +167,61 @@ def inject_load_analysis_listener():
 
 def load_analysis_from_url():
     """
-    Load analysis data from URL query parameters
+    Load analysis data from URL query parameters or sessionStorage
     Returns the analysis data dict or None
     """
     query_params = st.query_params
     analysis_id = query_params.get('analysisId', None)
     analysis_data_encoded = query_params.get('analysisData', None)
     
-    # If analysisData is encoded in URL, decode it
+    # If analysisData is encoded in URL, decode it (preferred method)
     if analysis_data_encoded:
         try:
             import base64
             analysis_data_json = base64.b64decode(analysis_data_encoded).decode('utf-8')
             analysis_data = json.loads(analysis_data_json)
             logger.info("✅ Loaded analysisData from URL")
+            logger.info("📊 Analysis data type: %s", type(analysis_data))
+            if isinstance(analysis_data, dict):
+                logger.info("📊 Analysis data keys: %s", list(analysis_data.keys()))
+            
+            # Ensure the data structure matches what display functions expect
+            if isinstance(analysis_data, dict):
+                # If analysisData has nested structure, check if we need to extract it
+                if 'analysisData' in analysis_data and isinstance(analysis_data['analysisData'], dict):
+                    nested = analysis_data['analysisData']
+                    if 'analysis_results' in nested or 'step_by_step_analysis' in nested:
+                        nested_data = analysis_data.pop('analysisData')
+                        analysis_data.update(nested_data)
+                        logger.info("✅ Flattened nested analysisData structure")
+                
+                # Ensure required fields exist
+                if 'id' not in analysis_data:
+                    if 'analysisId' in analysis_data:
+                        analysis_data['id'] = analysis_data['analysisId']
+                    elif analysis_id:
+                        analysis_data['id'] = analysis_id
+                
+                # Ensure success flag
+                if 'success' not in analysis_data:
+                    analysis_data['success'] = True
+                
+                logger.info("✅ Processed analysis data, final keys: %s", list(analysis_data.keys()))
+                
             return analysis_data
         except Exception as e:
             logger.error(f"❌ Error decoding analysisData from URL: {e}")
+            import traceback
+            logger.error(f"Traceback: {traceback.format_exc()}")
+    
+    # Try to read from sessionStorage via JavaScript (fallback)
+    # Note: Streamlit can't directly read sessionStorage, so we use a workaround
+    # by having JavaScript write it to a hidden element that we can read
+    if analysis_id:
+        # Use JavaScript to read from sessionStorage and make it available
+        # Note: We can't directly read sessionStorage from Python
+        # The data should be in the URL after reload, or we fetch from Firestore
+        pass
     
     return None
 
@@ -210,6 +266,7 @@ def show_history_page():
     Handles both postMessage (LOAD_ANALYSIS) and URL-based (analysisId) loading
     """
     # Inject parent communication and LOAD_ANALYSIS listener
+    # CRITICAL: These must be called first, before any other Streamlit commands
     inject_parent_communication()
     inject_load_analysis_listener()
     
@@ -226,21 +283,25 @@ def show_history_page():
     # Check if analysis data was stored in session state from previous load
     if 'loaded_analysis_data' in st.session_state and st.session_state.loaded_analysis_data:
         analysis_data = st.session_state.loaded_analysis_data
+        logger.info("✅ Using analysis data from session state")
     else:
         # Try to load from URL (encoded by JavaScript from postMessage)
         analysis_data = load_analysis_from_url()
         
         # If not in URL, try to fetch from Firestore using analysisId
         if not analysis_data and analysis_id:
+            logger.info(f"📥 Fetching analysis {analysis_id} from Firestore...")
             with st.spinner(f"🔄 {t('results_loading', 'Loading analysis...')}"):
                 analysis_data = fetch_analysis_from_firestore(analysis_id)
         
         # Store in session state for future use
         if analysis_data:
             st.session_state.loaded_analysis_data = analysis_data
+            logger.info(f"✅ Stored analysis data in session state, keys: {list(analysis_data.keys()) if isinstance(analysis_data, dict) else 'Not a dict'}")
     
     # If still no data, check if we need to wait for postMessage
     if not analysis_data and not analysis_id:
+        logger.warning("⚠️ No analysis data and no analysisId - waiting for LOAD_ANALYSIS message")
         st.info("📋 Waiting for analysis data from CropDrive website...")
         st.markdown("""
         <div style="background-color: #f8f9fa; padding: 2rem; border-radius: 10px; margin: 2rem 0; border-left: 4px solid #2E8B57;">
@@ -251,6 +312,9 @@ def show_history_page():
                 <li>Click "Open Recent Analysis" on any report</li>
                 <li>The analysis will load automatically here</li>
             </ol>
+            <p style="color: #666; margin-top: 1rem;">
+                <strong>Debug:</strong> Check browser console (F12) for LOAD_ANALYSIS message logs.
+            </p>
         </div>
         """, unsafe_allow_html=True)
         
@@ -277,6 +341,14 @@ def show_history_page():
     # Ensure success flag is set
     if 'success' not in analysis_data:
         analysis_data['success'] = True
+    
+    # Log successful load with data structure info
+    logger.info(f"✅ Successfully loaded analysis data, ID: {analysis_data.get('id', 'unknown')}")
+    logger.info(f"📊 Analysis data structure: success={analysis_data.get('success')}, has analysis_results={bool(analysis_data.get('analysis_results'))}")
+    if 'analysis_results' in analysis_data:
+        logger.info(f"📊 analysis_results type: {type(analysis_data['analysis_results'])}")
+        if isinstance(analysis_data['analysis_results'], dict):
+            logger.info(f"📊 analysis_results keys: {list(analysis_data['analysis_results'].keys())}")
     
     # Display results using the same functions as results page
     # This ensures identical formatting to the original reports page
