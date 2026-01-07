@@ -133,6 +133,14 @@ except Exception as e:
     traceback.print_exc()
     admin_panel_func = None
 
+try:
+    from modules.history import show_history_page
+except Exception as e:
+    print(f"Warning: Could not import history module: {e}")
+    import traceback
+    traceback.print_exc()
+    show_history_page = None
+
 # Page configuration is now at the top of the file
 
 # Note: Browser console warnings about "Unrecognized feature" for Permissions Policy
@@ -517,6 +525,21 @@ def main():
     """Main application function"""
     # Initialize the application
     initialize_app()
+    
+    # Check for analysisId in query params - if present, show history page
+    query_params = st.query_params
+    analysis_id = query_params.get('analysisId', None)
+    
+    if analysis_id and show_history_page:
+        # Show header
+        show_header()
+        
+        # Show sidebar
+        show_sidebar()
+        
+        # Show history page
+        show_history_page()
+        return
     
     # Show header
     show_header()
